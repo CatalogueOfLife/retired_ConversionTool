@@ -1,7 +1,7 @@
 <?php
 require_once 'model/HigherTaxon.php';
 
-class SpiceCache_HigherTaxon extends HigherTaxon
+class Sc_Model_HigherTaxon extends HigherTaxon
 {
     public static $ranks = array(
         'family',
@@ -17,7 +17,7 @@ class SpiceCache_HigherTaxon extends HigherTaxon
             ''
         );
         if(!isset($fieldMap[$name])) {
-            throw new Exception('Property not allowed');
+            throw new Exception('Property not allowed: ' . $name);
         }
     }
 }

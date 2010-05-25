@@ -1,8 +1,8 @@
 <?php
 require_once 'model/Database.php';
-require_once 'model/HigherTaxon.php';
+require_once 'converters/Sc/Model/HigherTaxon.php';
 
-class SpiceCacheLoader
+class Sc_Load_Engine
 {
     protected $_dbh;
     
@@ -62,14 +62,19 @@ class SpiceCacheLoader
         echo '<br/>' . __METHOD__ . '<br/>';
         $stmt = $this->_dbh->prepare(
             'SELECT taxonID, rank, taxonName, parent ' .
-            'FROM HierarchyCache WHERE LENGTH(TRIM(rank)) > 0 LIMIT :offset, 1'
+            'FROM HierarchyCache WHERE LENGTH(TRIM(rank)) > 0 ' .
+            'LIMIT :offset, 1'
         );
         $stmt->bindParam('offset', $offset, PDO::PARAM_INT);
         $stmt->execute();
         $taxon = $stmt->fetch(PDO::FETCH_ASSOC);
         var_dump($taxon);
-        $higherTaxon = new HigherTaxon();
-        $higherTaxon->$taxon['rank'] = $taxon['taxonName'];
+        $higherTaxon = new Sc_Model_HigherTaxon();
+        try {
+            $higherTaxon->$taxon['rank'] = $taxon['taxonName'];
+        } catch (Exception $e) {
+            // tried to set a property that's not allowed
+        }
         $parentId = $taxon['parent'];
         do {
             $parent = $this->_fetchTaxonParent($parentId);
@@ -80,7 +85,11 @@ class SpiceCacheLoader
                     return $higherTaxon;
                 }
                 $parentId = $parent['parent'];
-                $higherTaxon->$parent['rank'] = $parent['taxonName'];
+                try {
+                    $higherTaxon->$parent['rank'] = $parent['taxonName'];
+                } catch (Exception $e) {
+                    // tried to set a property that's not allowed
+                }
                 echo "Adding $parent[rank] = $parent[taxonName]<br/>";
             }
         } while ($parent);

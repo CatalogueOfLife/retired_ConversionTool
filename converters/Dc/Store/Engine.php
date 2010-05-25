@@ -1,7 +1,7 @@
 <?php
 require_once 'model/Database.php';
 
-class DynamicChecklistStorer
+class Dc_Store_Engine
 {
     protected $_dbh;
     

@@ -1,7 +1,7 @@
 <?php
 require_once 'DbHandler.php';
-require_once 'loaders/SpiceCacheLoader.php';
-require_once 'storers/DynamicChecklistStorer.php';
+require_once 'converters/Sc/Load/Engine.php';
+require_once 'converters/Dc/Store/Engine.php';
 
 try {
     $config = parse_ini_file('config/db.ini', true);
@@ -17,10 +17,10 @@ try {
         DbHandler::createInstance($k, $v, $o);
     }
     $source = DbHandler::getInstance('source');
-    $loader = new SpiceCacheLoader($source);
+    $loader = new Sc_Load_Engine($source);
     
     $target= DbHandler::getInstance('target');
-    $storer = new DynamicChecklistStorer($target);
+    $storer = new Dc_Store_Engine($target);
     
     /*$total = $loader->count('Database');
     
@@ -31,6 +31,7 @@ try {
         echo '.';
     }
     echo '<br/>Done!';*/
+    
     for ($i = 0; $i < 100; $i++) {
         var_dump($loader->load('HigherTaxon', 15000 + $i));
     }
