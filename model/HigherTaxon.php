@@ -9,6 +9,6 @@ class HigherTaxon
     public $superfamily;
     public $family;
     public $familyCommonName;
-    public $database;/*Database*/
+    public $databaseId;/*Database*/
     public $isAcceptedName;
 }
