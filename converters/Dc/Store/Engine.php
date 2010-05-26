@@ -20,6 +20,8 @@ class Dc_Store_Engine
             return $this->_storeSpecialist($object);
         } else if ($object instanceof HigherTaxon) {
             return $this->_storeHigherTaxon($object);
+        } else if ($object instanceof Taxon) {
+            return $this->_storeTaxon($object);
         }
         throw new Exception('Unknown data object');
     }
@@ -111,6 +113,35 @@ class Dc_Store_Engine
            $taxon->family,
            $taxon->databaseId,
            $taxon->isAcceptedName)
+        );
+        return true;
+    }
+    
+    protected function _storeTaxon(Taxon $taxon) {
+       $stmt = $this->_dbh->prepare(
+            'INSERT INTO `scientific_names` SET name_code = ?, web_site = ?,
+            genus = ?, species = ?, infraspecies = ?, infraspecies_marker = ?,
+            author = ?, accepted_name_code = ?, comment = ?, scrutiny_date = ?,
+            sp2000_status_id = ?, database_id = ?, specialist_id = ?,
+            is_accepted_name = ?, family_id =
+                (SELECT record_id FROM families WHERE family = ? LIMIT 1)'
+       );
+       $stmt->execute(array(
+           $taxon->nameCode,
+           $taxon->webSite,
+           $taxon->genus,
+           $taxon->species,
+           $taxon->infraspecies,
+           $taxon->infraspeciesMarker,
+           $taxon->author,
+           $taxon->acceptedNameCode,
+           $taxon->comment,
+           $taxon->scrutinyDate,
+           $taxon->nameStatusId,
+           $taxon->databaseId,
+           $taxon->specialistId,
+           $taxon->isAcceptedName,
+           $taxon->familyName)
         );
         return true;
     }

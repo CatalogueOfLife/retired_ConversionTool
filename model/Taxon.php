@@ -14,7 +14,8 @@ class Taxon
     public $scrutinyDate;
     public $nameStatusId;
     public $databaseId;
-    public $specialist; // Specialist obj
+    public $specialistId;
     public $familyId;
+    public $familyName; // if there's no id, set the name
     public $isAcceptedName;
 }

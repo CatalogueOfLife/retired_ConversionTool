@@ -2,6 +2,7 @@
 require_once 'model/Database.php';
 require_once 'model/Specialist.php';
 require_once 'converters/Sc/Model/HigherTaxon.php';
+require_once 'converters/Sc/Model/Taxon.php';
 
 class Sc_Load_Engine
 {
@@ -176,9 +177,7 @@ class Sc_Load_Engine
     
   protected function _countTaxa()
     {
-        $stmt = $this->_dbh->prepare(
-            'SELECT COUNT(1) FROM Type1Cache WHERE specificEpithet != \'\''
-        );
+        $stmt = $this->_dbh->prepare('SELECT COUNT(1) FROM Type1Cache');
         $stmt->execute();
         $res = $stmt->fetchColumn(0);
         unset($stmt);
@@ -214,13 +213,13 @@ class Sc_Load_Engine
                 when 'misapplied' then 3
                 end as nameStatusId,
             t1.source as databaseName,
-            t2.scrutinyperson as specialist,
-            t2.family,
+            t2.scrutinyperson as specialistName,
+            t2.family AS familyName,
             IF (t1.status = 'accepted' or t1.status = 'provisional', 1, 0)
                 as isAcceptedName
             FROM `Type1Cache` t1
-            left join `StandardDataCache` t2 on t1.TaxonCode = t2.taxoncode
-            WHERE t1.specificEpithet != '' LIMIT :offset, :limit"
+            left join `StandardDataCache` t2 on t1.TaxonCode = t2.taxonID
+            LIMIT :offset, :limit"
         );
         $stmt->bindParam('offset', $offset, PDO::PARAM_INT);
         $stmt->bindParam('limit', $limit, PDO::PARAM_INT);
@@ -229,8 +228,14 @@ class Sc_Load_Engine
         $taxa = array();
         
         while($taxon = $stmt->fetchObject('Sc_Model_Taxon')) {
-            $this->_logger->debug('Processing taxon ' . $taxon['taxonID']);
             $taxon->databaseId = Dictionary::get('dbs', $taxon->databaseName);
+            $specialistId = Dictionary::get(
+                'specialists', $taxon->specialistName
+            );
+            if($specialistId) {
+                $taxon->specialistId = $specialistId;
+            }
+            $taxa[] = $taxon;
         }
         unset($stmt);
         return $taxa;

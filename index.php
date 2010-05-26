@@ -36,60 +36,81 @@ function puntjes (&$puntenteller, $counter, $total, &$punten_per_regelteller,
 }
 
 
-    $config = parse_ini_file('config/db.ini', true);
-    foreach ($config as $k => $v) {
-        $o = array();
-        if (isset($config["options"])) {
-            $options = explode(",", $config["options"]);
-            foreach ($options as $option) {
-                $parts = explode("=", trim($option));
-                $o[$parts[0]] = $parts[1];
-            }
-        }
-        DbHandler::createInstance($k, $v, $o);
-    }
-    $source = DbHandler::getInstance('source');
-    $loader = new Sc_Load_Engine($source, $logger);
-    
-    $target = DbHandler::getInstance('target');
-    $storer = new Dc_Store_Engine($target, $logger);
-    
-    $total = $loader->count('Database');
-    
-    echo 'Transferring databases' . PHP_EOL;
-    $storer->clear('Database');
-    $dbs = $loader->load('Database');
-    foreach($dbs as $db) {
-        $storer->store($db);
-        Dictionary::add('dbs', $db->name, $db->id);
-    }
-    echo PHP_EOL . 'Done!' . PHP_EOL;
-    
-    echo 'Transferring specialists' . PHP_EOL;
-    $storer->clear('Specialist');
-    $specialists = $loader->load('Specialist');
-    foreach($specialists as $specialist) {
-        $storer->store($specialist);
-        Dictionary::add('specialists', $specialist->name, $specialist->id);
-    }
-    echo PHP_EOL . 'Done!' . PHP_EOL;
-    
-    /*$total = $loader->count('HigherTaxon');
-    echo "Transferring $total higher taxa" . PHP_EOL;
-    $storer->clear('HigherTaxon');
-    
-    $puntenteller = $punten_per_regelteller = 0;
-        
-    for ($limit = 1000, $offset = 0; $offset < $total; $offset += $limit) {
-        puntjes($puntenteller, $offset, $total, $punten_per_regelteller);
-        try {
-            $taxa = $loader->load('HigherTaxon', $offset, $limit);
-            foreach($taxa as $taxon) {
-                $storer->store($taxon);
-            }
-            unset($taxa);
-        } catch (PDOException $e) {
-            $logger->warn('Store query failed: ' . $e->getMessage());
+$config = parse_ini_file('config/db.ini', true);
+foreach ($config as $k => $v) {
+    $o = array();
+    if (isset($config["options"])) {
+        $options = explode(",", $config["options"]);
+        foreach ($options as $option) {
+            $parts = explode("=", trim($option));
+            $o[$parts[0]] = $parts[1];
         }
     }
-    echo PHP_EOL . 'Done!';*/
+    DbHandler::createInstance($k, $v, $o);
+}
+$source = DbHandler::getInstance('source');
+$loader = new Sc_Load_Engine($source, $logger);
+
+$target = DbHandler::getInstance('target');
+$storer = new Dc_Store_Engine($target, $logger);
+
+$total = $loader->count('Database');
+
+echo 'Transferring databases' . PHP_EOL;
+$storer->clear('Database');
+$dbs = $loader->load('Database');
+foreach($dbs as $db) {
+    $storer->store($db);
+    Dictionary::add('dbs', $db->name, $db->id);
+}
+echo PHP_EOL . 'Done!' . PHP_EOL;
+
+echo 'Transferring specialists' . PHP_EOL;
+$storer->clear('Specialist');
+$specialists = $loader->load('Specialist');
+foreach($specialists as $specialist) {
+    $storer->store($specialist);
+    Dictionary::add('specialists', $specialist->name, $specialist->id);
+}
+echo PHP_EOL . 'Done!' . PHP_EOL;
+
+/*$total = $loader->count('HigherTaxon');
+echo "Transferring $total higher taxa" . PHP_EOL;
+$storer->clear('HigherTaxon');
+
+$puntenteller = $punten_per_regelteller = 0;
+    
+for ($limit = 1000, $offset = 0; $offset < $total; $offset += $limit) {
+    puntjes($puntenteller, $offset, $total, $punten_per_regelteller);
+    try {
+        $taxa = $loader->load('HigherTaxon', $offset, $limit);
+        foreach($taxa as $taxon) {
+            $storer->store($taxon);
+        }
+        unset($taxa);
+    } catch (PDOException $e) {
+        $logger->warn('Store query failed: ' . $e->getMessage());
+    }
+}
+echo PHP_EOL . 'Done!';*/
+
+$total = $loader->count('Taxon');
+echo "Transferring $total taxa" . PHP_EOL;
+$storer->clear('Taxon');
+
+$puntenteller = $punten_per_regelteller = 0;
+    
+for ($limit = 1000, $offset = 0; $offset < $total; $offset += $limit) {
+    puntjes($puntenteller, $offset, $total, $punten_per_regelteller);
+    try {
+        $taxa = $loader->load('Taxon', $offset, $limit);
+        foreach($taxa as $taxon) {
+            $storer->store($taxon);
+        }
+        unset($taxa);
+    } catch (PDOException $e) {
+        $logger->warn('Store query failed: ' . $e->getMessage());
+    }
+}
+echo PHP_EOL . 'Done!';
+    
