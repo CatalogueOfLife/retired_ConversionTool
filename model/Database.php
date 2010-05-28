@@ -1,5 +1,7 @@
 <?php
-class Database
+require_once 'Model.php';
+
+class Database implements Model
 {
     public $id;
     public $name;

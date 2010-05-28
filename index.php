@@ -3,8 +3,8 @@ set_include_path('library' . PATH_SEPARATOR . get_include_path());
 
 require_once 'DbHandler.php';
 require_once 'Dictionary.php';
-require_once 'converters/Sc/Load/Engine.php';
-require_once 'converters/Dc/Store/Engine.php';
+require_once 'converters/Sc/Loader.php';
+require_once 'converters/Dc/Storer.php';
 require_once 'Zend/Log/Writer/Stream.php';
 require_once 'Zend/Log.php';
    
@@ -48,13 +48,8 @@ foreach ($config as $k => $v) {
     }
     DbHandler::createInstance($k, $v, $o);
 }
-$source = DbHandler::getInstance('source');
-$loader = new Sc_Load_Engine($source, $logger);
-
-$target = DbHandler::getInstance('target');
-$storer = new Dc_Store_Engine($target, $logger);
-
-$total = $loader->count('Database');
+$loader = new Sc_Loader(DbHandler::getInstance('source'), $logger);
+$storer = new Dc_Storer(DbHandler::getInstance('target'), $logger);
 
 echo 'Transferring databases' . PHP_EOL;
 $storer->clear('Database');

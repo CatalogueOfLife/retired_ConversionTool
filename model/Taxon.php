@@ -1,5 +1,7 @@
 <?php
-class Taxon
+require_once 'Model.php';
+
+class Taxon implements Model
 {
     public $id;
     public $nameCode;

@@ -1,5 +1,7 @@
 <?php
-class HigherTaxon
+require_once 'Model.php';
+
+class HigherTaxon implements Model
 {
     public $id;
     public $kingdom;
