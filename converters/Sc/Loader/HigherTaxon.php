@@ -22,7 +22,7 @@ class Sc_Loader_HigherTaxon extends Sc_Loader_Abstract
         $stmt = $this->_dbh->prepare(
             'SELECT taxonID, rank, taxonName, parent ' .
             'FROM HierarchyCache WHERE LENGTH(TRIM(rank)) > 0 ' .
-            'LIMIT :offset, :limit'
+            'AND rank = "family" LIMIT :offset, :limit'
         );
         $stmt->bindParam('offset', $offset, PDO::PARAM_INT);
         $stmt->bindParam('limit', $limit, PDO::PARAM_INT);
@@ -43,13 +43,22 @@ class Sc_Loader_HigherTaxon extends Sc_Loader_Abstract
                 // TODO: this method of walking up the hierarchy is terribly
                 // uneffective because of the bad quality of the data
                 // It seems to fail always for the sp2000 hierarchy, so in
-                // that case (taxonID LIKE Sp2000Hierarchy_*) it should be
+                // that case (taxonID LIKE Sp2000Hierarchy_%) it is
                 // fetched from the first id, which contains all the information
+                if(strpos($taxon['taxonID'], 'Sp2000Hierarchy_') === 0) {
+                    $parts = explode('_', $taxon['taxonID']);
+                    if(count($parts) == 5) {
+                        $parentId = array_shift($parts);
+                        $higherTaxon->phylum = array_shift($parts);
+                        $higherTaxon->class  = array_shift($parts);
+                        $higherTaxon->order  = array_shift($parts);
+                        $higherTaxon->family = array_shift($parts);
+                    }
+                }
                 $taxon = $this->_fetchTaxonParent($parentId);
                 if($taxon) {
                     $this->_logger->debug('Fetched parent ' . $taxon['taxonName']);
                     $parentId = $taxon['parent'];
-                    
                     if($taxon['parent'] == 'Sp2000Hierarchy_!A') {
                         $this->_logger->debug('Fetched top level ' . $taxon['taxonName']);
                         $higherTaxon->kingdom = $taxon['taxonName'];
