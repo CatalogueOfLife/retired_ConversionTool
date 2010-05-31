@@ -1,14 +1,14 @@
 <?php
 require_once 'Interface.php';
 require_once 'Abstract.php';
-require_once 'model/Database.php';
+//require_once 'model/CommonName.php';
 
-class Sc_Loader_Database extends Sc_Loader_Abstract
+class Sc_Loader_CommonName extends Sc_Loader_Abstract
     implements Sc_Loader_Interface
 {
     public function count()
     {
-        $stmt = $this->_dbh->prepare('SELECT COUNT(1) FROM Type3Cache');
+        $stmt = $this->_dbh->prepare('SELECT COUNT(1) FROM CommonNameWithRefs');
         $stmt->execute();
         return $stmt->fetchColumn(0);
     }

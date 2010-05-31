@@ -1,4 +1,6 @@
 <?php
+require_once 'Loader/Interface.php';
+
 class Sc_Loader
 {
     protected $_dbh;
@@ -19,7 +21,12 @@ class Sc_Loader
         if(!class_exists($class)) {
             throw new Exception('Loader class undefined');
         }
-        return new $class($this->_dbh, $this->_logger);
+        $loader = new $class($this->_dbh, $this->_logger);
+        if(!$loader instanceof Sc_Loader_Interface) {
+            unset($loader);
+            throw new Exception('Invalid loader instance');
+        }
+        return $loader;
     }
     
     public function load($what, $offset = 0, $limit = 100)

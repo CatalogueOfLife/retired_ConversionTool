@@ -1,8 +1,9 @@
 <?php
+require_once 'Interface.php';
 require_once 'Abstract.php';
 require_once 'converters/Sc/Model/Taxon.php';
 
-class Sc_Loader_Taxon extends Sc_Loader_Abstract
+class Sc_Loader_Taxon extends Sc_Loader_Abstract implements Sc_Loader_Interface
 {
     public function count()
     {
@@ -17,36 +18,36 @@ class Sc_Loader_Taxon extends Sc_Loader_Abstract
     {
         $stmt = $this->_dbh->prepare(
             "SELECT
-            t1.taxoncode as nameCode,
-            t2.datalink as webSite,
+            t1.taxoncode AS nameCode,
+            t2.datalink AS webSite,
             t1.genus,
-            t1.specificepithet as species,
-            t1.infraspecificepithet as infraspecies,
-            t1.infraspecificmarker as infraspeciesMarker,
-            t1.authority as author,
-            t1.taxoncode as acceptedNameCode,
+            t1.specificepithet AS species,
+            t1.infraspecificepithet AS infraspecies,
+            t1.infraspecificmarker AS infraspeciesMarker,
+            t1.authority AS author,
+            t1.taxoncode AS acceptedNameCode,
             t2.`comment`,
             if (t2.scrutinyyear > 0,
-               concat(
+               CONCAT(
                    t2.scrutinyday, '-',
                    t2.scrutinymonth, '-',
                    t2.scrutinyyear
                    ), NULL)
-               as scrutinyDate,
-            case t1.status
-                when 'accepted' then 1
-                when 'provisional' then 4
-                when 'synonym' then 5
-                when 'ambiguous' then 2
-                when 'misapplied' then 3
-                end as nameStatusId,
-            t1.source as databaseName,
-            t2.scrutinyperson as specialistName,
+               AS scrutinyDate,
+            CASE t1.status
+                WHEN 'accepted' THEN 1
+                WHEN 'provisional' THEN 4
+                WHEN 'synonym' THEN 5
+                WHEN 'ambiguous' THEN 2
+                WHEN 'misapplied' THEN 3
+                END AS nameStatusId,
+            t1.source AS databaseName,
+            t2.scrutinyperson AS specialistName,
             t2.family AS familyName,
-            IF (t1.status = 'accepted' or t1.status = 'provisional', 1, 0)
-                as isAcceptedName
+            IF (t1.status = 'accepted' OR t1.status = 'provisional', 1, 0)
+                AS isAcceptedName
             FROM `Type1Cache` t1
-            left join `StandardDataCache` t2 on t1.TaxonCode = t2.taxonID
+            LEFT JOIN `StandardDataCache` t2 ON t1.TaxonCode = t2.taxonID
             LIMIT :offset, :limit"
         );
         $stmt->bindParam('offset', $offset, PDO::PARAM_INT);

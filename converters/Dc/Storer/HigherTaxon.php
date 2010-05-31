@@ -1,7 +1,9 @@
 <?php
+require_once 'Interface.php';
 require_once 'Abstract.php';
 
 class Dc_Storer_HigherTaxon extends Dc_Storer_Abstract
+    implements Dc_Storer_Interface
 {
     public function clear()
     {

@@ -9,12 +9,4 @@ abstract class Dc_Storer_Abstract
         $this->_dbh = $dbh;
         $this->_logger = $logger;
     }
-    
-    public function clear() {
-        throw new Exception(__METHOD__ . ' not implemented');
-    }
-    
-    public function store(Model $object) {
-        throw new Exception(__METHOD__ . ' not implemented');
-    }
 }

@@ -13,7 +13,7 @@ $writer->addFilter(Zend_Log::NOTICE);
 $logger = new Zend_Log($writer);
 
 function puntjes (&$puntenteller, $counter, $total, &$punten_per_regelteller,
-                  $breakline = PHP_EOL, $aantal_per_punt = 1, $punten_per_regel = 10)
+                  $breakline = PHP_EOL, $aantal_per_punt = 1, $punten_per_regel = 1)
 {
     if ($aantal_per_punt == 0) {
         $puntenteller = $punten_per_regelteller = 0;
@@ -58,7 +58,7 @@ foreach($dbs as $db) {
     $storer->store($db);
     Dictionary::add('dbs', $db->name, $db->id);
 }
-echo PHP_EOL . 'Done!' . PHP_EOL;
+echo 'Done!' . PHP_EOL;
 
 echo 'Transferring specialists' . PHP_EOL;
 $storer->clear('Specialist');
@@ -67,9 +67,9 @@ foreach($specialists as $specialist) {
     $storer->store($specialist);
     Dictionary::add('specialists', $specialist->name, $specialist->id);
 }
-echo PHP_EOL . 'Done!' . PHP_EOL;
+echo 'Done!' . PHP_EOL;
 
-/*$total = $loader->count('HigherTaxon');
+$total = $loader->count('HigherTaxon');
 echo "Transferring $total higher taxa" . PHP_EOL;
 $storer->clear('HigherTaxon');
 
@@ -87,7 +87,7 @@ for ($limit = 1000, $offset = 0; $offset < $total; $offset += $limit) {
         $logger->warn('Store query failed: ' . $e->getMessage());
     }
 }
-echo PHP_EOL . 'Done!';*/
+echo 'Done!' . PHP_EOL;
 
 $total = $loader->count('Taxon');
 echo "Transferring $total taxa" . PHP_EOL;
@@ -107,5 +107,5 @@ for ($limit = 1000, $offset = 0; $offset < $total; $offset += $limit) {
         $logger->warn('Store query failed: ' . $e->getMessage());
     }
 }
-echo PHP_EOL . 'Done!';
+echo 'Done!' . PHP_EOL;
     

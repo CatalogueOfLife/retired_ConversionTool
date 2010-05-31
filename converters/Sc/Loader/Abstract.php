@@ -9,12 +9,4 @@ abstract class Sc_Loader_Abstract
         $this->_dbh = $dbh;
         $this->_logger = $logger;
     }
-    
-    public function count() {
-        throw new Exception(__METHOD__ . ' not implemented');
-    }
-    
-    public function load($offset, $limit) {
-        throw new Exception(__METHOD__ . ' not implemented');
-    }
 }

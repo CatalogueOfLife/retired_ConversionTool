@@ -1,4 +1,6 @@
 <?php
+require_once 'Storer/Interface.php';
+
 class Dc_Storer
 {
     protected $_dbh;
@@ -25,7 +27,12 @@ class Dc_Storer
         if(!class_exists($class)) {
             throw new Exception('Storer class undefined');
         }
-        return new $class($this->_dbh, $this->_logger);
+        $storer = new $class($this->_dbh, $this->_logger);
+        if(!$storer instanceof Dc_Storer_Interface) {
+            unset($storer);
+            throw new Exception('Invalid storer instance');
+        }
+        return $storer;
     }
     
     public function clear($what) {
