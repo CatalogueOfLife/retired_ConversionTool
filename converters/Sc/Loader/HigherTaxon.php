@@ -8,7 +8,9 @@ class Sc_Loader_HigherTaxon extends Sc_Loader_Abstract
     public function count()
     {
         $stmt = $this->_dbh->prepare(
-            'SELECT COUNT(1) FROM HierarchyCache WHERE LENGTH(TRIM(rank)) > 0'
+            'SELECT COUNT(1) FROM HierarchyCache
+            WHERE LENGTH(TRIM(rank)) > 0
+            AND rank = "family"'
         );
         $stmt->execute();
         $res = $stmt->fetchColumn(0);
