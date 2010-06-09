@@ -20,4 +20,5 @@ class Taxon implements Model
     public $familyId;
     public $familyName; // if there's no id, set the name
     public $isAcceptedName;
+    public $references; // array of Reference objs
 }

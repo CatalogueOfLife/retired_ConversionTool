@@ -12,7 +12,7 @@ require_once 'Zend/Log.php';
  * Logger initialization
  */
 $writer = new Zend_Log_Writer_Stream('logs/conversion.log');
-$writer->addFilter(Zend_Log::NOTICE);
+$writer->addFilter(Zend_Log::DEBUG);
 $logger = new Zend_Log($writer);
 
 /**
@@ -64,6 +64,9 @@ $storer = new Dc_Storer(DbHandler::getInstance('target'), $logger);
 /**
  * Conversion
  */
+// Clear references
+$storer->clear('Reference');
+
 // Databases
 echo 'Transferring databases' . PHP_EOL;
 $storer->clear('Database');
@@ -103,7 +106,8 @@ for ($limit = 1000, $offset = 0; $offset < $total; $offset += $limit) {
         $logger->warn('Store query failed: ' . $e->getMessage());
     }
 }
-echo 'Done!' . PHP_EOL;
+echo 'Done!' . PHP_EOL;*/
+
 
 // Taxa
 $total = $loader->count('Taxon');
@@ -124,7 +128,7 @@ for ($limit = 1000, $offset = 0; $offset < $total; $offset += $limit) {
         $logger->warn('Store query failed: ' . $e->getMessage());
     }
 }
-echo 'Done!' . PHP_EOL;*/
+echo 'Done!' . PHP_EOL;
 
 // Common Names
 $total = $loader->count('CommonName');
@@ -133,16 +137,14 @@ $storer->clear('CommonName');
 
 $puntenteller = $punten_per_regelteller = 0;
     
-for ($limit = 1000, $offset = 0; $offset < $total; $offset += $limit) {
+for ($limit = 100, $offset = 0; $offset < $total; $offset += $limit) {
     puntjes($puntenteller, $offset, $total, $punten_per_regelteller);
     try {
-        $taxa = $loader->load('CommonName', $offset, $limit);
-        foreach($taxa as $taxon) {
-            print_r($taxon);
-            $storer->map($taxon);
-            $storer->store($taxon);
+        $commonNames = $loader->load('CommonName', $offset, $limit);
+        foreach($commonNames as $cn) {                    
+            $storer->store($cn);
         }
-        unset($taxa);
+        unset($commonNames);
     } catch (PDOException $e) {
         $logger->warn('Store query failed: ' . $e->getMessage());
     }

@@ -40,7 +40,7 @@ class Sc_Loader_CommonName extends Sc_Loader_Abstract
             $cn->databaseId = Dictionary::get(
             	'dbs', $this->getDatabaseNameFromNameCode($cn->nameCode)
             );
-            if ($cn->hasReference()) {            	
+            if ($cn->hasReference()) { 	
             	$ref = new Reference();
 	            $ref->author   = $cn->refAuthor;
 	            $ref->title    = $cn->refTitle;

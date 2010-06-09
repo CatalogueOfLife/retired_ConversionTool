@@ -64,6 +64,17 @@ class Sc_Loader_Taxon extends Sc_Loader_Abstract implements Sc_Loader_Interface
             if($specialistId) {
                 $taxon->specialistId = $specialistId;
             }
+            $rStmt = $this->_dbh->prepare(
+                'SELECT author, year, title, details AS source
+                FROM Reference WHERE ' .
+                    (in_array($taxon->nameStatusId, array(1,4)) ?
+                        'avcNameCode' : 'synonymWithRefsCode') . ' = ?' 
+            );
+            $rStmt->execute(
+                array($taxon->databaseName . '_' . $taxon->nameCode)
+            );
+            $taxon->references = 
+                $rStmt->fetchAll(PDO::FETCH_CLASS, 'Reference');
             $taxa[] = $taxon;
         }
         unset($stmt);

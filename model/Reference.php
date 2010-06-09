@@ -8,4 +8,9 @@ class Reference implements Model
     public $year;
     public $title;
     public $source;
+    
+    public function getHash()
+    {
+    	return md5($this->author . $this->year . $this->title . $this->source);
+    }
 }
