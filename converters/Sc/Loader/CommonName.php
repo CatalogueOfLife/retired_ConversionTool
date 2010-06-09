@@ -17,8 +17,8 @@ class Sc_Loader_CommonName extends Sc_Loader_Abstract
     public function load ($offset, $limit)
     {
         $stmt = $this->_dbh->prepare(
-            'SELECT c.commonNamenumber AS commonNameCode,
-                    c.avcNameCode AS nameCode,                    
+            'SELECT c.commonNamenumber AS nameCode,
+                    c.avcNameCode AS acceptedNameCode,                    
                     c.vernName AS name,
                     c.language,
                     TRIM(TRAILING "#" FROM c.placeNames) AS country,
@@ -40,14 +40,15 @@ class Sc_Loader_CommonName extends Sc_Loader_Abstract
             $cn->databaseId = Dictionary::get(
             	'dbs', $this->getDatabaseNameFromNameCode($cn->nameCode)
             );
-            if ($cn->author) {
+            if ($cn->hasReference()) {            	
             	$ref = new Reference();
-            	$ref->author  = $cn->refAuthor;
-            	$ref->title   = $cn->refTitle;
-            	$ref->year    = $cn->refYear;
-            	$ref->source = $cn->refSource;
+	            $ref->author   = $cn->refAuthor;
+	            $ref->title    = $cn->refTitle;
+	            $ref->year     = $cn->refYear;
+	            $ref->source   = $cn->refSource;
+	            $cn->reference = $ref;
+            	unset($ref);
             }
-            $cn->reference = $ref;
             $commonNames[] = $cn;
         }
         unset($stmt);
