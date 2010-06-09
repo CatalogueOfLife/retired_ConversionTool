@@ -8,8 +8,6 @@ class CommonName implements Model
     public $name;
     public $language;
     public $country;
-    public $referenceId;
+    public $reference; // Reference
     public $databaseId;
-    public $isInfraspecies;
-    public $referenceCode;
 }

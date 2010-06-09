@@ -1,7 +1,7 @@
 <?php
 require_once 'Interface.php';
 require_once 'Abstract.php';
-//require_once 'model/CommonName.php';
+require_once 'converters/Sc/Model/CommonName.php';
 
 class Sc_Loader_CommonName extends Sc_Loader_Abstract
     implements Sc_Loader_Interface
@@ -16,16 +16,18 @@ class Sc_Loader_CommonName extends Sc_Loader_Abstract
     public function load ($offset, $limit)
     {
         $stmt = $this->_dbh->prepare(
-            'SELECT gsdID AS name, contactLink AS contactPerson, ' .
-            'lastUpdateDate AS releaseDate, description AS abstract, ' .
-            'gsdShortName AS shortName, gsdTitle AS fullName, homeLink AS url,' .
-            'version FROM Type3Cache'
+            'SELECT c.commonNamenumber AS commonNameCode,
+                    c.avcNameCode AS nameCode,
+                    c.vernName AS name,
+                    TRIM(TRAILING "#" FROM c.placeNames) AS country
+            FROM CommonNameWithRefs c
+            LIMIT :offset, :limit'
         );
-        // TODO: implement $offset and $limit
-        //$stmt->bindParam('offset', $offset, PDO::PARAM_INT);
+        $stmt->bindParam('offset', $offset, PDO::PARAM_INT);
+        $stmt->bindParam('limit', $limit, PDO::PARAM_INT);
         $stmt->execute();
-        $res = $stmt->fetchAll(PDO::FETCH_CLASS, 'Database');
+        $cn = $stmt->fetchAll(PDO::FETCH_CLASS, 'Sc_Model_CommonName');
         unset($stmt);
-        return $res;
+        return $cn;
     }
 }

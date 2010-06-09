@@ -8,10 +8,16 @@ require_once 'converters/Dc/Storer.php';
 require_once 'Zend/Log/Writer/Stream.php';
 require_once 'Zend/Log.php';
    
+/**
+ * Logger initialization
+ */
 $writer = new Zend_Log_Writer_Stream('logs/conversion.log');
 $writer->addFilter(Zend_Log::NOTICE);
 $logger = new Zend_Log($writer);
 
+/**
+ * Puntjes!
+ */
 function puntjes (&$puntenteller, $counter, $total, &$punten_per_regelteller,
                   $breakline = PHP_EOL, $aantal_per_punt = 1, $punten_per_regel = 1)
 {
@@ -35,8 +41,11 @@ function puntjes (&$puntenteller, $counter, $total, &$punten_per_regelteller,
     }
 }
 
-
+/**
+ * Configuration
+ */
 $config = parse_ini_file('config/db.ini', true);
+// extract db options
 foreach ($config as $k => $v) {
     $o = array();
     if (isset($config["options"])) {
@@ -48,9 +57,14 @@ foreach ($config as $k => $v) {
     }
     DbHandler::createInstance($k, $v, $o);
 }
+// initialize loader (Sc - SPICE) and storer (Dc - Dynamic Checklist)
 $loader = new Sc_Loader(DbHandler::getInstance('source'), $logger);
 $storer = new Dc_Storer(DbHandler::getInstance('target'), $logger);
 
+/**
+ * Conversion
+ */
+// Databases
 echo 'Transferring databases' . PHP_EOL;
 $storer->clear('Database');
 $dbs = $loader->load('Database');
@@ -60,6 +74,7 @@ foreach($dbs as $db) {
 }
 echo 'Done!' . PHP_EOL;
 
+// Specialists
 echo 'Transferring specialists' . PHP_EOL;
 $storer->clear('Specialist');
 $specialists = $loader->load('Specialist');
@@ -69,7 +84,8 @@ foreach($specialists as $specialist) {
 }
 echo 'Done!' . PHP_EOL;
 
-$total = $loader->count('HigherTaxon');
+// Higher Taxa
+/*$total = $loader->count('HigherTaxon');
 echo "Transferring $total higher taxa" . PHP_EOL;
 $storer->clear('HigherTaxon');
 
@@ -89,6 +105,7 @@ for ($limit = 1000, $offset = 0; $offset < $total; $offset += $limit) {
 }
 echo 'Done!' . PHP_EOL;
 
+// Taxa
 $total = $loader->count('Taxon');
 echo "Transferring $total taxa" . PHP_EOL;
 $storer->clear('Taxon');
@@ -107,5 +124,27 @@ for ($limit = 1000, $offset = 0; $offset < $total; $offset += $limit) {
         $logger->warn('Store query failed: ' . $e->getMessage());
     }
 }
-echo 'Done!' . PHP_EOL;
+echo 'Done!' . PHP_EOL;*/
+
+// Common Names
+$total = $loader->count('CommonName');
+echo "Transferring $total common names" . PHP_EOL;
+$storer->clear('CommonName');
+
+$puntenteller = $punten_per_regelteller = 0;
     
+for ($limit = 1000, $offset = 0; $offset < $total; $offset += $limit) {
+    puntjes($puntenteller, $offset, $total, $punten_per_regelteller);
+    try {
+        $taxa = $loader->load('CommonName', $offset, $limit);
+        foreach($taxa as $taxon) {
+            print_r($taxon);
+            $storer->map($taxon);
+            $storer->store($taxon);
+        }
+        unset($taxa);
+    } catch (PDOException $e) {
+        $logger->warn('Store query failed: ' . $e->getMessage());
+    }
+}
+echo 'Done!' . PHP_EOL;
