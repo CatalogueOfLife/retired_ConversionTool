@@ -16,15 +16,14 @@ class Dc_Storer_Reference extends Dc_Storer_Abstract
     public function store(Model $reference)
     {
         $stmt = $this->_dbh->prepare(
-            'INSERT INTO `references` (author, year, title, source,
-            database_id) VALUES (?, ?, ?, ?, ?)'
+            'INSERT INTO `references` 
+            (author, year, title, source) VALUES (?, ?, ?, ?)'
         );
         $stmt->execute(array(
             $reference->author,
             $reference->year,
             $reference->title,
-            $reference->source,
-            $reference->databaseId)
+            $reference->source)
         );
         $reference->id = $this->_dbh->lastInsertId();
         return $reference;

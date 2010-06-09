@@ -8,5 +8,4 @@ class Reference implements Model
     public $year;
     public $title;
     public $source;
-    public $databaseId;
 }

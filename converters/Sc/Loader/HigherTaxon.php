@@ -24,9 +24,9 @@ class Sc_Loader_HigherTaxon extends Sc_Loader_Abstract
     {
         $this->_logger->debug('Start ' . __METHOD__);
         $stmt = $this->_dbh->prepare(
-            'SELECT taxonID, rank, taxonName, parent ' .
-            'FROM HierarchyCache WHERE LENGTH(TRIM(rank)) > 0 ' .
-            'AND rank = "family" LIMIT :offset, :limit'
+            'SELECT taxonID, rank, taxonName, parent 
+            FROM HierarchyCache WHERE LENGTH(TRIM(rank)) > 0 
+            AND rank = "family" LIMIT :offset, :limit'
         );
         $stmt->bindParam('offset', $offset, PDO::PARAM_INT);
         $stmt->bindParam('limit', $limit, PDO::PARAM_INT);
@@ -49,7 +49,7 @@ class Sc_Loader_HigherTaxon extends Sc_Loader_Abstract
                 // It seems to fail always for the sp2000 hierarchy, so in
                 // that case (taxonID LIKE Sp2000Hierarchy_%) it is
                 // fetched from the first id, which contains all the information
-                if(strpos($taxon['taxonID'], 'Sp2000Hierarchy_') === 0) {
+                /*if(strpos($taxon['taxonID'], 'Sp2000Hierarchy_') === 0) {
                     $parts = explode('_', $taxon['taxonID']);
                     if(count($parts) == 5) {
                         $parentId = array_shift($parts);
@@ -58,8 +58,8 @@ class Sc_Loader_HigherTaxon extends Sc_Loader_Abstract
                         $higherTaxon->order  = array_shift($parts);
                         $higherTaxon->family = array_shift($parts);
                     }
-                }
-                $taxon = $this->_fetchTaxonParent($parentId);
+                }*/
+                $taxon = $this->_fetchTaxonParent($parentId);                
                 if($taxon) {
                     $this->_logger->debug('Fetched parent ' . $taxon['taxonName']);
                     $parentId = $taxon['parent'];
@@ -68,9 +68,10 @@ class Sc_Loader_HigherTaxon extends Sc_Loader_Abstract
                         $higherTaxon->kingdom = $taxon['taxonName'];
                         
                         // set the db
-                        $taxonIdParts = explode('_', $taxon['taxonID']);
-                        $dbId = Dictionary::get('dbs', $taxonIdParts[0]);
-                        if($dbId) {
+                        if($dbId = Dictionary::get(
+                        	'dbs', 
+                        	$this->getDatabaseNameFromNameCode($taxon['taxonID'])
+                        )) {                        
                             $higherTaxon->databaseId = $dbId;
                         }
                         

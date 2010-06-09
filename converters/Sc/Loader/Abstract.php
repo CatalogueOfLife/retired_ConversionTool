@@ -9,4 +9,10 @@ abstract class Sc_Loader_Abstract
         $this->_dbh = $dbh;
         $this->_logger = $logger;
     }
+    
+    public function getDatabaseNameFromNameCode($nameCode)
+    {    
+        $taxonIdParts = explode('_', $nameCode);
+        return $taxonIdParts[0];
+    }
 }
