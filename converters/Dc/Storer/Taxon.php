@@ -16,9 +16,7 @@ class Dc_Storer_Taxon extends Dc_Storer_Abstract implements Dc_Storer_Interface
     	// store references (if any)
         if (is_array($taxon->references)) {
       	    require_once 'converters/Dc/Storer/Reference.php';
-            $storer = new Dc_Storer_Reference(
-                $this->_dbh, $this->_logger, $this->_indicator
-            );
+            $storer = new Dc_Storer_Reference($this->_dbh, $this->_logger);
             foreach ($taxon->references as &$ref) {
             	$ref = $storer->store($ref);
             }
