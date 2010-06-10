@@ -67,7 +67,7 @@ foreach($specialists as $specialist) {
 echo 'Done!' . PHP_EOL;
 
 // Higher Taxa
-/*$total = $loader->count('HigherTaxon');
+$total = $loader->count('HigherTaxon');
 $ind->init($total, 50);
 echo "Transferring $total higher taxa" . PHP_EOL;
 $storer->clear('HigherTaxon');
@@ -83,7 +83,7 @@ for ($limit = 1000, $offset = 0; $offset < $total; $offset += $limit) {
         $logger->warn('Store query failed: ' . $e->getMessage());
     }
 }
-echo 'Done!' . PHP_EOL;*/
+echo 'Done!' . PHP_EOL;
 
 // Taxa
 $total = $loader->count('Taxon');
