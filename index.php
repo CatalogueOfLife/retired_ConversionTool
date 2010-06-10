@@ -13,7 +13,7 @@ require_once 'Indicator.php';
  * Logger initialization
  */
 $writer = new Zend_Log_Writer_Stream('logs/conversion.log');
-$writer->addFilter(Zend_Log::DEBUG);
+$writer->addFilter(Zend_Log::WARN);
 $logger = new Zend_Log($writer);
 
 $ind = new Indicator();
@@ -65,9 +65,9 @@ foreach($specialists as $specialist) {
     Dictionary::add('specialists', $specialist->name, $specialist->id);
 }
 echo 'Done!' . PHP_EOL;
-/*
+
 // Higher Taxa
-$total = $loader->count('HigherTaxon');
+/*$total = $loader->count('HigherTaxon');
 $ind->init($total, 50);
 echo "Transferring $total higher taxa" . PHP_EOL;
 $storer->clear('HigherTaxon');
@@ -83,8 +83,7 @@ for ($limit = 1000, $offset = 0; $offset < $total; $offset += $limit) {
         $logger->warn('Store query failed: ' . $e->getMessage());
     }
 }
-echo 'Done!' . PHP_EOL;
-*/
+echo 'Done!' . PHP_EOL;*/
 
 // Taxa
 $total = $loader->count('Taxon');
@@ -126,17 +125,14 @@ echo 'Done!' . PHP_EOL;
 
 // Distribution 
 $total = $loader->count('Distribution');
-$ind->init($total);
+$limit = 500;
+$ind->init($total / $limit, 1);
 echo "Transferring $total distributions" . PHP_EOL;
 $storer->clear('Distribution');
     
-for ($limit = 1000, $offset = 0; $offset < $total; $offset += $limit) {    
+for ($offset = 0; $offset < $total; $offset += $limit) {    
     try {
-        $dists = $loader->load('Distribution', $offset, $limit);
-        foreach($dists as $dist) {          
-            $storer->store($dist);
-        }
-        unset($dists);
+        $storer->storeAll($loader->load('Distribution', $offset, $limit));
     } catch (PDOException $e) {
         $logger->warn('Store query failed: ' . $e->getMessage());
     }

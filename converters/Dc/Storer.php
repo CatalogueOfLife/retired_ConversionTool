@@ -29,7 +29,7 @@ class Dc_Storer
         if(!class_exists($class)) {
             throw new Exception('Storer class undefined');
         }
-        $storer = new $class($this->_dbh, $this->_logger, $this->_indicator);
+        $storer = new $class($this->_dbh, $this->_logger);
         if(!$storer instanceof Dc_Storer_Interface) {
             unset($storer);
             throw new Exception('Invalid storer instance');
@@ -47,5 +47,17 @@ class Dc_Storer
         $res = $storer->store($object);
         $this->_indicator->iterate();
         return $res;        
+    }
+    
+    public function storeAll(array $arr)
+    {
+    	if(empty($arr)) {
+    		return;
+    	}
+        $storer = $this->_getStorer(get_class($arr[0]), true);      
+        $res = $storer->storeAll($arr);
+        unset($arr);
+        $this->_indicator->iterate();        
+        return $res;
     }
 }

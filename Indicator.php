@@ -19,11 +19,14 @@ class Indicator
     	$this->_breakLine = $breakLine;
     }
     
-    public function init($numberOfIterations, $markersPerLine = null)
+    public function init($numberOfIterations, $markersPerLine = null, $iterationsPerMarker = null)
     {
     	if($markersPerLine !== null) {
     		$this->_markersPerLine = (int)$markersPerLine;
     	}
+       if($iterationsPerMarker !== null) {
+            $this->_iterationsPerMarker = (int)$iterationsPerMarker;
+        }
     	$this->_enabled = true;
         $this->_totalNumberOfIterations = (int)$numberOfIterations;
         $this->reset();
@@ -36,7 +39,7 @@ class Indicator
     	}
     	$this->_iterationCounter ++;
     	$this->_cycleCounter ++;
-    	if ($this->_cycleCounter >= $this->_iterationsPerMarker) {
+    	if ($this->_iterationCounter >= $this->_iterationsPerMarker) {
             echo $this->_marker;
             flush();
             $this->_iterationCounter = 0;

@@ -19,7 +19,9 @@ class Dc_Storer_CommonName extends Dc_Storer_Abstract
     	if ($commonName->referenceId === null) {
 	    	if ($commonName->reference instanceof Reference) {
 	    		require_once 'converters/Dc/Storer/Reference.php';
-	    		$storer = new Dc_Storer_Reference($this->_dbh, $this->_logger);
+	    		$storer = new Dc_Storer_Reference(
+	    		    $this->_dbh, $this->_logger, $this->_indicator
+	    		);
 	    		$ref = $storer->store($commonName->reference);
 	    		$commonName->referenceId = $ref->id;
 	    		unset($storer);
