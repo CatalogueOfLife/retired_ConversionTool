@@ -5,11 +5,13 @@ class Dc_Storer
 {
     protected $_dbh;
     protected $_logger;
+    protected $_indicator;
     
-    public function __construct(PDO $dbh, Zend_Log $logger)
+    public function __construct(PDO $dbh, Zend_Log $logger, Indicator $indicator)
     {
         $this->_dbh = $dbh;
         $this->_logger = $logger;
+        $this->_indicator = $indicator;
     }
     
     private function _getStorer($name, $isClass = false)
@@ -27,7 +29,7 @@ class Dc_Storer
         if(!class_exists($class)) {
             throw new Exception('Storer class undefined');
         }
-        $storer = new $class($this->_dbh, $this->_logger);
+        $storer = new $class($this->_dbh, $this->_logger, $this->_indicator);
         if(!$storer instanceof Dc_Storer_Interface) {
             unset($storer);
             throw new Exception('Invalid storer instance');
@@ -41,6 +43,9 @@ class Dc_Storer
     
     public function store(Model $object)
     {
-        return $this->_getStorer(get_class($object), true)->store($object);
+    	$storer = $this->_getStorer(get_class($object), true);   	
+        $res = $storer->store($object);
+        $this->_indicator->iterate();
+        return $res;        
     }
 }

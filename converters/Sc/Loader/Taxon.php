@@ -27,6 +27,7 @@ class Sc_Loader_Taxon extends Sc_Loader_Abstract implements Sc_Loader_Interface
             t1.authority AS author,
             t1.taxoncode AS acceptedNameCode,
             t2.`comment`,
+            t2.taxonCode,
             if (t2.scrutinyyear > 0,
                CONCAT(
                    t2.scrutinyday, '-',
@@ -70,11 +71,10 @@ class Sc_Loader_Taxon extends Sc_Loader_Abstract implements Sc_Loader_Interface
                     (in_array($taxon->nameStatusId, array(1,4)) ?
                         'avcNameCode' : 'synonymWithRefsCode') . ' = ?' 
             );
-            $rStmt->execute(
-                array($taxon->databaseName . '_' . $taxon->nameCode)
-            );
+            $rStmt->execute(array($taxon->taxonCode));
             $taxon->references = 
                 $rStmt->fetchAll(PDO::FETCH_CLASS, 'Reference');
+            unset($rStmt);
             $taxa[] = $taxon;
         }
         unset($stmt);
