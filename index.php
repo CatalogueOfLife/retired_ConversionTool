@@ -35,7 +35,7 @@ foreach ($config as $k => $v) {
     DbHandler::createInstance($k, $v, $o);
 }
 // initialize loader (Sc - SPICE) and storer (Dc - Dynamic Checklist)
-$loader = new Sc_Loader(DbHandler::getInstance('source'), $logger, $ind);
+$loader = new Sc_Loader(DbHandler::getInstance('source'), $logger);
 $storer = new Dc_Storer(DbHandler::getInstance('target'), $logger, $ind);
 
 /**
@@ -65,7 +65,7 @@ foreach($specialists as $specialist) {
     Dictionary::add('specialists', $specialist->name, $specialist->id);
 }
 echo 'Done!' . PHP_EOL;
-
+/*
 // Higher Taxa
 $total = $loader->count('HigherTaxon');
 $ind->init($total, 50);
@@ -84,11 +84,11 @@ for ($limit = 1000, $offset = 0; $offset < $total; $offset += $limit) {
     }
 }
 echo 'Done!' . PHP_EOL;
-
+*/
 
 // Taxa
 $total = $loader->count('Taxon');
-$ind->init($total);
+$ind->init($total, 100);
 echo "Transferring $total taxa" . PHP_EOL;
 $storer->clear('Taxon');
    
@@ -107,7 +107,7 @@ echo 'Done!' . PHP_EOL;
 
 // Common Names
 $total = $loader->count('CommonName');
-$ind->init($total);
+$ind->init($total, 50);
 echo "Transferring $total common names" . PHP_EOL;
 $storer->clear('CommonName');
     
