@@ -5,7 +5,7 @@ class Indicator
 	// settings
 	protected $_marker = '.';
     protected $_breakLine = PHP_EOL;
-    protected $_iterationsPerMarker = 1; // FIXME: values other than 1 give weird percentages
+    protected $_iterationsPerMarker = 10; 
     protected $_markersPerLine = 50;
     
     protected $_totalNumberOfIterations = 0;
