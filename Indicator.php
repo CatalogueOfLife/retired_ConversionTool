@@ -4,7 +4,7 @@ class Indicator
 	protected $_enabled = false;
 	// settings
 	protected $_marker = '.';
-    protected $_breakLine = PHP_EOL;
+    protected $_breakLine = "<br>";
     protected $_iterationsPerMarker = 10; 
     protected $_markersPerLine = 50;
     

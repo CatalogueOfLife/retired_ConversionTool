@@ -19,17 +19,24 @@ class DbHandler
         if(isset(self::$instance[$id])) {
             return false;
         }
-        self::$instance[$id] = new PDO(
-            $config['driver'] . ':host=' . $config['host'] . ';dbname=' .
-                $config['dbname'],
-            $config['username'],
-            $config['password'],
-            $options
-        );
-        self::$instance[$id]->setAttribute(
-            PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION
-        );
-        return true;
+        try {
+            $dsn =  $config['driver'] . ':host=' . $config['host'] . 
+                    ';dbname=' . $config['dbname'];
+            ($config['port'] != '' ? $dsn .= ';port=' . $config['port'] : '');
+        	self::$instance[$id] = new PDO($dsn,
+	            $config['username'],
+	            $config['password'],
+	            $options
+	        );
+	        self::$instance[$id]->setAttribute(
+	            PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION
+	        );
+	        return true;
+        }
+        catch (PDOException $e) {
+	        echo $e->getMessage();
+	        exit;
+	    }
     }
     
     /* TODO: implement??
