@@ -96,10 +96,10 @@ echo '<br>Done!</p>';
 // Taxa
 $total = $loader->count('Taxon');
 $ind->init($total, null, 25);
-echo "<p>Transferring $total taxa<br>";
+echo "<p>Transferring $total taxa (slow!)<br>";
 $storer->clear('Taxon');
    
-for ($limit = 10000, $offset = 0; $offset < $total; $offset += $limit) {
+for ($limit = 5000, $offset = 0; $offset < $total; $offset += $limit) {
     try {
         $taxa = $loader->load('Taxon', $offset, $limit);
         foreach($taxa as $taxon) {
