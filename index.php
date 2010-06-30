@@ -1,4 +1,12 @@
 <?php
+// Some settings to always flush and avoid timeouts...
+@apache_setenv('no-gzip', 1);
+@ini_set('zlib.output_compression', 0);
+@ini_set('implicit_flush', 1);
+for ($i = 0; $i < ob_get_level(); $i++) { ob_end_flush(); }
+ob_implicit_flush(1);
+set_time_limit(0);
+
 set_include_path('library' . PATH_SEPARATOR . get_include_path());
 
 require_once 'DbHandler.php';
@@ -45,31 +53,31 @@ $storer = new Dc_Storer(DbHandler::getInstance('target'), $logger, $ind);
 $storer->clear('Reference');
 
 // Databases
-$ind->init($loader->count('Database'), 10);
-echo 'Transferring databases' . PHP_EOL;
+$ind->init($loader->count('Database'));
+echo '<p>Transferring databases<br>';
 $storer->clear('Database');
 $dbs = $loader->load('Database');
 foreach($dbs as $db) {
     $storer->store($db);
     Dictionary::add('dbs', $db->name, $db->id);
 }
-echo 'Done!' . PHP_EOL;
+echo '<br>Done!</p>';
 
 // Specialists
-$ind->init($loader->count('Specialist'), 10);
-echo 'Transferring specialists' . PHP_EOL;
+$ind->init($loader->count('Specialist'));
+echo '<p>Transferring specialists<br>';
 $storer->clear('Specialist');
 $specialists = $loader->load('Specialist');
 foreach($specialists as $specialist) {
     $storer->store($specialist);
     Dictionary::add('specialists', $specialist->name, $specialist->id);
 }
-echo 'Done!' . PHP_EOL;
+echo '<br>Done!</p>';
 
 // Higher Taxa
 $total = $loader->count('HigherTaxon');
-$ind->init($total, 50);
-echo "Transferring $total higher taxa" . PHP_EOL;
+$ind->init($total);
+echo "<p>Transferring $total higher taxa<br>";
 $storer->clear('HigherTaxon');
 
 for ($limit = 1000, $offset = 0; $offset < $total; $offset += $limit) {    
@@ -83,15 +91,15 @@ for ($limit = 1000, $offset = 0; $offset < $total; $offset += $limit) {
         $logger->warn('Store query failed: ' . $e->getMessage());
     }
 }
-echo 'Done!' . PHP_EOL;
+echo '<br>Done!</p>';
 
 // Taxa
 $total = $loader->count('Taxon');
-$ind->init($total, 100);
-echo "Transferring $total taxa" . PHP_EOL;
+$ind->init($total, null, 25);
+echo "<p>Transferring $total taxa<br>";
 $storer->clear('Taxon');
    
-for ($limit = 1000, $offset = 0; $offset < $total; $offset += $limit) {
+for ($limit = 10000, $offset = 0; $offset < $total; $offset += $limit) {
     try {
         $taxa = $loader->load('Taxon', $offset, $limit);
         foreach($taxa as $taxon) {
@@ -102,12 +110,12 @@ for ($limit = 1000, $offset = 0; $offset < $total; $offset += $limit) {
         $logger->warn('Store query failed: ' . $e->getMessage());
     }
 }
-echo 'Done!' . PHP_EOL;
+echo '<br>Done!</p>';
 
 // Common Names
 $total = $loader->count('CommonName');
-$ind->init($total, 50);
-echo "Transferring $total common names" . PHP_EOL;
+$ind->init($total);
+echo "Transferring $total common names" . '<br>';
 $storer->clear('CommonName');
     
 for ($limit = 100, $offset = 0; $offset < $total; $offset += $limit) {
@@ -121,13 +129,13 @@ for ($limit = 100, $offset = 0; $offset < $total; $offset += $limit) {
         $logger->warn('Store query failed: ' . $e->getMessage());
     }
 }
-echo 'Done!' . PHP_EOL;
+echo '<br>Done!</p>';
 
 // Distribution 
 $total = $loader->count('Distribution');
 $limit = 500;
 $ind->init($total / $limit, 1);
-echo "Transferring $total distributions" . PHP_EOL;
+echo "<p>Transferring $total distribution<br>";
 $storer->clear('Distribution');
     
 for ($offset = 0; $offset < $total; $offset += $limit) {    
@@ -137,4 +145,4 @@ for ($offset = 0; $offset < $total; $offset += $limit) {
         $logger->warn('Store query failed: ' . $e->getMessage());
     }
 }
-echo 'Done!' . PHP_EOL;
+echo '<br>Done!' . '</p>';

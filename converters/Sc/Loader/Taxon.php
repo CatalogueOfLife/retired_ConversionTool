@@ -15,10 +15,9 @@ class Sc_Loader_Taxon extends Sc_Loader_Abstract implements Sc_Loader_Interface
         $stmt->execute();
         $res = $stmt->fetchColumn(0);
         $stmt = $this->_dbh->prepare(
-            'SELECT COUNT(1) 
+            'SELECT COUNT(DISTINCT t1.synonymCode) 
             FROM `SynonymWithRefs` t1
-            INNER JOIN `StandardDataCache` t2 ON t1.avcNameCode = t2.taxonCode
-            GROUP BY t1.synonymCode'
+            INNER JOIN `StandardDataCache` t2 ON t1.avcNameCode = t2.taxonCode'
         );
         $stmt->execute(); 
         $res += $stmt->fetchColumn(0);
@@ -34,7 +33,7 @@ class Sc_Loader_Taxon extends Sc_Loader_Abstract implements Sc_Loader_Interface
             self::SQL_SYNONYMWITHREFS .  
             ' LIMIT :offset, :limit'
         );
-        
+         
         $stmt->bindParam('offset', $offset, PDO::PARAM_INT);
         $stmt->bindParam('limit', $limit, PDO::PARAM_INT);
         $stmt->execute();

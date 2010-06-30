@@ -6,7 +6,7 @@ class Indicator
 	protected $_marker = '.';
     protected $_breakLine = "<br>";
     protected $_iterationsPerMarker = 10; 
-    protected $_markersPerLine = 50;
+    protected $_markersPerLine = 75;
     
     protected $_totalNumberOfIterations = 0;
     
@@ -24,7 +24,7 @@ class Indicator
     	if($markersPerLine !== null) {
     		$this->_markersPerLine = (int)$markersPerLine;
     	}
-       if($iterationsPerMarker !== null) {
+        if($iterationsPerMarker !== null) {
             $this->_iterationsPerMarker = (int)$iterationsPerMarker;
         }
     	$this->_enabled = true;
