@@ -1,7 +1,7 @@
 <?php
 require_once 'Storer/Interface.php';
 
-class Bs_Storer
+class Dc_Storer
 {
     protected $_dbh;
     protected $_logger;
@@ -21,7 +21,7 @@ class Bs_Storer
             $parts = explode('_', $name);
             $name = current(array_reverse($parts));
         }
-        $class = 'Bs_Storer_' . $name;
+        $class = 'Dc_Storer_' . $name;
         
         if(!include_once('Storer/' . $name . '.php')) {
             throw new Exception('Storer class file not found');
@@ -30,7 +30,7 @@ class Bs_Storer
             throw new Exception('Storer class undefined');
         }
         $storer = new $class($this->_dbh, $this->_logger);
-        if(!$storer instanceof Bs_Storer_Interface) {
+        if(!$storer instanceof Dc_Storer_Interface) {
             unset($storer);
             throw new Exception('Invalid storer instance');
         }

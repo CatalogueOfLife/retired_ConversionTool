@@ -1,5 +1,5 @@
 <?php
-abstract class Bs_Storer_Abstract
+abstract class Dc_Storer_Abstract
 {
     protected $_dbh;
     protected $_logger;
