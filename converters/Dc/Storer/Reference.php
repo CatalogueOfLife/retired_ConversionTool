@@ -3,14 +3,16 @@ require_once 'Interface.php';
 require_once 'Abstract.php';
 require_once 'model/Reference.php';
 
-class Dc_Storer_Reference extends Dc_Storer_Abstract
-    implements Dc_Storer_Interface
+class Bs_Storer_Reference extends Bs_Storer_Abstract
+    implements Bs_Storer_Interface
 {
     public function clear()
     {
-        $stmt = $this->_dbh->prepare('TRUNCATE `references`');
+        //Don't delete the content, you should be able to use it for multiple
+        //Loaders
+/*      $stmt = $this->_dbh->prepare('TRUNCATE `references`');
         $stmt->execute();
-        unset($stmt);
+        unset($stmt);*/
     }
     
     public function store(Model $reference)

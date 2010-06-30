@@ -2,8 +2,8 @@
 require_once 'Interface.php';
 require_once 'Abstract.php';
 
-class Dc_Storer_Distribution extends Dc_Storer_Abstract
-    implements Dc_Storer_Interface
+class Bs_Storer_Distribution extends Bs_Storer_Abstract
+    implements Bs_Storer_Interface
 {
 	protected $_query = 
 	   'INSERT INTO `distribution` (name_code, distribution) VALUES (?, ?)';
