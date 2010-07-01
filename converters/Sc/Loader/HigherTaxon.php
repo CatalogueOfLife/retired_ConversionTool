@@ -1,7 +1,7 @@
 <?php
 require_once 'Interface.php';
 require_once 'Abstract.php';
-require_once 'converters/Sc/Model/HigherTaxon.php';
+require_once 'converters/Sc/Model/ScToDc/HigherTaxon.php';
 
 class Sc_Loader_HigherTaxon extends Sc_Loader_Abstract
     implements Sc_Loader_Interface
@@ -38,7 +38,7 @@ class Sc_Loader_HigherTaxon extends Sc_Loader_Abstract
             
             $this->_logger->debug('Processing taxon ' . $taxon['taxonID']);
         
-            $higherTaxon = new Sc_Model_HigherTaxon();
+            $higherTaxon = new Sc_Model_ScToDc_HigherTaxon();
             
             $higherTaxon->$taxon['rank'] = $taxon['taxonName'];
             $parentId = $taxon['parent'];

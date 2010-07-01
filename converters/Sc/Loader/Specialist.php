@@ -1,7 +1,7 @@
 <?php
 require_once 'Interface.php';
 require_once 'Abstract.php';
-require_once 'model/Specialist.php';
+require_once 'model/ScToDc/Specialist.php';
 
 class Sc_Loader_Specialist extends Sc_Loader_Abstract
     implements Sc_Loader_Interface

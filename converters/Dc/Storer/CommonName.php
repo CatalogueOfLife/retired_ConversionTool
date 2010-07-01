@@ -1,8 +1,8 @@
 <?php
 require_once 'Interface.php';
 require_once 'Abstract.php';
-require_once 'model/CommonName.php';
-require_once 'model/Reference.php';
+require_once 'model/ScToDc/CommonName.php';
+require_once 'model/ScToDc/Reference.php';
 
 class Dc_Storer_CommonName extends Dc_Storer_Abstract
     implements Dc_Storer_Interface
