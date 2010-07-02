@@ -18,7 +18,7 @@ class Sc_Loader_CommonName extends Sc_Loader_Abstract
     {
         $stmt = $this->_dbh->prepare(
             'SELECT c.commonNamenumber AS nameCode,
-                    c.avcNameCode AS acceptedNameCode,                    
+                    s.taxonID AS acceptedNameCode,                    
                     c.vernName AS name,
                     c.language,
                     TRIM(TRAILING "#" FROM c.placeNames) AS country,
@@ -28,7 +28,9 @@ class Sc_Loader_CommonName extends Sc_Loader_Abstract
                     r.details AS refSource
             FROM CommonNameWithRefs c
             LEFT JOIN Reference r 
-            	ON c.commonNamenumber = r.commonNameWithRefsCode
+                ON c.commonNamenumber = r.commonNameWithRefsCode
+            LEFT JOIN StandardDataCache s
+                ON s.taxonCode = c.avcNameCode
             GROUP BY c.commonNamenumber
             LIMIT :offset, :limit'
         );
