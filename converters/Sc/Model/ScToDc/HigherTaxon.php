@@ -1,7 +1,7 @@
 <?php
-require_once 'model/HigherTaxon.php';
+require_once 'model/ScToDc/HigherTaxon.php';
 
-class Sc_Model_HigherTaxon extends HigherTaxon
+class Sc_Model_ScToDc_HigherTaxon extends HigherTaxon
 {
     public $isAcceptedName = 1;
     

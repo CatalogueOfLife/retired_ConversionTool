@@ -1,7 +1,7 @@
 <?php
 require_once 'Interface.php';
 require_once 'Abstract.php';
-require_once 'model/Distribution.php';
+require_once 'model/ScToDc/Distribution.php';
 
 class Sc_Loader_Distribution extends Sc_Loader_Abstract
     implements Sc_Loader_Interface

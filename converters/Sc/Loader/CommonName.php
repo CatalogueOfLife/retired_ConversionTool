@@ -1,8 +1,8 @@
 <?php
 require_once 'Interface.php';
 require_once 'Abstract.php';
-require_once 'converters/Sc/Model/CommonName.php';
-require_once 'model/Reference.php';
+require_once 'converters/Sc/Model/ScToDc/CommonName.php';
+require_once 'model/ScToDc/Reference.php';
 
 class Sc_Loader_CommonName extends Sc_Loader_Abstract
     implements Sc_Loader_Interface
@@ -38,7 +38,7 @@ class Sc_Loader_CommonName extends Sc_Loader_Abstract
         $stmt->bindParam('limit', $limit, PDO::PARAM_INT);
         $stmt->execute();
         $commonNames = array();
-        while($cn = $stmt->fetchObject('Sc_Model_CommonName')) {
+        while($cn = $stmt->fetchObject('Sc_Model_ScToDc_CommonName')) {
             $cn->databaseId = Dictionary::get(
             	'dbs', $this->getDatabaseNameFromNameCode($cn->nameCode)
             );

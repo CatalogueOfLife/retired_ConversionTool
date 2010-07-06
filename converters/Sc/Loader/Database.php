@@ -1,7 +1,7 @@
 <?php
 require_once 'Interface.php';
 require_once 'Abstract.php';
-require_once 'model/Database.php';
+require_once 'model/ScToDc/Database.php';
 
 class Sc_Loader_Database extends Sc_Loader_Abstract
     implements Sc_Loader_Interface

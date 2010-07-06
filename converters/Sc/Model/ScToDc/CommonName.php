@@ -1,7 +1,7 @@
 <?php
-require_once 'model/CommonName.php';
+require_once 'model/ScToDc/CommonName.php';
 
-class Sc_Model_CommonName extends CommonName
+class Sc_Model_ScToDc_CommonName extends CommonName
 {   
     public $refYear;
     public $refAuthor;

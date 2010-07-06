@@ -1,7 +1,7 @@
 <?php
 require_once 'Interface.php';
 require_once 'Abstract.php';
-require_once 'converters/Sc/Model/Taxon.php';
+require_once 'converters/Sc/Model/ScToDc/Taxon.php';
 
 class Sc_Loader_Taxon extends Sc_Loader_Abstract implements Sc_Loader_Interface
 {
@@ -40,7 +40,7 @@ class Sc_Loader_Taxon extends Sc_Loader_Abstract implements Sc_Loader_Interface
         
         $taxa = array();
         
-        while($taxon = $stmt->fetchObject('Sc_Model_Taxon')) {
+        while($taxon = $stmt->fetchObject('Sc_Model_ScToDc_Taxon')) {
             $taxon->databaseId = Dictionary::get('dbs', $taxon->databaseName);
             $specialistId = Dictionary::get(
                 'specialists', $taxon->specialistName
