@@ -18,7 +18,7 @@ class Sc_Loader_CommonName extends Sc_Loader_Abstract
     {
         $stmt = $this->_dbh->prepare(
             'SELECT c.commonNamenumber AS nameCode,
-                    s.taxonID AS acceptedNameCode,                    
+                    s.taxonCode AS acceptedNameCode,                    
                     c.vernName AS name,
                     c.language,
                     TRIM(TRAILING "#" FROM c.placeNames) AS country,

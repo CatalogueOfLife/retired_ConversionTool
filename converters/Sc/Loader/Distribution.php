@@ -20,7 +20,7 @@ class Sc_Loader_Distribution extends Sc_Loader_Abstract
     public function load($offset, $limit)
     {
         $stmt = $this->_dbh->prepare(
-            'SELECT t1.placeName AS distribution, t2.taxonid AS nameCode
+            'SELECT t1.placeName AS distribution, t2.taxonCode AS nameCode
             FROM PlaceNames t1, StandardDataCache t2 
             WHERE t1.avcNameCode = t2.taxoncode
             LIMIT :offset, :limit'

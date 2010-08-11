@@ -8,9 +8,7 @@ class Sc_Loader_Taxon extends Sc_Loader_Abstract implements Sc_Loader_Interface
     public function count()
     {
     	$stmt = $this->_dbh->prepare(
-            'SELECT COUNT(1)
-            FROM `Type1Cache` t1
-            LEFT JOIN `StandardDataCache` t2 ON t1.TaxonCode = t2.taxonID'
+            'SELECT COUNT(1) FROM `StandardDataCache`'
         );
         $stmt->execute();
         $res = $stmt->fetchColumn(0);
@@ -28,7 +26,7 @@ class Sc_Loader_Taxon extends Sc_Loader_Abstract implements Sc_Loader_Interface
     public function load($offset, $limit)
     {
         $stmt = $this->_dbh->prepare(
-            self::SQL_TYPE1CACHE . 
+            self::SQL_STANDARDDATACACHE . 
             ' UNION ' . 
             self::SQL_SYNONYMWITHREFS .  
             ' LIMIT :offset, :limit'
@@ -67,20 +65,20 @@ class Sc_Loader_Taxon extends Sc_Loader_Abstract implements Sc_Loader_Interface
     const SQL_SYNONYMWITHREFS = "        
         (SELECT
             t1.synonymCode AS nameCode,
-            t2.datalink AS webSite,
+            t2.dataLink AS webSite,
             t1.genus,
-            t1.specificepithet AS species,
-            t1.infraspecificepithet AS infraspecies,
-            t1.infraspecificmarker AS infraspeciesMarker,
+            t1.specificEpithet AS species,
+            t1.infraspecificEpithet AS infraspecies,
+            t1.infraspecificMarker AS infraspeciesMarker,
             t1.authority AS author,
             t1.avcNameCode AS acceptedNameCode,
             t2.`comment`,
             t2.taxonCode,
-            IF (t2.scrutinyyear > 0,
+            IF (t2.scrutinyYear > 0,
                CONCAT(
-                   t2.scrutinyday, '-',
-                   t2.scrutinymonth, '-',
-                   t2.scrutinyyear
+                   t2.scrutinyDay, '-',
+                   t2.scrutinyMonth, '-',
+                   t2.scrutinyYear
                    ), NULL)
                AS scrutinyDate,
             CASE t1.synonymStatus
@@ -96,40 +94,38 @@ class Sc_Loader_Taxon extends Sc_Loader_Abstract implements Sc_Loader_Interface
             IF (t1.synonymStatus = 'accepted' OR t1.synonymStatus = 'provisional', 1, 0)
                 AS isAcceptedName
             FROM `SynonymWithRefs` t1
-            INNER JOIN `StandardDataCache` t2 ON t1.avcNameCode = t2.taxonCode
-            GROUP BY nameCode)        
+            INNER JOIN `StandardDataCache` t2 ON t1.avcNameCode = t2.taxonCode)        
     "; 
-    const SQL_TYPE1CACHE = "
+    const SQL_STANDARDDATACACHE = "
         (SELECT
-            t1.taxoncode AS nameCode,
-            t2.datalink AS webSite,
-            t1.genus,
-            t1.specificepithet AS species,
-            t1.infraspecificepithet AS infraspecies,
-            t1.infraspecificmarker AS infraspeciesMarker,
-            t1.authority AS author,
-            t1.taxoncode AS acceptedNameCode,
-            t2.`comment`,
-            t2.taxonCode,
-            IF (t2.scrutinyyear > 0,
-               CONCAT(
-                   t2.scrutinyday, '-',
-                   t2.scrutinymonth, '-',
-                   t2.scrutinyyear
-                   ), NULL)
-               AS scrutinyDate,
-            CASE t1.status
-                WHEN 'accepted' THEN 1
-                WHEN 'provisional' THEN 4
-                WHEN 'synonym' THEN 5
-                WHEN 'ambiguous' THEN 2
-                WHEN 'misapplied' THEN 3
-                END AS nameStatusId,
-            t1.source AS databaseName,
-            t2.scrutinyperson AS specialistName,
-            t2.family AS familyName,
-            IF (t1.status = 'accepted' OR t1.status = 'provisional', 1, 0)
-                AS isAcceptedName
-            FROM `Type1Cache` t1
-            LEFT JOIN `StandardDataCache` t2 ON t1.TaxonCode = t2.taxonID)";
+			taxonCode AS nameCode,
+			dataLink AS webSite,
+			genus,
+			specificEpithet AS species,
+			infraspecificEpithet AS infraspecies,
+			infraspecificMarker AS infraspeciesMarker,
+			authority AS author,
+			taxonCode AS acceptedNameCode,
+			`comment`,
+			taxonCode,
+			IF (scrutinyyear > 0,
+			   CONCAT(
+			       scrutinyday, '-',
+			       scrutinymonth, '-',
+			       scrutinyyear
+			       ), NULL)
+			   AS scrutinyDate,
+			CASE namestatus
+			    WHEN 'accepted' THEN 1
+			    WHEN 'provisional' THEN 4
+			    WHEN 'synonym' THEN 5
+			    WHEN 'ambiguous' THEN 2
+			    WHEN 'misapplied' THEN 3
+			    END AS nameStatusId,
+			gsdname AS databaseName,
+			scrutinyperson AS specialistName,
+			family AS familyName,
+			IF (namestatus = 'accepted' OR namestatus = 'provisional', 1, 0)
+			    AS isAcceptedName
+			FROM `StandardDataCache`)";
 }

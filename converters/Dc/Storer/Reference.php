@@ -15,14 +15,14 @@ class Dc_Storer_Reference extends Dc_Storer_Abstract
     
     public function store(Model $reference)
     {
-    	$this->_logger->debug('Trying to get reference with hash ' . $reference->getHash());
+    	//$this->_logger->debug('Trying to get reference with hash ' . $reference->getHash());
     	$refId = Dictionary::get('refs', $reference->getHash());
     	if($refId) {
-    		$this->_logger->debug('Got it! id is ' . $refId);
+    		//$this->_logger->debug('Got it! id is ' . $refId);
     		$reference->id = $refId;
     		return $reference;
     	}
-    	$this->_logger->debug('Not there, inserting');
+    	//$this->_logger->debug('Not there, inserting');
         $stmt = $this->_dbh->prepare(
             'INSERT INTO `references` 
             (author, year, title, source) VALUES (?, ?, ?, ?)'
@@ -35,7 +35,7 @@ class Dc_Storer_Reference extends Dc_Storer_Abstract
         );
         $reference->id = $this->_dbh->lastInsertId();
     	Dictionary::add('refs', $reference->getHash(), $reference->id);
-    	$this->_logger->debug('Added reference ' . $reference->id . ' with hash ' . $reference->getHash());
+    	//$this->_logger->debug('Added reference ' . $reference->id . ' with hash ' . $reference->getHash());
         return $reference;
     }
 }

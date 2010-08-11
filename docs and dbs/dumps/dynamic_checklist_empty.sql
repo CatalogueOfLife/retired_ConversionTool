@@ -179,7 +179,7 @@ CREATE TABLE `scientific_names` (
   `infraspecies` varchar(50) DEFAULT '',
   `infraspecies_marker` varchar(50) DEFAULT NULL,
   `author` varchar(100) DEFAULT NULL,
-  `accepted_name_code` varchar(36) DEFAULT NULL,
+  `accepted_name_code` varchar(50) DEFAULT NULL,
   `comment` longtext,
   `scrutiny_date` text,
   `sp2000_status_id` int(1) DEFAULT NULL,
