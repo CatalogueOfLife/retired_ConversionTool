@@ -23,6 +23,7 @@ class Ac_Loader_Database extends Ac_Loader_Abstract
             'taxa AS groupNameInEnglish, '.
             'authors_editors AS authorsAndEditors, '.
             'release_date AS releaseDate, '.
+            'organization AS organisation, '.
             'abstract, ' .
             'web_site AS uri,' .
 	        'version FROM `databases`'

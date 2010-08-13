@@ -6,14 +6,9 @@
 </head>
 <body style="font: 12px verdana;">
 <h3>Annual Checklist to Base Scheme</h3>
-<?php
-// Some settings to always flush and avoid timeouts...
-@ini_set('zlib.output_compression', 0);
-@ini_set('implicit_flush', 1);
-for ($i = 0; $i < ob_get_level(); $i++) { ob_end_flush(); }
-ob_implicit_flush(1);
-set_time_limit(0);
 
+<?php
+alwaysFlush();
 set_include_path('library' . PATH_SEPARATOR . get_include_path());
 
 require_once 'DbHandler.php';
@@ -24,8 +19,6 @@ require_once 'Zend/Log/Writer/Stream.php';
 require_once 'Zend/Log.php';
 require_once 'Indicator.php';
 
-$db_sql = file_get_contents();
-   
 /**
  * Logger initialization
  */
@@ -51,10 +44,8 @@ foreach ($config as $k => $v) {
     }
     DbHandler::createInstance($k, $v, $o);
 }
-
 $loader = new Ac_Loader(DbHandler::getInstance('source'), $logger);
 $storer = new Bs_Storer(DbHandler::getInstance('target'), $logger, $ind);
-
 
 // Databases
 $ind->init($loader->count('Database'));
@@ -152,6 +143,14 @@ for ($offset = 0; $offset < $total; $offset += $limit) {
     }
 }
 echo '<br>Done!' . '</p>';
+
+function alwaysFlush() {
+	@ini_set('zlib.output_compression', 0);
+	@ini_set('implicit_flush', 1);
+	for ($i = 0; $i < ob_get_level(); $i++) { ob_end_flush(); }
+	ob_implicit_flush(1);
+	set_time_limit(0);
+}
 ?>
 </body>
 </html>

@@ -9,8 +9,11 @@ class Bs_Storer_Database extends Bs_Storer_Abstract
 {
     public function clear()
     {
-        $stmt = $this->_dbh->prepare('TRUNCATE `source_database`');
-        $stmt->execute();
+        $tables = array('uri_to_source_database', 'source_database');
+        foreach ($tables as $table) {
+            $stmt = $this->_dbh->prepare('DELETE FROM `'.$table.'`');
+            $stmt->execute();
+        }
         unset($stmt);
     }
     
@@ -39,12 +42,8 @@ class Bs_Storer_Database extends Bs_Storer_Abstract
         if ($db->uri != "") {
             $uri = new Uri();
             $uri->resourceIdentifier = $db->uri;
-            echo '<pre>';
-            print_r($uri);
-            echo '</pre>';
-            
             $storer = new Bs_Storer_Uri($this->_dbh, $this->_logger);
-            $henk = $storer->store($uri);
+            $uri = $storer->store($uri);
             $db->uriId = $uri->id;
             unset($storer, $uri);
             

@@ -7,17 +7,17 @@ class Bs_Storer_Uri extends Bs_Storer_Abstract
 {
     public function clear()
     {
-        $tables = array('uri_to_source_database', 'uri');
+    	$tables = array('uri');
     	foreach ($tables as $table) {
-	        $stmt = $this->_dbh->prepare('TRUNCATE `'.$table.'`');
+	        $stmt = $this->_dbh->prepare('DELETE FROM `'.$table.'`');
 	        $stmt->execute();
-	        unset($stmt);
     	}
-     }
+     	unset($stmt);
+    }
     
     public function store(Model $uri)
     {
-    	$uri->uriSchemeId = $this->_getUriSchemeId();
+    	$uri->uriSchemeId = $this->_getUriSchemeId($uri->resourceIdentifier);
         $uriId = $this->recordExists('id', 'uri', array(
             'resource_identifier' => $uri->resourceIdentifier,
             'uri_scheme_id' => $uri->uriSchemeId)
@@ -38,12 +38,12 @@ class Bs_Storer_Uri extends Bs_Storer_Abstract
         return $uri;
     }
    
-    private function _getUriSchemeId() 
+    private function _getUriSchemeId($resourceIdentifier) 
     {
-        $pos = strstr($uri->resourceIdentifier, '://');
+        $pos = strpos($resourceIdentifier, '://');
         if ($pos) {
-            $scheme = substr($uri->resourceIdentifier, 0, $pos);
-            if ($schemeId = $this->_getUriSchemeIdByProtocol($scheme)) {
+        	$scheme = substr($resourceIdentifier, 0, $pos);
+        	if ($schemeId = $this->_getUriSchemeIdByScheme($scheme)) {
                 return $schemeId;
             }
         }
