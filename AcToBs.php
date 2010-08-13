@@ -1,3 +1,11 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=utf-8">
+	<title>Annual Checklist to Base Scheme</title>
+</head>
+<body style="font: 12px verdana;">
+<h3>Annual Checklist to Base Scheme</h3>
 <?php
 // Some settings to always flush and avoid timeouts...
 @ini_set('zlib.output_compression', 0);
@@ -10,11 +18,13 @@ set_include_path('library' . PATH_SEPARATOR . get_include_path());
 
 require_once 'DbHandler.php';
 require_once 'Dictionary.php';
-require_once 'converters/Sc/Loader.php';
-require_once 'converters/Dc/Storer.php';
+require_once 'converters/Ac/Loader.php';
+require_once 'converters/Bs/Storer.php';
 require_once 'Zend/Log/Writer/Stream.php';
 require_once 'Zend/Log.php';
 require_once 'Indicator.php';
+
+$db_sql = file_get_contents();
    
 /**
  * Logger initialization
@@ -41,31 +51,23 @@ foreach ($config as $k => $v) {
     }
     DbHandler::createInstance($k, $v, $o);
 }
-// initialize loader (Sc - SPICE) and storer (Dc - Dynamic Checklist)
-$loader = new Sc_Loader(DbHandler::getInstance('source'), $logger);
-$storer = new Dc_Storer(DbHandler::getInstance('target'), $logger, $ind);
 
+$loader = new Ac_Loader(DbHandler::getInstance('source'), $logger);
+$storer = new Bs_Storer(DbHandler::getInstance('target'), $logger, $ind);
 
-
-
-/**
- * Conversion
- */
-// Clear references
-
-
-$storer->clear('Reference');
 
 // Databases
 $ind->init($loader->count('Database'));
 echo '<p>Transferring databases<br>';
 $storer->clear('Database');
+$storer->clear('Uri');
 $dbs = $loader->load('Database');
 foreach($dbs as $db) {
     $storer->store($db);
-    Dictionary::add('dbs', $db->name, $db->id);
 }
 echo '<br>Done!</p>';
+
+die('O wat goed!');
 
 // Specialists
 $ind->init($loader->count('Specialist'));
@@ -150,3 +152,6 @@ for ($offset = 0; $offset < $total; $offset += $limit) {
     }
 }
 echo '<br>Done!' . '</p>';
+?>
+</body>
+</html>

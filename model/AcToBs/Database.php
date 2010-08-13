@@ -5,13 +5,14 @@ class Database implements Model
 {
     public $id;
     public $name;
-    public $fullName;
-    public $shortName;
-    public $url;
-    public $organization;
+    public $abbreviatedName;
+    public $groupNameInEnglish;
+    public $authorsAndEditors;
+    public $organisation;
     public $contactPerson;
     public $abstract;
     public $version;
     public $releaseDate;
-    public $authorsAndEditors;
+    public $uri;
+    public $uriId;
 }
