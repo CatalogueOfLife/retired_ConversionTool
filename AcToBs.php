@@ -15,8 +15,8 @@ require_once 'DbHandler.php';
 require_once 'Dictionary.php';
 require_once 'converters/Ac/Loader.php';
 require_once 'converters/Bs/Storer.php';
-require_once 'Zend/Log/Writer/Stream.php';
-require_once 'Zend/Log.php';
+require_once 'library/Zend/Log/Writer/Stream.php';
+require_once 'library/Zend/Log.php';
 require_once 'Indicator.php';
 
 /**
@@ -25,7 +25,6 @@ require_once 'Indicator.php';
 $writer = new Zend_Log_Writer_Stream('logs/conversion.log');
 $writer->addFilter(Zend_Log::WARN);
 $logger = new Zend_Log($writer);
-
 $ind = new Indicator();
 
 /**
@@ -48,13 +47,34 @@ $loader = new Ac_Loader(DbHandler::getInstance('source'), $logger);
 $storer = new Bs_Storer(DbHandler::getInstance('target'), $logger, $ind);
 
 // Databases
-$ind->init($loader->count('Database'));
 echo '<p>Transferring databases<br>';
 $storer->clear('Database');
 $storer->clear('Uri');
+$ind->init($loader->count('Database'));
 $dbs = $loader->load('Database');
 foreach($dbs as $db) {
     $storer->store($db);
+}
+echo '<br>Done!</p>';
+
+// Higher Taxa
+echo '<p>Preparing higher taxa...<br>';
+$storer->clear('HigherTaxon');
+$total = $loader->count('HigherTaxon');
+$ind->init($total);
+echo "Transferring $total higher taxa<br>";
+
+for ($limit = 1000, $offset = 0; $offset < $total; $offset += $limit) {    
+    try {
+        $taxa = $loader->load('HigherTaxon', $offset, $limit);
+//echo '<pre>'; print_r($taxa); echo '</pre>'; 
+        foreach($taxa as $taxon) {
+        	$storer->store($taxon);
+        }
+        unset($taxa);
+    } catch (PDOException $e) {
+        $logger->warn('Store query failed: ' . $e->getMessage());
+    }
 }
 echo '<br>Done!</p>';
 
@@ -71,24 +91,6 @@ foreach($specialists as $specialist) {
 }
 echo '<br>Done!</p>';
 
-// Higher Taxa
-$total = $loader->count('HigherTaxon');
-$ind->init($total);
-echo "<p>Transferring $total higher taxa<br>";
-$storer->clear('HigherTaxon');
-
-for ($limit = 1000, $offset = 0; $offset < $total; $offset += $limit) {    
-    try {
-        $taxa = $loader->load('HigherTaxon', $offset, $limit);
-        foreach($taxa as $taxon) {
-            $storer->store($taxon);
-        }
-        unset($taxa);
-    } catch (PDOException $e) {
-        $logger->warn('Store query failed: ' . $e->getMessage());
-    }
-}
-echo '<br>Done!</p>';
 
 // Taxa
 $total = $loader->count('Taxon');

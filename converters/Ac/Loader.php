@@ -36,6 +36,6 @@ class Ac_Loader
     
     public function count($what)
     {
-        return $this->_getLoader($what)->count();
+         return $this->_getLoader($what)->count();
     }
 }

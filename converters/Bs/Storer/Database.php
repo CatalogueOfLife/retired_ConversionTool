@@ -9,12 +9,11 @@ class Bs_Storer_Database extends Bs_Storer_Abstract
 {
     public function clear()
     {
-        $tables = array('uri_to_source_database', 'source_database');
-        foreach ($tables as $table) {
-            $stmt = $this->_dbh->prepare('DELETE FROM `'.$table.'`');
-            $stmt->execute();
-        }
-        unset($stmt);
+        // Clear uri_to_taxon already at this stage; otherwise an
+        // Integrity constraint violation will be thrown
+        $this->_clearTables(array
+            ('uri_to_source_database', 'uri_to_taxon', 'source_database')
+        );
     }
     
     public function store(Model $db)
@@ -44,17 +43,16 @@ class Bs_Storer_Database extends Bs_Storer_Abstract
             $uri->resourceIdentifier = $db->uri;
             $storer = new Bs_Storer_Uri($this->_dbh, $this->_logger);
             $uri = $storer->store($uri);
-            $db->uriId = $uri->id;
-            unset($storer, $uri);
-            
-	        $stmt = $this->_dbh->prepare(
+
+            $stmt = $this->_dbh->prepare(
 	            'INSERT INTO `uri_to_source_database` (uri_id, '.
 	            'source_database_id) VALUES (?, ?)'
 	        );
 	        $stmt->execute(array(
-	            $db->uriId,
+	            $uri->id,
 	            $db->id)
 	        );
+            unset($storer, $uri);
         }
         
         return $db;

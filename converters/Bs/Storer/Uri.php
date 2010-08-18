@@ -7,18 +7,17 @@ class Bs_Storer_Uri extends Bs_Storer_Abstract
 {
     public function clear()
     {
-    	$tables = array('uri');
-    	foreach ($tables as $table) {
-	        $stmt = $this->_dbh->prepare('DELETE FROM `'.$table.'`');
-	        $stmt->execute();
-    	}
-     	unset($stmt);
+    	$this->_clearTables(array('uri'));
     }
     
     public function store(Model $uri)
     {
-    	$uri->uriSchemeId = $this->_getUriSchemeId($uri->resourceIdentifier);
-        $uriId = $this->recordExists('id', 'uri', array(
+    	if ($uri->uriSchemeId == '') {
+    	    $uri->uriSchemeId = $this->_getUriSchemeId(
+    	        $uri->resourceIdentifier
+    	    );
+    	}
+        $uriId = $this->_recordExists('id', 'uri', array(
             'resource_identifier' => $uri->resourceIdentifier,
             'uri_scheme_id' => $uri->uriSchemeId)
         );
@@ -38,27 +37,35 @@ class Bs_Storer_Uri extends Bs_Storer_Abstract
         return $uri;
     }
    
+    public function getUriSchemeIdByScheme($scheme) 
+    {
+        if ($id = Dictionary::get('uri_scheme', $scheme)) {
+            return $id;
+        }
+        $stmt = $this->_dbh->prepare(
+           'SELECT id FROM `uri_scheme` WHERE scheme = ?'
+        );
+        $result = $stmt->execute(array($scheme));
+        if ($result && $stmt->rowCount() == 1) {
+            $id = $stmt->fetchColumn(0);
+            Dictionary::add('uri_scheme', $scheme, $id);
+            return $id;
+        }
+        throw new Exception('Could not get scheme id for '.$scheme);
+        return false;
+    }
+    
     private function _getUriSchemeId($resourceIdentifier) 
     {
         $pos = strpos($resourceIdentifier, '://');
         if ($pos) {
         	$scheme = substr($resourceIdentifier, 0, $pos);
-        	if ($schemeId = $this->_getUriSchemeIdByScheme($scheme)) {
+        	if ($schemeId = $this->getUriSchemeIdByScheme($scheme)) {
                 return $schemeId;
             }
         }
         // Assume url is web link when lookup fails
-        return $this->_getUriSchemeIdByScheme('http');
+        return $this->getUriSchemeIdByScheme('http');
     }
     
-    private function _getUriSchemeIdByScheme($scheme) 
-    {
-       $stmt = $this->_dbh->prepare(
-           'SELECT id FROM `uri_scheme` WHERE scheme = ?'
-       );
-       if ($stmt->execute(array($scheme)) && $stmt->rowCount() == 1) {
-           return $stmt->fetchColumn(0);
-       }
-       return false;
-    }
 }

@@ -1,0 +1,123 @@
+<?php
+require_once 'Interface.php';
+require_once 'Abstract.php';
+
+class Bs_Storer_HigherTaxon extends Bs_Storer_Abstract
+    implements Bs_Storer_Interface
+{
+	public function clear()
+    {
+    	$this->_clearTables(array(
+            'taxon_name_element', 'scientific_name_element', 
+            'uri_to_taxon', 'taxon')
+        );
+    }
+    
+    public function store(Model $taxon)
+    {
+//$this->printObject($taxon);
+    	// Source database id is NULL for all higher taxa
+        $taxon->sourceDatabaseId = NULL;
+    	$this->_setTaxonomicRankId($taxon);
+        $this->_setTaxon($taxon);
+    	$this->_setScientificNameElement($taxon);
+        $this->_setTaxonNameElement($taxon);
+        $this->_setTaxonLsid($taxon);
+    }
+    
+    protected function _setTaxonomicRankId(Model $taxon) 
+    {
+        if ($id = Dictionary::get('ranks', $taxon->taxonomicRank)) {
+        	$taxon->taxonomicRankId = $id;
+        	return $taxon;
+        }
+        $stmt = $this->_dbh->prepare(
+            'SELECT id FROM `taxonomic_rank` WHERE `rank` = ?'
+        );
+        $result = $stmt->execute(array($taxon->taxonomicRank));
+        if ($result && $stmt->rowCount() == 1) {
+            $id = $stmt->fetchColumn(0);
+            Dictionary::add('ranks', $taxon->taxonomicRank, $id);
+            $taxon->taxonomicRankId = $id;
+            return $taxon;
+        }
+        throw new Exception('Taxonomic rank id could not be set!');
+        return false;
+    }
+    
+    protected function _setScientificNameElement(Model $taxon) 
+    {
+        // All names are stored in lower case
+        $name = strtolower($taxon->name);
+        $stmt = $this->_dbh->prepare(
+            'SELECT id FROM `scientific_name_element` WHERE `name_element` = ?'
+        );
+        $result = $stmt->execute(array($name));
+        if ($result && $stmt->rowCount() == 1) {
+            $name_element_id =  $stmt->fetchColumn(0);
+        } else {
+            $stmt = $this->_dbh->prepare(
+                'INSERT INTO `scientific_name_element` '.
+                '(`name_element`) VALUE (?)'
+            );
+            $stmt->execute(array($name));
+            $name_element_id =  $this->_dbh->lastInsertId();
+        }
+        if (isset($name_element_id)) {
+            $taxon->nameElementId = $name_element_id;
+            return $taxon;
+        }
+        throw new Exception('Scientific name element could not be set!');
+        return false;
+    }
+    
+    protected function _setTaxon(Model $taxon)
+    {
+        $stmt = $this->_dbh->prepare(
+            'INSERT INTO `taxon` (`id`, `taxonomic_rank_id`, '.
+            '`source_database_id`) VALUES (?, ?, ?)'
+        );
+        $stmt->execute(array(
+            $taxon->id,
+            $taxon->taxonomicRankId,
+            $taxon->sourceDatabaseId)
+        );
+        return $taxon;
+    }
+    
+    protected function _setTaxonNameElement(Model $taxon) 
+    {
+        if ($taxon->parentId == '' || $taxon->parentId == 0) {
+            $taxon->parentId = NULL;
+        }
+        $stmt = $this->_dbh->prepare(
+            'INSERT INTO `taxon_name_element` (`taxon_id`, '.
+            '`scientific_name_element_id`, `parent_id`) VALUES (?, ?, ?)'
+        );
+        $stmt->execute(array(
+           $taxon->id, $taxon->nameElementId, $taxon->parentId
+           )
+        );
+        return $taxon;
+    }
+
+    protected function _setTaxonLsid(Model $taxon)
+    {
+		require_once 'model/AcToBs/Uri.php';
+		require_once 'converters/Bs/Storer/Uri.php';
+    	$uri = new Uri();
+        $uri->resourceIdentifier = $taxon->lsid;
+    	$storer = new Bs_Storer_Uri($this->_dbh, $this->_logger);
+        $uri->uriSchemeId = $storer->getUriSchemeIdByScheme('lsid');
+        $storer->store($uri);
+        
+        $stmt = $this->_dbh->prepare(
+            'INSERT INTO `uri_to_taxon` (uri_id, taxon_id) VALUES (?, ?)'
+        );
+        $stmt->execute(array(
+            $uri->id,
+            $taxon->id)
+        );
+        unset($storer, $uri);
+    }
+}

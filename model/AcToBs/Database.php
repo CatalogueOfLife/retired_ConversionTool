@@ -14,5 +14,4 @@ class Database implements Model
     public $version;
     public $releaseDate;
     public $uri;
-    public $uriId;
 }

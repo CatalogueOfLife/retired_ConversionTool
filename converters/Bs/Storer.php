@@ -46,7 +46,7 @@ class Bs_Storer
     	$storer = $this->_getStorer(get_class($object), true);   	
         $res = $storer->store($object);
         $this->_indicator->iterate();
-        return $res;        
+        return $res;
     }
     
     public function storeAll(array $arr)
