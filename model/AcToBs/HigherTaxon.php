@@ -8,5 +8,5 @@ class HigherTaxon implements Model
     public $name;
     public $lsid;
     public $parentId;
-    public $databaseId;
+    public $sourceDatabaseId = NULL;
 }

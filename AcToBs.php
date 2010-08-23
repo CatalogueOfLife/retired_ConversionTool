@@ -46,28 +46,28 @@ foreach ($config as $k => $v) {
 $loader = new Ac_Loader(DbHandler::getInstance('source'), $logger);
 $storer = new Bs_Storer(DbHandler::getInstance('target'), $logger, $ind);
 
+echo '<p>Deleting old data...<br>';
+$storer->clearDb();
+echo 'Done!</p>';
+
 // Databases
 echo '<p>Transferring databases<br>';
-$storer->clear('Database');
-$storer->clear('Uri');
 $ind->init($loader->count('Database'));
 $dbs = $loader->load('Database');
 foreach($dbs as $db) {
     $storer->store($db);
 }
 echo '<br>Done!</p>';
+/*
 
 // Higher Taxa
 echo '<p>Preparing higher taxa...<br>';
-$storer->clear('HigherTaxon');
 $total = $loader->count('HigherTaxon');
 $ind->init($total);
 echo "Transferring $total higher taxa<br>";
-
 for ($limit = 1000, $offset = 0; $offset < $total; $offset += $limit) {    
     try {
         $taxa = $loader->load('HigherTaxon', $offset, $limit);
-//echo '<pre>'; print_r($taxa); echo '</pre>'; 
         foreach($taxa as $taxon) {
         	$storer->store($taxon);
         }
@@ -77,8 +77,27 @@ for ($limit = 1000, $offset = 0; $offset < $total; $offset += $limit) {
     }
 }
 echo '<br>Done!</p>';
+*/
 
-die('O wat goed!');
+// Taxa
+echo '<p>Preparing species and infraspecies...<br>';
+//$total = $loader->count('Taxon');
+$total = 10;
+$ind->init($total);
+echo "Transferring $total taxa<br>";
+for ($limit = 1000, $offset = 0; $offset < $total; $offset += $limit) {    
+    try {
+        $taxa = $loader->load('Taxon', $offset, $limit);
+        foreach($taxa as $taxon) {
+            $storer->store($taxon);
+        }
+        unset($taxa);
+    } catch (PDOException $e) {
+        $logger->warn('Store query failed: ' . $e->getMessage());
+    }
+}
+echo '<br>Done!</p>';
+die('script stopped');
 
 // Specialists
 $ind->init($loader->count('Specialist'));

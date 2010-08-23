@@ -7,6 +7,18 @@ class Bs_Storer
     protected $_logger;
     protected $_indicator;
     
+    // Tables cannot be cleared one-by-one as with Spicecache database
+    // Order of truncation is determined by order in $dbTables array below
+    private static $dbTables = array(
+        'distribution_free_text', 'region_free_text', 'taxon_detail', 
+        'scrutiny', 'specialist', 
+        'author_string', 'taxon_name_element', 
+        'scientific_name_element', 'uri_to_taxon', 'reference_to_taxon',
+        'reference', 'uri_to_source_database', 
+        'uri_to_taxon', 'uri', 'taxon', 
+        'source_database'
+    );
+    
     public function __construct(PDO $dbh, Zend_Log $logger, Indicator $indicator)
     {
         $this->_dbh = $dbh;
@@ -41,6 +53,19 @@ class Bs_Storer
         return $this->_getStorer($what)->clear();
     }
     
+    public function clearDb()
+    {
+        foreach (self::$dbTables as $table) {
+            $stmt = $this->_dbh->prepare('TRUNCATE `'.$table.'`');
+            $stmt->execute();
+            $stmt = $this->_dbh->prepare(
+                'ALTER TABLE `'.$table.'` AUTO_INCREMENT = 1'
+            );
+            $stmt->execute();
+        }
+        unset($stmt);
+    }
+    
     public function store(Model $object)
     {
     	$storer = $this->_getStorer(get_class($object), true);   	
@@ -57,7 +82,7 @@ class Bs_Storer
         $storer = $this->_getStorer(get_class($arr[0]), true);      
         $res = $storer->storeAll($arr);
         unset($arr);
-        $this->_indicator->iterate();        
+        $this->_indicator->iterate();
         return $res;
     }
 }

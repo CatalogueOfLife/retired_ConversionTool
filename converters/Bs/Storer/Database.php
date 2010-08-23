@@ -7,15 +7,6 @@ require_once 'converters/Bs/Storer/Uri.php';
 class Bs_Storer_Database extends Bs_Storer_Abstract
     implements Bs_Storer_Interface
 {
-    public function clear()
-    {
-        // Clear uri_to_taxon already at this stage; otherwise an
-        // Integrity constraint violation will be thrown
-        $this->_clearTables(array
-            ('uri_to_source_database', 'uri_to_taxon', 'source_database')
-        );
-    }
-    
     public function store(Model $db)
     {
         $stmt = $this->_dbh->prepare(
@@ -42,7 +33,7 @@ class Bs_Storer_Database extends Bs_Storer_Abstract
             $uri = new Uri();
             $uri->resourceIdentifier = $db->uri;
             $storer = new Bs_Storer_Uri($this->_dbh, $this->_logger);
-            $uri = $storer->store($uri);
+            $storer->store($uri);
 
             $stmt = $this->_dbh->prepare(
 	            'INSERT INTO `uri_to_source_database` (uri_id, '.

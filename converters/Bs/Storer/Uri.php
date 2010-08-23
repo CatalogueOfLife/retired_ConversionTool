@@ -5,11 +5,6 @@ require_once 'Abstract.php';
 class Bs_Storer_Uri extends Bs_Storer_Abstract
     implements Bs_Storer_Interface
 {
-    public function clear()
-    {
-    	$this->_clearTables(array('uri'));
-    }
-    
     public function store(Model $uri)
     {
     	if ($uri->uriSchemeId == '') {

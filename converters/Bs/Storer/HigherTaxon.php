@@ -5,20 +5,11 @@ require_once 'Abstract.php';
 class Bs_Storer_HigherTaxon extends Bs_Storer_Abstract
     implements Bs_Storer_Interface
 {
-	public function clear()
-    {
-    	$this->_clearTables(array(
-            'taxon_name_element', 'scientific_name_element', 
-            'uri_to_taxon', 'taxon')
-        );
-    }
-    
     public function store(Model $taxon)
     {
 //$this->printObject($taxon);
     	// Source database id is NULL for all higher taxa
-        $taxon->sourceDatabaseId = NULL;
-    	$this->_setTaxonomicRankId($taxon);
+        $this->_setTaxonomicRankId($taxon);
         $this->_setTaxon($taxon);
     	$this->_setScientificNameElement($taxon);
         $this->_setTaxonNameElement($taxon);
@@ -45,6 +36,21 @@ class Bs_Storer_HigherTaxon extends Bs_Storer_Abstract
         return false;
     }
     
+    protected function _setTaxon(Model $taxon)
+    {
+        $stmt = $this->_dbh->prepare(
+            'INSERT INTO `taxon` (`id`, `taxonomic_rank_id`, '.
+            '`source_database_id`, `original_id`) VALUES (?, ?, ?, ?)'
+        );
+        $stmt->execute(array(
+            $taxon->id,
+            $taxon->taxonomicRankId,
+            $taxon->sourceDatabaseId,
+            $taxon->originalId)
+        );
+        return $taxon;
+    }
+    
     protected function _setScientificNameElement(Model $taxon) 
     {
         // All names are stored in lower case
@@ -54,35 +60,21 @@ class Bs_Storer_HigherTaxon extends Bs_Storer_Abstract
         );
         $result = $stmt->execute(array($name));
         if ($result && $stmt->rowCount() == 1) {
-            $name_element_id =  $stmt->fetchColumn(0);
+            $nameElementId =  $stmt->fetchColumn(0);
         } else {
             $stmt = $this->_dbh->prepare(
                 'INSERT INTO `scientific_name_element` '.
                 '(`name_element`) VALUE (?)'
             );
             $stmt->execute(array($name));
-            $name_element_id =  $this->_dbh->lastInsertId();
+            $nameElementId =  $this->_dbh->lastInsertId();
         }
-        if (isset($name_element_id)) {
-            $taxon->nameElementId = $name_element_id;
+        if (isset($nameElementId)) {
+            $taxon->nameElementIds[] = $nameElementId;
             return $taxon;
         }
         throw new Exception('Scientific name element could not be set!');
         return false;
-    }
-    
-    protected function _setTaxon(Model $taxon)
-    {
-        $stmt = $this->_dbh->prepare(
-            'INSERT INTO `taxon` (`id`, `taxonomic_rank_id`, '.
-            '`source_database_id`) VALUES (?, ?, ?)'
-        );
-        $stmt->execute(array(
-            $taxon->id,
-            $taxon->taxonomicRankId,
-            $taxon->sourceDatabaseId)
-        );
-        return $taxon;
     }
     
     protected function _setTaxonNameElement(Model $taxon) 
@@ -90,14 +82,16 @@ class Bs_Storer_HigherTaxon extends Bs_Storer_Abstract
         if ($taxon->parentId == '' || $taxon->parentId == 0) {
             $taxon->parentId = NULL;
         }
-        $stmt = $this->_dbh->prepare(
-            'INSERT INTO `taxon_name_element` (`taxon_id`, '.
-            '`scientific_name_element_id`, `parent_id`) VALUES (?, ?, ?)'
-        );
-        $stmt->execute(array(
-           $taxon->id, $taxon->nameElementId, $taxon->parentId
-           )
-        );
+        foreach ($taxon->nameElementIds as $nameElement) {
+	        $stmt = $this->_dbh->prepare(
+	            'INSERT INTO `taxon_name_element` (`taxon_id`, '.
+	            '`scientific_name_element_id`, `parent_id`) VALUES (?, ?, ?)'
+	        );
+	        $stmt->execute(array(
+	           $taxon->id, $nameElement, $taxon->parentId
+	           )
+	        );
+        }
         return $taxon;
     }
 
