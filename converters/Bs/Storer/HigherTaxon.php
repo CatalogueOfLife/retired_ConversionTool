@@ -60,7 +60,7 @@ class Bs_Storer_HigherTaxon extends Bs_Storer_Abstract
         );
         $result = $stmt->execute(array($name));
         if ($result && $stmt->rowCount() == 1) {
-            $nameElementId =  $stmt->fetchColumn(0);
+            $nameElementId = $stmt->fetchColumn(0);
         } else {
             $stmt = $this->_dbh->prepare(
                 'INSERT INTO `scientific_name_element` '.

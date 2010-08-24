@@ -1,4 +1,5 @@
 <?php
+require_once 'Dictionary.php';
 require_once 'converters/Bs/Storer/HigherTaxon.php';
 require_once 'converters/Bs/Storer/Reference.php';
 require_once 'model/AcToBs/Specialist.php';
@@ -6,14 +7,15 @@ require_once 'converters/Bs/Storer/Specialist.php';
 require_once 'model/AcToBs/Author.php';
 require_once 'converters/Bs/Storer/Author.php';
 require_once 'converters/Bs/Storer/Distribution.php';
+require_once 'converters/Bs/Storer/CommonName.php';
 
 class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon
     implements Bs_Storer_Interface
 {
 	// Overview of infraspecific markers in Sp2010ac database that can be
 	// mapped to predefined markers taken from TDWG. Any markers that are not 
-	// present will be added to the `taxonomic_rank` table with status = 0
-	private static $mapMarkers = array (
+	// present will be added to the `taxonomic_rank` table with standard = 0
+	private static $markerMap = array (
 		'convar.' => 'convar',
 		'cv.' => 'cultivar',
 		'f.' => 'form',
@@ -61,44 +63,48 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon
     	$this->_setTaxonLsid($taxon);
         $this->_setTaxonDetail($taxon);
         $this->_setTaxonDistribution($taxon);
+        $this->_setTaxonCommonName($taxon);
         
-$this->printObject($taxon); 
+//$this->printObject($taxon); 
     	
 //        $this->_setTaxonNameElement($taxon);  // Needs parent_id!
     }
     
     protected function _setInfraSpecificMarkerId(Model $taxon) 
     {
-        $marker = $taxon->infraSpecificMarker;
-        // If infraSpecificMarker is empty, but infraspecies is not, set
+    	$marker = $taxon->infraSpecificMarker;
+    	// If infraSpecificMarker is empty, but infraspecies is not, set
         // marker to unknown
         if ($marker == '' && $taxon->infraspecies != '') {
         	$marker = 'unknown';
         }
-        if (array_key_exists($marker, self::$mapMarkers)) {
-        	$taxon->infraSpecificMarker = self::$mapMarkers[$marker];
+        if (array_key_exists($marker, self::$markerMap)) {
+        	$marker = self::$markerMap[$marker];
         }
-    	if ($id = Dictionary::get('ranks', $taxon->infraSpecificMarker)) {
-            $taxon->taxonomicRankId = $id;
+    	if ($markerId = Dictionary::get('ranks', $marker)) {
+            $taxon->taxonomicRankId = $markerId;
             return $taxon;
         }
         $stmt = $this->_dbh->prepare(
             'SELECT id FROM `taxonomic_rank` WHERE `rank` = ?'
         );
-        $result = $stmt->execute(array($taxon->infraSpecificMarker));
+        $result = $stmt->execute(array($marker));
         if ($result && $stmt->rowCount() == 1) {
-            $id = $stmt->fetchColumn(0);
-            Dictionary::add('ranks', $taxon->infraSpecificMarker, $id);
-            $taxon->taxonomicRankId = $id;
+            $markerId = $stmt->fetchColumn(0);
+            Dictionary::add('ranks', $marker, $markerId);
+            $taxon->taxonomicRankId = $markerId;
             return $taxon;
         }
         $stmt = $this->_dbh->prepare(
-            'INSERT INTO `taxonomic_rank` (`rank`, `status`) VALUE (?, ?)'
+            'INSERT INTO `taxonomic_rank` (`rank`, `standard`) VALUE (?, ?)'
         );
         $stmt->execute(array($marker, 0));
-        $id = $this->_dbh->lastInsertId();
-        Dictionary::add('ranks', $marker, $id);
-        $taxon->taxonomicRankId = $id;
+        $markerId = $this->_dbh->lastInsertId();
+        Dictionary::add('ranks', $marker, $markerId);
+        $taxon->taxonomicRankId = $markerId;
+        if ($taxon->infraSpecificMarker != $marker) {
+        	$taxon->infraSpecificMarker = $marker;
+        }
         return $taxon;
     }
 
@@ -196,7 +202,9 @@ $this->printObject($taxon);
         $storer = new Bs_Storer_Reference($this->_dbh, $this->_logger);
         foreach ($taxon->references as $reference) {
             $storer->store($reference);
-            $referenceIds[] = $reference->id;
+            if (!in_array($reference->id, $referenceIds)) {
+            	$referenceIds[] = $reference->id;
+            }
         }
         foreach ($referenceIds as $referenceId) {
             $stmt = $this->_dbh->prepare(
@@ -252,6 +260,12 @@ $this->printObject($taxon);
     
     protected function _setTaxonCommonName(Model $taxon)
     {
-    	
+        $storer = new Bs_Storer_CommonName($this->_dbh, $this->_logger);
+    	foreach ($taxon->commonNames as $commonName) {
+    		// All cross-tables are handled in Bs_Storer_CommonName
+    		// Need to pass taxon_id before storing
+    		$commonName->taxonId = $taxon->id;
+    		$storer->store($commonName);
+    	}
     }
 }

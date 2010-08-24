@@ -93,7 +93,8 @@ for ($limit = 1000, $offset = 0; $offset < $total; $offset += $limit) {
         }
         unset($taxa);
     } catch (PDOException $e) {
-        $logger->warn('Store query failed: ' . $e->getMessage());
+        echo '<pre>'; print_r($taxon); echo '</pre>';
+        echo formatException($e);
     }
 }
 echo '<br>Done!</p>';
@@ -125,7 +126,7 @@ for ($limit = 5000, $offset = 0; $offset < $total; $offset += $limit) {
         }
         unset($taxa);
     } catch (PDOException $e) {
-        $logger->warn('Store query failed: ' . $e->getMessage());
+        echo formatException($e);
     }
 }
 echo '<br>Done!</p>';
@@ -172,6 +173,23 @@ function alwaysFlush() {
 	ob_implicit_flush(1);
 	set_time_limit(0);
 }
+
+function formatException(Exception $e) {
+    $trace = $e->getTrace();
+
+    $result = 'Exception: "';
+    $result .= $e->getMessage();
+    $result .= '" @ ';
+    if($trace[0]['class'] != '') {
+        $result .= $trace[0]['class'];
+        $result .= '->';
+    }
+    $result .= $trace[0]['function'];
+    $result .= '();<br />';
+
+    return $result;
+}
+
 ?>
 </body>
 </html>

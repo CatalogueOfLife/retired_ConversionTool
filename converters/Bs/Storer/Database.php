@@ -45,7 +45,6 @@ class Bs_Storer_Database extends Bs_Storer_Abstract
 	        );
             unset($storer, $uri);
         }
-        
         return $db;
     }
 }

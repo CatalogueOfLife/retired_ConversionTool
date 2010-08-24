@@ -4,6 +4,7 @@ require_once 'Abstract.php';
 require_once 'converters/Ac/Model/AcToBs/Taxon.php';
 require_once 'model/AcToBs/Reference.php';
 require_once 'model/AcToBs/Distribution.php';
+require_once 'converters/Ac/Model/AcToBs/CommonName.php';
 
 class Ac_Loader_Taxon extends Ac_Loader_Abstract
     implements Ac_Loader_Interface
@@ -25,7 +26,7 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
     {
         // Statement that includes proper examples
         $stmt = $this->_dbh->prepare(
-            'SELECT t1.`record_id` as id, t1.`taxon` as taxonomicRank, '.
+            'SELECT distinct t1.`record_id` as id, t1.`taxon` as taxonomicRank, '.
             't1.`name`, t2.`genus`, t2.`species`, t2.`infraspecies`, '.
             't2.`infraspecies_marker` as infraSpecificMarker, t1.`lsid`, '.
             't1.`parent_id` as parentId, t1.`database_id` as sourceDatabaseId, '.
@@ -33,9 +34,9 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
             't1.`sp2000_status_id` as scientificNameStatusId,'.
             't2.`web_site` as uri, t2.`comment` as additionalData, '.
             't2.`scrutiny_date` as scrutinyDate, t2.`specialist_id` as specialistId '.
-            'FROM taxa t1, scientific_names t2 WHERE t1.`is_accepted_name` = 1 '.
+            'FROM taxa t1, scientific_names t2, common_names t3 WHERE t1.`is_accepted_name` = 1 '.
             'AND t1.`taxon` LIKE "%species" AND t1.`name` NOT LIKE "% x %" '.
-            'AND t2.`specialist_id` IS NOT NULL '.
+            'AND t2.`specialist_id` IS NOT NULL AND t1.name_code = t3.name_code '.
             'AND t2.`scrutiny_date` IS NOT NULL AND t1.`name_code` = t2.`name_code` '.
             'LIMIT :offset, :limit'
         );
@@ -97,6 +98,24 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
                     PDO::FETCH_CLASS, 'Distribution'
                 );
             unset($distributionStmt);
+            
+            $cnStmt = $this->_dbh->prepare(
+                'SELECT t1.`common_name` as commonNameElement, t1.`language`, '.
+                't1.`country`, t2.`author` as referenceAuthors, '.
+                't2.`year` as referenceYear, t2.`title` as referenceTitle, '.
+                't2.`source` as referenceText '.
+                'FROM `common_names` t1, `references` t2 '.
+                'WHERE t1.`reference_id` = t2.`record_id` AND t1.`name_code` = ?'
+            );
+            $cnStmt->execute(array($taxon->originalId));
+            $taxon->commonNames = 
+                $cnStmt->fetchAll(
+                    PDO::FETCH_CLASS, 'Bs_Model_AcToBs_CommonName'
+                );
+            unset($cnStmt);
+            
+            
+            
             
             
             $taxa[] = $taxon;

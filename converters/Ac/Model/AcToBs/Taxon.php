@@ -8,6 +8,7 @@ class Bs_Model_AcToBs_Taxon extends Taxon
     public $scientificNameStatus;
     public $scrutinyId = NULL;
     public $nameElementIds = array();
+    public $commonNames = array();
     public $synonyms = array();
     public $references = array();
     public $distribution = array();

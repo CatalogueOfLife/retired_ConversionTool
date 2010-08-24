@@ -1,11 +1,10 @@
 <?php
 require_once 'Model.php';
 
-class Reference implements Model
+class CommonName implements Model
 {
     public $id;
-    public $title;
-    public $authors;
-    public $year;
-    public $text;
+    public $commonNameElement;
+    public $language;
+    public $country;
 }

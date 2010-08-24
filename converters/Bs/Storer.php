@@ -14,6 +14,7 @@ class Bs_Storer
         'scrutiny', 'specialist', 
         'author_string', 'taxon_name_element', 
         'scientific_name_element', 'uri_to_taxon', 'reference_to_taxon',
+        'reference_to_common_name', 'common_name', 'common_name_element', 
         'reference', 'uri_to_source_database', 
         'uri_to_taxon', 'uri', 'taxon', 
         'source_database'
@@ -63,6 +64,10 @@ class Bs_Storer
             );
             $stmt->execute();
         }
+        $stmt = $this->_dbh->prepare(
+            'DELETE FROM `taxonomic_rank` WHERE `standard` = ?'
+        );
+        $stmt->execute(array(0));
         unset($stmt);
     }
     

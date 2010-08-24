@@ -21,8 +21,7 @@ abstract class Bs_Storer_Abstract
     		}
     	}
 		$stmt = $this->_dbh->prepare(substr($query, 0, -5));
-		$result = $stmt->execute($where);
-		if ($result && $stmt->rowCount() == 1) {
+		if ($stmt->execute($where) && $stmt->rowCount() == 1) {
             return $stmt->fetchColumn(0);
 		}
 	    return false;
