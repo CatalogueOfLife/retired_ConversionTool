@@ -3,6 +3,7 @@ require_once 'model/AcToBs/Taxon.php';
 
 class Bs_Model_AcToBs_Synonym extends Taxon
 {
+    public $taxonId;
     public $taxonomicRankId;
     public $scientificNameStatus;
     public $nameElementIds = array();

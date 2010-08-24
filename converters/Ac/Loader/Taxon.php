@@ -5,6 +5,7 @@ require_once 'converters/Ac/Model/AcToBs/Taxon.php';
 require_once 'model/AcToBs/Reference.php';
 require_once 'model/AcToBs/Distribution.php';
 require_once 'converters/Ac/Model/AcToBs/CommonName.php';
+require_once 'converters/Ac/Model/AcToBs/Synonym.php';
 
 class Ac_Loader_Taxon extends Ac_Loader_Abstract
     implements Ac_Loader_Interface
@@ -66,12 +67,7 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
         	$this->_setTaxonReferences($taxon);
             $this->_setTaxonDistribution($taxon);
             $this->_setTaxonCommonNames($taxon);
-            
-            
-            
-            
-            
-            
+            $this->_setTaxonSynonyms($taxon);
             $taxa[] = $taxon;
         }
         unset($stmt);
@@ -87,6 +83,7 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
         $stmt->execute(array($taxon->scientificNameStatusId));
         $taxon->scientificNameStatus = $stmt->fetchColumn(0);
         unset($stmt);
+        return $taxon;
     }
     
     protected function _setTaxonSpecialistName(Model $taxon)
@@ -98,6 +95,7 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
 		$stmt->execute(array($taxon->specialistId));
 		$taxon->specialistName = $stmt->fetchColumn(0);
 		unset($stmt);
+        return $taxon;
     }
 
     protected function _setTaxonReferences(Model $taxon)
@@ -111,6 +109,7 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
 		$stmt->execute(array($taxon->originalId));
 		$taxon->references = $stmt->fetchAll(PDO::FETCH_CLASS, 'Reference');
 		unset($stmt);
+        return $taxon;
     }
 
     protected function _setTaxonDistribution(Model $taxon)
@@ -122,6 +121,7 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
         $stmt->execute(array($taxon->originalId));
         $taxon->distribution = $stmt->fetchAll(PDO::FETCH_CLASS, 'Distribution');
         unset($stmt);
+        return $taxon;
     }
 
     protected function _setTaxonCommonNames(Model $taxon)
@@ -139,6 +139,25 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
 		    PDO::FETCH_CLASS, 'Bs_Model_AcToBs_CommonName'
 		);
 		unset($stmt);
+        return $taxon;
     }
 
+    protected function _setTaxonSynonyms(Model $taxon)
+    {
+    	$stmt = $this->_dbh->prepare(
+    	   'SELECT `record_id` as id, `name_code` as originalId, '.
+    	   '`genus`, `species`, `infraspecies`, `author` as authorString, '.
+    	   '`infraspecies_marker` as infraSpecificMarker, `web_site` as uri '.
+           'FROM `scientific_names` WHERE `accepted_name_code` = ? '
+    	);
+        $stmt->execute(array($taxon->originalId));
+        $taxon->synonyms = $stmt->fetchAll(
+            PDO::FETCH_CLASS, 'Bs_Model_AcToBs_Synonym'
+        );
+        foreach ($taxon->synonyms as $synonym) {
+        	$this->_setTaxonReferences($synonym);
+        }
+        unset($stmt);
+        return $taxon;
+    }
 }

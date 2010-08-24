@@ -63,9 +63,9 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon
     	$this->_setTaxonLsid($taxon);
         $this->_setTaxonDetail($taxon);
         $this->_setTaxonDistribution($taxon);
-        $this->_setTaxonCommonName($taxon);
+        $this->_setTaxonCommonNames($taxon);
         
-//$this->printObject($taxon); 
+$this->printObject($taxon); 
     	
 //        $this->_setTaxonNameElement($taxon);  // Needs parent_id!
     }
@@ -258,14 +258,21 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon
     	return $taxon;
     }
     
-    protected function _setTaxonCommonName(Model $taxon)
+    protected function _setTaxonCommonNames(Model $taxon)
     {
         $storer = new Bs_Storer_CommonName($this->_dbh, $this->_logger);
-    	foreach ($taxon->commonNames as $commonName) {
-    		// All cross-tables are handled in Bs_Storer_CommonName
-    		// Need to pass taxon_id before storing
-    		$commonName->taxonId = $taxon->id;
-    		$storer->store($commonName);
-    	}
+        foreach ($taxon->commonNames as $commonName) {
+            $commonName->taxonId = $taxon->id;
+            $storer->store($commonName);
+        }
+    }
+    
+    protected function _setTaxonSynonyms(Model $taxon)
+    {
+        $storer = new Bs_Storer_Synonym($this->_dbh, $this->_logger);
+        foreach ($taxon->synonyms as $synonym) {
+            $synonym->taxonId = $taxon->id;
+            $storer->store($synonym);
+        }
     }
 }

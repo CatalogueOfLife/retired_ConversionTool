@@ -93,7 +93,7 @@ for ($limit = 1000, $offset = 0; $offset < $total; $offset += $limit) {
         }
         unset($taxa);
     } catch (PDOException $e) {
-        echo '<pre>'; print_r($taxon); echo '</pre>';
+//        echo '<pre>'; print_r($taxon); echo '</pre>';
         echo formatException($e);
     }
 }
