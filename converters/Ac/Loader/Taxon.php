@@ -61,58 +61,12 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
 
         $taxa = array();
         while($taxon = $stmt->fetchObject('Bs_Model_AcToBs_Taxon')) {
-            $statusStmt = $this->_dbh->prepare(
-                'SELECT `sp2000_status` FROM `sp2000_statuses` WHERE ' .
-                'record_id = ?' 
-            );
-            $statusStmt->execute(array($taxon->scientificNameStatusId));
-            $taxon->scientificNameStatus = $statusStmt->fetchColumn(0);
-            unset($statusStmt);
-        	
-            $specialistStmt = $this->_dbh->prepare(
-                'SELECT `specialist_name` FROM `specialists` WHERE ' .
-                'record_id = ?' 
-            );
-            $specialistStmt->execute(array($taxon->specialistId));
-            $taxon->specialistName = $specialistStmt->fetchColumn(0);
-            unset($specialistStmt);
+        	$this->_setTaxonScientificNameStatus($taxon);
+        	$this->_setTaxonSpecialistName($taxon);
+        	$this->_setTaxonReferences($taxon);
+            $this->_setTaxonDistribution($taxon);
+            $this->_setTaxonCommonNames($taxon);
             
-            $referenceStmt = $this->_dbh->prepare(
-                'SELECT `author` as authors, `year`, `title`, `source` as text FROM '.
-                '`references` t1, `scientific_name_references` t2 WHERE ' .
-                't2.`name_code` = ? AND t1.`record_id` = t2.`reference_id` AND '.
-                't2.`reference_type` != "ComNameRef"'
-            );
-            $referenceStmt->execute(array($taxon->originalId));
-            $taxon->references = 
-                $referenceStmt->fetchAll(PDO::FETCH_CLASS, 'Reference');
-            unset($referenceStmt);
-            
-            $distributionStmt = $this->_dbh->prepare(
-                'SELECT `distribution` as freeText FROM `distribution` WHERE ' .
-                '`name_code` = ?'
-            );
-            $distributionStmt->execute(array($taxon->originalId));
-            $taxon->distribution = 
-                $distributionStmt->fetchAll(
-                    PDO::FETCH_CLASS, 'Distribution'
-                );
-            unset($distributionStmt);
-            
-            $cnStmt = $this->_dbh->prepare(
-                'SELECT t1.`common_name` as commonNameElement, t1.`language`, '.
-                't1.`country`, t2.`author` as referenceAuthors, '.
-                't2.`year` as referenceYear, t2.`title` as referenceTitle, '.
-                't2.`source` as referenceText '.
-                'FROM `common_names` t1, `references` t2 '.
-                'WHERE t1.`reference_id` = t2.`record_id` AND t1.`name_code` = ?'
-            );
-            $cnStmt->execute(array($taxon->originalId));
-            $taxon->commonNames = 
-                $cnStmt->fetchAll(
-                    PDO::FETCH_CLASS, 'Bs_Model_AcToBs_CommonName'
-                );
-            unset($cnStmt);
             
             
             
@@ -123,4 +77,68 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
         unset($stmt);
         return $taxa;
     }
+    
+    protected function _setTaxonScientificNameStatus(Model $taxon)
+    {
+        $stmt = $this->_dbh->prepare(
+            'SELECT `sp2000_status` FROM `sp2000_statuses` WHERE ' .
+            'record_id = ?' 
+        );
+        $stmt->execute(array($taxon->scientificNameStatusId));
+        $taxon->scientificNameStatus = $stmt->fetchColumn(0);
+        unset($stmt);
+    }
+    
+    protected function _setTaxonSpecialistName(Model $taxon)
+    {
+		$stmt = $this->_dbh->prepare(
+		'SELECT `specialist_name` FROM `specialists` WHERE ' .
+		'record_id = ?' 
+		);
+		$stmt->execute(array($taxon->specialistId));
+		$taxon->specialistName = $stmt->fetchColumn(0);
+		unset($stmt);
+    }
+
+    protected function _setTaxonReferences(Model $taxon)
+    {
+        $stmt = $this->_dbh->prepare(
+			'SELECT `author` as authors, `year`, `title`, `source` as text '.
+            'FROM `references` t1, `scientific_name_references` t2 WHERE ' .
+			't2.`name_code` = ? AND t1.`record_id` = t2.`reference_id` AND '.
+			't2.`reference_type` != "ComNameRef"'
+		);
+		$stmt->execute(array($taxon->originalId));
+		$taxon->references = $stmt->fetchAll(PDO::FETCH_CLASS, 'Reference');
+		unset($stmt);
+    }
+
+    protected function _setTaxonDistribution(Model $taxon)
+    {
+        $stmt = $this->_dbh->prepare(
+            'SELECT `distribution` as freeText FROM `distribution` WHERE ' .
+            '`name_code` = ?'
+        );
+        $stmt->execute(array($taxon->originalId));
+        $taxon->distribution = $stmt->fetchAll(PDO::FETCH_CLASS, 'Distribution');
+        unset($stmt);
+    }
+
+    protected function _setTaxonCommonNames(Model $taxon)
+    {
+		$stmt = $this->_dbh->prepare(
+			'SELECT t1.`common_name` as commonNameElement, t1.`language`, '.
+			't1.`country`, t2.`author` as referenceAuthors, '.
+			't2.`year` as referenceYear, t2.`title` as referenceTitle, '.
+			't2.`source` as referenceText '.
+			'FROM `common_names` t1, `references` t2 '.
+			'WHERE t1.`reference_id` = t2.`record_id` AND t1.`name_code` = ?'
+		);
+		$stmt->execute(array($taxon->originalId));
+		$taxon->commonNames = $stmt->fetchAll(
+		    PDO::FETCH_CLASS, 'Bs_Model_AcToBs_CommonName'
+		);
+		unset($stmt);
+    }
+
 }
