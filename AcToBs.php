@@ -19,6 +19,9 @@ require_once 'library/Zend/Log/Writer/Stream.php';
 require_once 'library/Zend/Log.php';
 require_once 'Indicator.php';
 
+require_once 'converters/Bs/Storer/HigherTaxon.php';
+require_once 'converters/Bs/Storer/Taxon.php';
+
 /**
  * Logger initialization
  */

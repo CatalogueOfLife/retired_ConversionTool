@@ -11,8 +11,8 @@ class Bs_Storer
     // Order of truncation is determined by order in $dbTables array below
     private static $dbTables = array(
         'distribution_free_text', 'region_free_text', 'taxon_detail', 
-        'scrutiny', 'specialist', 
-        'author_string', 'taxon_name_element', 
+        'scrutiny', 'specialist', 'reference_to_synonym', 'synonym',
+        'synonym_name_element', 'author_string', 'taxon_name_element', 
         'scientific_name_element', 'uri_to_taxon', 'reference_to_taxon',
         'reference_to_common_name', 'common_name', 'common_name_element', 
         'reference', 'uri_to_source_database', 

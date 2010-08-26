@@ -1,5 +1,4 @@
 <?php
-require_once 'Dictionary.php';
 require_once 'converters/Bs/Storer/HigherTaxon.php';
 require_once 'converters/Bs/Storer/Reference.php';
 require_once 'model/AcToBs/Specialist.php';
@@ -8,6 +7,7 @@ require_once 'model/AcToBs/Author.php';
 require_once 'converters/Bs/Storer/Author.php';
 require_once 'converters/Bs/Storer/Distribution.php';
 require_once 'converters/Bs/Storer/CommonName.php';
+require_once 'converters/Bs/Storer/Synonym.php';
 
 class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon
     implements Bs_Storer_Interface
@@ -64,80 +64,41 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon
         $this->_setTaxonDetail($taxon);
         $this->_setTaxonDistribution($taxon);
         $this->_setTaxonCommonNames($taxon);
+        $this->_setTaxonSynonyms($taxon);
         
-$this->printObject($taxon); 
+//$this->printObject($taxon); 
     	
 //        $this->_setTaxonNameElement($taxon);  // Needs parent_id!
     }
     
-    protected function _setInfraSpecificMarkerId(Model $taxon) 
+    // Method used with just the rank, not the entire taxon object
+    private function _getTaxonomicRankId($rank) 
     {
-    	$marker = $taxon->infraSpecificMarker;
-    	// If infraSpecificMarker is empty, but infraspecies is not, set
-        // marker to unknown
-        if ($marker == '' && $taxon->infraspecies != '') {
-        	$marker = 'unknown';
-        }
-        if (array_key_exists($marker, self::$markerMap)) {
-        	$marker = self::$markerMap[$marker];
-        }
-    	if ($markerId = Dictionary::get('ranks', $marker)) {
-            $taxon->taxonomicRankId = $markerId;
-            return $taxon;
+        if ($id = Dictionary::get('ranks', $rank)) {
+            return $id;
         }
         $stmt = $this->_dbh->prepare(
             'SELECT id FROM `taxonomic_rank` WHERE `rank` = ?'
         );
-        $result = $stmt->execute(array($marker));
-        if ($result && $stmt->rowCount() == 1) {
-            $markerId = $stmt->fetchColumn(0);
-            Dictionary::add('ranks', $marker, $markerId);
-            $taxon->taxonomicRankId = $markerId;
-            return $taxon;
-        }
-        $stmt = $this->_dbh->prepare(
-            'INSERT INTO `taxonomic_rank` (`rank`, `standard`) VALUE (?, ?)'
-        );
-        $stmt->execute(array($marker, 0));
-        $markerId = $this->_dbh->lastInsertId();
-        Dictionary::add('ranks', $marker, $markerId);
-        $taxon->taxonomicRankId = $markerId;
-        if ($taxon->infraSpecificMarker != $marker) {
-        	$taxon->infraSpecificMarker = $marker;
-        }
-        return $taxon;
-    }
-
-    protected function _getScientificNameStatusId(Model $taxon)
-    {
-        if ($id = Dictionary::get('statuses', $taxon->scientificNameStatus)) {
-            // Reset scientific name status id
-            $taxon->scientificNameStatusId = $id;
-            return $taxon;
-        }
-        $stmt = $this->_dbh->prepare(
-            'SELECT id FROM `scientific_name_status` WHERE `name_status` = ?'
-        );
-        $result = $stmt->execute(array($taxon->scientificNameStatus));
+        $result = $stmt->execute(array($rank));
         if ($result && $stmt->rowCount() == 1) {
             $id = $stmt->fetchColumn(0);
-            Dictionary::add('statuses', $taxon->scientificNameStatusId, $id);
-            $taxon->scientificNameStatusId = $id;
-            return $taxon;
+            Dictionary::add('ranks', $rank, $id);
+            return $id;
         }
-        throw new Exception('Scientific name status could not be set!');
         return false;
     }
-    
-    // Slightly different from HigherTaxon as multiple elements are set
+
     protected function _setScientificNameElements(Model $taxon) 
     {
-        $nameElements = array($taxon->genus, $taxon->species);
-        if ($taxon->infraspecies != '') {
-        	$nameElements[] = $taxon->infraspecies;
+        $nameElements = array(
+            $this->_getTaxonomicRankId('genus') => $taxon->genus, 
+            $this->_getTaxonomicRankId('species') => $taxon->species 
+        );
+        if ($taxon->infraSpecificMarker != '') {
+        	$nameElements[$taxon->taxonomicRankId] = $taxon->infraspecies;
         }
-        
-        foreach ($nameElements as $nameElement) {
+        foreach ($nameElements as $rankId => $nameElement) {
 	        $name = strtolower($nameElement);
 	        $stmt = $this->_dbh->prepare(
 	            'SELECT id FROM `scientific_name_element` WHERE `name_element` = ?'
@@ -154,7 +115,7 @@ $this->printObject($taxon);
 	            $nameElementId =  $this->_dbh->lastInsertId();
 	        }
 	        if (isset($nameElementId)) {
-	            $taxon->nameElementIds[] = $nameElementId;
+	            $taxon->nameElementIds[$rankId] = $nameElementId;
 	        }
         }
         // At least two elements should have been set for (infra)species
@@ -274,5 +235,17 @@ $this->printObject($taxon);
             $synonym->taxonId = $taxon->id;
             $storer->store($synonym);
         }
+    }
+    
+    protected function _isHybrid($nameElement)
+    {
+        $hybridMarkers = array('x ', ' x ');
+        foreach($hybridMarkers as $marker) {
+            $parts = explode($marker, $nameElement);
+            if (count($parts) > 1) {
+                return $parts;
+            }
+        }
+        return false;
     }
 }

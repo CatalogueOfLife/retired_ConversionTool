@@ -1,8 +1,9 @@
 <?php
-require_once 'Interface.php';
-require_once 'Abstract.php';
+require_once 'converters/Bs/Storer/TaxonAbstract.php';
+require_once 'model/AcToBs/Uri.php';
+require_once 'converters/Bs/Storer/Uri.php';
 
-class Bs_Storer_HigherTaxon extends Bs_Storer_Abstract
+class Bs_Storer_HigherTaxon extends Bs_Storer_TaxonAbstract
     implements Bs_Storer_Interface
 {
     public function store(Model $taxon)
@@ -14,26 +15,6 @@ class Bs_Storer_HigherTaxon extends Bs_Storer_Abstract
     	$this->_setScientificNameElement($taxon);
         $this->_setTaxonNameElement($taxon);
         $this->_setTaxonLsid($taxon);
-    }
-    
-    protected function _setTaxonomicRankId(Model $taxon) 
-    {
-        if ($id = Dictionary::get('ranks', $taxon->taxonomicRank)) {
-        	$taxon->taxonomicRankId = $id;
-        	return $taxon;
-        }
-        $stmt = $this->_dbh->prepare(
-            'SELECT id FROM `taxonomic_rank` WHERE `rank` = ?'
-        );
-        $result = $stmt->execute(array($taxon->taxonomicRank));
-        if ($result && $stmt->rowCount() == 1) {
-            $id = $stmt->fetchColumn(0);
-            Dictionary::add('ranks', $taxon->taxonomicRank, $id);
-            $taxon->taxonomicRankId = $id;
-            return $taxon;
-        }
-        throw new Exception('Taxonomic rank id could not be set!');
-        return false;
     }
     
     protected function _setTaxon(Model $taxon)
@@ -97,8 +78,6 @@ class Bs_Storer_HigherTaxon extends Bs_Storer_Abstract
 
     protected function _setTaxonLsid(Model $taxon)
     {
-		require_once 'model/AcToBs/Uri.php';
-		require_once 'converters/Bs/Storer/Uri.php';
     	$uri = new Uri();
         $uri->resourceIdentifier = $taxon->lsid;
     	$storer = new Bs_Storer_Uri($this->_dbh, $this->_logger);

@@ -127,10 +127,10 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
     protected function _setTaxonCommonNames(Model $taxon)
     {
 		$stmt = $this->_dbh->prepare(
-			'SELECT t1.`common_name` as commonNameElement, t1.`language`, '.
+			'SELECT t1.`common_name` AS commonNameElement, t1.`language`, '.
 			't1.`country`, t2.`author` as referenceAuthors, '.
-			't2.`year` as referenceYear, t2.`title` as referenceTitle, '.
-			't2.`source` as referenceText '.
+			't2.`year` AS referenceYear, t2.`title` AS referenceTitle, '.
+			't2.`source` AS referenceText '.
 			'FROM `common_names` t1, `references` t2 '.
 			'WHERE t1.`reference_id` = t2.`record_id` AND t1.`name_code` = ?'
 		);
@@ -145,10 +145,17 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
     protected function _setTaxonSynonyms(Model $taxon)
     {
     	$stmt = $this->_dbh->prepare(
-    	   'SELECT `record_id` as id, `name_code` as originalId, '.
-    	   '`genus`, `species`, `infraspecies`, `author` as authorString, '.
-    	   '`infraspecies_marker` as infraSpecificMarker, `web_site` as uri '.
-           'FROM `scientific_names` WHERE `accepted_name_code` = ? '
+    	   'SELECT t1.`record_id` AS id, t1.`name_code` AS originalId, '.
+    	   't1.`genus`, t1.`species`, t1.`infraspecies`, '.
+    	   't1.`author` AS authorString, t1.`web_site` AS uri, '.
+    	   't1.`infraspecies_marker` AS infraSpecificMarker, '.
+    	   't2.`sp2000_status` AS scientificNameStatus, '.
+    	   'IF (t1.`infraspecies_marker` = "" OR t1.`infraspecies_marker` '.
+    	   'IS NULL AND t1.`infraspecies` = "" OR t1.`infraspecies` IS NULL, '.
+    	   '"Species", "Infraspecies") AS taxonomicRank '.
+           'FROM `scientific_names` t1, `sp2000_statuses` t2 WHERE '.
+           't1.`sp2000_status_id` = t2.`record_id` AND '.
+    	   't1.`accepted_name_code` = ? '
     	);
         $stmt->execute(array($taxon->originalId));
         $taxon->synonyms = $stmt->fetchAll(
