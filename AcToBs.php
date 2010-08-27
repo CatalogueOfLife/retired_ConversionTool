@@ -63,7 +63,6 @@ foreach($dbs as $db) {
 echo '<br>Done!</p>';
 
 // Higher Taxa
-/*
 echo '<p>Preparing higher taxa...<br>';
 $total = $loader->count('HigherTaxon');
 $ind->init($total);
@@ -81,7 +80,6 @@ for ($limit = 5000, $offset = 0; $offset < $total; $offset += $limit) {
    }
 }
 echo '<br>Done!</p>';
-*/
 
 // Taxa
 echo '<p>Preparing species and infraspecies...<br>';

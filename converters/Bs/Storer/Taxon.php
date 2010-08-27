@@ -24,13 +24,13 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon
     	$this->_getScientificNameStatusId($taxon);
     	$this->_setScientificNameElements($taxon);
         // Abort if parent taxon does not match for infraspecies
-/*    	if (!$this->_setTaxonNameElement($taxon)) {
+    	if (!$this->_setTaxonNameElement($taxon)) {
     	    $this->_logger->debug(
     	       'SKIPPED '.$taxon->name.': parent incorrectly set'
     	    );
     	    return;
     	}
-*/    	$this->_setTaxon($taxon);
+    	$this->_setTaxon($taxon);
     	if ($taxon->specialistId != '') {
     		$this->_setTaxonScrutiny($taxon);
     	}
