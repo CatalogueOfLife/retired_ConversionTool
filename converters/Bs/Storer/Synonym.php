@@ -22,7 +22,7 @@ class Bs_Storer_Synonym extends Bs_Storer_TaxonAbstract
             $this->_setSynonymReferences($synonym);
         }
     	
-$this->printObject($synonym);
+//$this->printObject($synonym);
         
     }
     
@@ -64,11 +64,13 @@ $this->printObject($synonym);
             '`taxonomic_rank_id`, `scientific_name_element_id`, '.
             '`synonym_id`, `hybrid_order`) VALUES (?, ?, ?, ?)'
         );
-        foreach ($synonym->nameElementIds as $rankId => $nameElement) {
+/*        foreach ($synonym->nameElementIds as $rankId => $nameElement) {
             if ($hybridElements = $this->_isHybrid($nameElement)) {
                 foreach ($hybridElements as $hybridOrder => $hybridElement) {
                     // Start order with 1 rather than 0
                     $hybridOrder++;
+                    $hybridElement = 
+                        trim(str_replace('x ', '', $hybridElement));
                     $nameElementId = 
                         $this->_getScientificNameElementId($hybridElement);
                     $stmt->execute(array(
@@ -82,6 +84,16 @@ $this->printObject($synonym);
                     $rankId, $nameElementId, $synonym->id, NULL)
                 );
             }
+        }
+*/
+        // Hybrid synonyms are currently stored as regular taxa as
+        // accepted hybrids cannot be stored according to the rules either
+        foreach ($synonym->nameElementIds as $rankId => $nameElement) {
+            $nameElementId = 
+                    $this->_getScientificNameElementId($nameElement);
+            $stmt->execute(array(
+                $rankId, $nameElementId, $synonym->id, NULL)
+            );
         }
         return $synonym;
     }

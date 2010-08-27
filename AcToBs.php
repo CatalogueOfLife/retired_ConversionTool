@@ -61,14 +61,13 @@ foreach($dbs as $db) {
     $storer->store($db);
 }
 echo '<br>Done!</p>';
-/*
 
 // Higher Taxa
 echo '<p>Preparing higher taxa...<br>';
 $total = $loader->count('HigherTaxon');
 $ind->init($total);
 echo "Transferring $total higher taxa<br>";
-for ($limit = 1000, $offset = 0; $offset < $total; $offset += $limit) {    
+for ($limit = 5000, $offset = 0; $offset < $total; $offset += $limit) {    
     try {
         $taxa = $loader->load('HigherTaxon', $offset, $limit);
         foreach($taxa as $taxon) {
@@ -76,11 +75,11 @@ for ($limit = 1000, $offset = 0; $offset < $total; $offset += $limit) {
         }
         unset($taxa);
     } catch (PDOException $e) {
-        $logger->warn('Store query failed: ' . $e->getMessage());
+        echo '<pre>'; print_r($taxon); echo '</pre>';
+        echo formatException($e);
     }
 }
 echo '<br>Done!</p>';
-*/
 
 // Taxa
 echo '<p>Preparing species and infraspecies...<br>';
@@ -88,7 +87,7 @@ echo '<p>Preparing species and infraspecies...<br>';
 $total = 10;
 $ind->init($total);
 echo "Transferring $total taxa<br>";
-for ($limit = 1000, $offset = 0; $offset < $total; $offset += $limit) {    
+for ($limit = 2500, $offset = 0; $offset < $total; $offset += $limit) {    
     try {
         $taxa = $loader->load('Taxon', $offset, $limit);
         foreach($taxa as $taxon) {
@@ -96,78 +95,11 @@ for ($limit = 1000, $offset = 0; $offset < $total; $offset += $limit) {
         }
         unset($taxa);
     } catch (PDOException $e) {
-//        echo '<pre>'; print_r($taxon); echo '</pre>';
+        echo '<pre>'; print_r($taxon); echo '</pre>';
         echo formatException($e);
     }
 }
 echo '<br>Done!</p>';
-die('script stopped');
-
-// Specialists
-$ind->init($loader->count('Specialist'));
-echo '<p>Transferring specialists<br>';
-$storer->clear('Specialist');
-$specialists = $loader->load('Specialist');
-foreach($specialists as $specialist) {
-    $storer->store($specialist);
-    Dictionary::add('specialists', $specialist->name, $specialist->id);
-}
-echo '<br>Done!</p>';
-
-
-// Taxa
-$total = $loader->count('Taxon');
-$ind->init($total, null, 25);
-echo "<p>Transferring $total taxa (slow!)<br>";
-$storer->clear('Taxon');
-   
-for ($limit = 5000, $offset = 0; $offset < $total; $offset += $limit) {
-    try {
-        $taxa = $loader->load('Taxon', $offset, $limit);
-        foreach($taxa as $taxon) {
-            $storer->store($taxon);
-        }
-        unset($taxa);
-    } catch (PDOException $e) {
-        echo formatException($e);
-    }
-}
-echo '<br>Done!</p>';
-
-// Common Names
-$total = $loader->count('CommonName');
-$ind->init($total);
-echo "Transferring $total common names" . '<br>';
-$storer->clear('CommonName');
-    
-for ($limit = 100, $offset = 0; $offset < $total; $offset += $limit) {
-    try {
-        $commonNames = $loader->load('CommonName', $offset, $limit);
-        foreach($commonNames as $cn) {                    
-            $storer->store($cn);
-        }
-        unset($commonNames);
-    } catch (PDOException $e) {
-        $logger->warn('Store query failed: ' . $e->getMessage());
-    }
-}
-echo '<br>Done!</p>';
-
-// Distribution 
-$total = $loader->count('Distribution');
-$limit = 500;
-$ind->init($total / $limit, 1);
-echo "<p>Transferring $total distribution<br>";
-$storer->clear('Distribution');
-    
-for ($offset = 0; $offset < $total; $offset += $limit) {    
-    try {
-        $storer->storeAll($loader->load('Distribution', $offset, $limit));
-    } catch (PDOException $e) {
-        $logger->warn('Store query failed: ' . $e->getMessage());
-    }
-}
-echo '<br>Done!' . '</p>';
 
 function alwaysFlush() {
 	@ini_set('zlib.output_compression', 0);

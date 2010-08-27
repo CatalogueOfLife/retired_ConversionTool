@@ -12,36 +12,6 @@ require_once 'converters/Bs/Storer/Synonym.php';
 class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon
     implements Bs_Storer_Interface
 {
-	// Overview of infraspecific markers in Sp2010ac database that can be
-	// mapped to predefined markers taken from TDWG. Any markers that are not 
-	// present will be added to the `taxonomic_rank` table with standard = 0
-	private static $markerMap = array (
-		'convar.' => 'convar',
-		'cv.' => 'cultivar',
-		'f.' => 'form',
-		'forma' => 'form',
-		'm.' => 'morph',
-		'monst.' => 'monster',
-		'monstr.' => 'monster',
-		'mut.' => 'mutant',
-		'prol.' => 'prole',
-		'proles' => 'prole',
-		'raca' => 'race',
-		'ssp.' => 'subspecies',
-		'subf.' => 'subform',
-		'subforma' => 'subform',
-		'subs.' => 'subspecies',
-		'subsp,' => 'subspecies',
-		'subsp.' => 'subspecies',
-		'subsp..' => 'subspecies',
-		'subvar.' => 'sub-variety',
-		'susbp.' => 'subspecies',
-		'susp.' => 'subspecies',
-		'var' => 'variety',
-		'var,' => 'variety',
-		'var.' => 'variety'
-	);
-	
     public function store(Model $taxon)
     {
      	// Species rank id
@@ -52,8 +22,11 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon
             $this->_setInfraSpecificMarkerId($taxon);
     	}
     	$this->_getScientificNameStatusId($taxon);
-    	$this->_setTaxon($taxon);
     	$this->_setScientificNameElements($taxon);
+    	
+/*      $this->_setTaxonNameElement($taxon);  // Needs parent_id!  */
+
+    	$this->_setTaxon($taxon);
     	if ($taxon->specialistId != '') {
     		$this->_setTaxonScrutiny($taxon);
     	}
@@ -66,9 +39,8 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon
         $this->_setTaxonCommonNames($taxon);
         $this->_setTaxonSynonyms($taxon);
         
-//$this->printObject($taxon); 
+$this->printObject($taxon); 
     	
-//        $this->_setTaxonNameElement($taxon);  // Needs parent_id!
     }
     
     protected function _setScientificNameElements(Model $taxon) 

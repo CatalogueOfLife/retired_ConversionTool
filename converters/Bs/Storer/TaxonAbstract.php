@@ -5,24 +5,37 @@ require_once 'Abstract.php';
 class Bs_Storer_TaxonAbstract extends Bs_Storer_Abstract
 
 {
-    // Method used with just the rank, not the entire taxon object
-    protected function _getTaxonomicRankId($rank) 
-    {
-        if ($id = Dictionary::get('ranks', $rank)) {
-            return $id;
-        }
-        $stmt = $this->_dbh->prepare(
-            'SELECT id FROM `taxonomic_rank` WHERE `rank` = ?'
-        );
-        $result = $stmt->execute(array($rank));
-        if ($result && $stmt->rowCount() == 1) {
-            $id = $stmt->fetchColumn(0);
-            Dictionary::add('ranks', $rank, $id);
-            return $id;
-        }
-        return false;
-    }
-
+    public static $hybridMarkers = array('x ', ' x ');
+    // Overview of infraspecific markers in Sp2010ac database that can be
+    // mapped to predefined markers taken from TDWG. Any markers that are not 
+    // present will be added to the `taxonomic_rank` table with standard = 0
+    public static $markerMap = array (
+        'convar.' => 'convar',
+        'cv.' => 'cultivar',
+        'f.' => 'form',
+        'forma' => 'form',
+        'm.' => 'morph',
+        'monst.' => 'monster',
+        'monstr.' => 'monster',
+        'mut.' => 'mutant',
+        'prol.' => 'prole',
+        'proles' => 'prole',
+        'raca' => 'race',
+        'ssp.' => 'subspecies',
+        'subf.' => 'subform',
+        'subforma' => 'subform',
+        'subs.' => 'subspecies',
+        'subsp,' => 'subspecies',
+        'subsp.' => 'subspecies',
+        'subsp..' => 'subspecies',
+        'subvar.' => 'sub-variety',
+        'susbp.' => 'subspecies',
+        'susp.' => 'subspecies',
+        'var' => 'variety',
+        'var,' => 'variety',
+        'var.' => 'variety'
+    );
+    
     protected function _setTaxonomicRankId(Model $taxon) 
     {
         if ($id = Dictionary::get('ranks', $taxon->taxonomicRank)) {
@@ -104,12 +117,30 @@ class Bs_Storer_TaxonAbstract extends Bs_Storer_Abstract
 
     protected function _isHybrid($nameElement)
     {
-        $hybridMarkers = array('x ', ' x ');
-        foreach($hybridMarkers as $marker) {
+        foreach($this->hybridMarkers as $marker) {
             $parts = explode($marker, $nameElement);
             if (count($parts) > 1) {
                 return $parts;
             }
+        }
+        return false;
+    }
+
+    // Two slightly modified methods that take a single parameter 
+    // rather than the entire object
+    protected function _getTaxonomicRankId($rank) 
+    {
+        if ($id = Dictionary::get('ranks', $rank)) {
+            return $id;
+        }
+        $stmt = $this->_dbh->prepare(
+            'SELECT id FROM `taxonomic_rank` WHERE `rank` = ?'
+        );
+        $result = $stmt->execute(array($rank));
+        if ($result && $stmt->rowCount() == 1) {
+            $id = $stmt->fetchColumn(0);
+            Dictionary::add('ranks', $rank, $id);
+            return $id;
         }
         return false;
     }

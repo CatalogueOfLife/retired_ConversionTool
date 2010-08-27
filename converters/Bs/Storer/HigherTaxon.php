@@ -60,19 +60,30 @@ class Bs_Storer_HigherTaxon extends Bs_Storer_TaxonAbstract
     
     protected function _setTaxonNameElement(Model $taxon) 
     {
+        // Top level(s)
         if ($taxon->parentId == '' || $taxon->parentId == 0) {
             $taxon->parentId = NULL;
         }
-        foreach ($taxon->nameElementIds as $nameElement) {
-	        $stmt = $this->_dbh->prepare(
-	            'INSERT INTO `taxon_name_element` (`taxon_id`, '.
-	            '`scientific_name_element_id`, `parent_id`) VALUES (?, ?, ?)'
-	        );
-	        $stmt->execute(array(
-	           $taxon->id, $nameElement, $taxon->parentId
-	           )
-	        );
+        // Verify for infraspecies if parent is present and matches 
+        // record in the checklist; if not abort
+        if (isset($taxon->infraspecies) && $taxon->infraspecies != '') {
+            $stmt = $this->_dbh->prepare(
+                'SELECT `taxonomic_rank_id` FROM `taxon` WHERE `id` = ?'
+            );
+            $result = $stmt->execute(array($taxon->parentId));
+            $parentRankId = $stmt->fetchColumn(0);
+            if ($parentRankId != $this->_getTaxonomicRankId('species')) {
+                return false;
+            }
         }
+        $stmt = $this->_dbh->prepare(
+            'INSERT INTO `taxon_name_element` (`taxon_id`, '.
+            '`scientific_name_element_id`, `parent_id`) VALUES (?, ?, ?)'
+        );
+        $stmt->execute(array(
+           $taxon->id, $nameElementId, $taxon->parentId
+           )
+        );
         return $taxon;
     }
 
