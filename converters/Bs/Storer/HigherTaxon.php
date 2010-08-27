@@ -11,8 +11,8 @@ class Bs_Storer_HigherTaxon extends Bs_Storer_TaxonAbstract
 //$this->printObject($taxon);
     	// Source database id is NULL for all higher taxa
         $this->_setTaxonomicRankId($taxon);
+        $this->_setScientificNameElement($taxon);
         $this->_setTaxon($taxon);
-    	$this->_setScientificNameElement($taxon);
         $this->_setTaxonNameElement($taxon);
         $this->_setTaxonLsid($taxon);
     }
@@ -81,9 +81,7 @@ class Bs_Storer_HigherTaxon extends Bs_Storer_TaxonAbstract
             '`scientific_name_element_id`, `parent_id`) VALUES (?, ?, ?)'
         );
         $stmt->execute(array(
-               $taxon->id, 
-               $this->getLastKeyArray($taxon->nameElementIds), 
-               $taxon->parentId
+               $taxon->id, end($taxon->nameElementIds), $taxon->parentId
              )
         );
         return $taxon;
