@@ -7,6 +7,10 @@ class Bs_Storer_Author extends Bs_Storer_Abstract
 {
     public function store(Model $author)
     {
+        if ($author->authorString == '') {
+            $author->id = NULL;
+            return $author;
+        }
         $authorId = $this->_recordExists('id', 'author_string', array(
             'string' => $author->authorString)
         );
