@@ -155,7 +155,8 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
     	   '"Species", "Infraspecies") AS taxonomicRank '.
            'FROM `scientific_names` t1, `sp2000_statuses` t2 WHERE '.
            't1.`sp2000_status_id` = t2.`record_id` AND '.
-    	   't1.`accepted_name_code` = ? '
+    	   't1.`accepted_name_code` = ? AND t1.`is_accepted_name` = 0 AND '.
+    	   't1.`name_code` != t1.`accepted_name_code`'
     	);
         $stmt->execute(array($taxon->originalId));
         $taxon->synonyms = $stmt->fetchAll(

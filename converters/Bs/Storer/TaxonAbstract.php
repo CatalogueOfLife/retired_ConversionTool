@@ -5,6 +5,24 @@ require_once 'Abstract.php';
 class Bs_Storer_TaxonAbstract extends Bs_Storer_Abstract
 
 {
+    // Method used with just the rank, not the entire taxon object
+    protected function _getTaxonomicRankId($rank) 
+    {
+        if ($id = Dictionary::get('ranks', $rank)) {
+            return $id;
+        }
+        $stmt = $this->_dbh->prepare(
+            'SELECT id FROM `taxonomic_rank` WHERE `rank` = ?'
+        );
+        $result = $stmt->execute(array($rank));
+        if ($result && $stmt->rowCount() == 1) {
+            $id = $stmt->fetchColumn(0);
+            Dictionary::add('ranks', $rank, $id);
+            return $id;
+        }
+        return false;
+    }
+
     protected function _setTaxonomicRankId(Model $taxon) 
     {
         if ($id = Dictionary::get('ranks', $taxon->taxonomicRank)) {
@@ -83,5 +101,36 @@ class Bs_Storer_TaxonAbstract extends Bs_Storer_Abstract
         throw new Exception('Scientific name status could not be set!');
         return false;
     }
-    
+
+    protected function _isHybrid($nameElement)
+    {
+        $hybridMarkers = array('x ', ' x ');
+        foreach($hybridMarkers as $marker) {
+            $parts = explode($marker, $nameElement);
+            if (count($parts) > 1) {
+                return $parts;
+            }
+        }
+        return false;
+    }
+
+    protected function _getScientificNameElementId($nameElement)
+    {
+        $name = strtolower($nameElement);
+        $stmt = $this->_dbh->prepare(
+            'SELECT id FROM `scientific_name_element` WHERE `name_element` = ?'
+        );
+        $result = $stmt->execute(array($name));
+        if ($result && $stmt->rowCount() == 1) {
+            $nameElementId =  $stmt->fetchColumn(0);
+        } else {
+            $stmt = $this->_dbh->prepare(
+                'INSERT INTO `scientific_name_element` '.
+                '(`name_element`) VALUE (?)'
+            );
+            $stmt->execute(array($name));
+            $nameElementId =  $this->_dbh->lastInsertId();
+        }
+        return $nameElementId;
+    }
 }

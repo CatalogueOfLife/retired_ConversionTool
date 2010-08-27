@@ -71,24 +71,6 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon
 //        $this->_setTaxonNameElement($taxon);  // Needs parent_id!
     }
     
-    // Method used with just the rank, not the entire taxon object
-    private function _getTaxonomicRankId($rank) 
-    {
-        if ($id = Dictionary::get('ranks', $rank)) {
-            return $id;
-        }
-        $stmt = $this->_dbh->prepare(
-            'SELECT id FROM `taxonomic_rank` WHERE `rank` = ?'
-        );
-        $result = $stmt->execute(array($rank));
-        if ($result && $stmt->rowCount() == 1) {
-            $id = $stmt->fetchColumn(0);
-            Dictionary::add('ranks', $rank, $id);
-            return $id;
-        }
-        return false;
-    }
-
     protected function _setScientificNameElements(Model $taxon) 
     {
         $nameElements = array(
@@ -235,17 +217,5 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon
             $synonym->taxonId = $taxon->id;
             $storer->store($synonym);
         }
-    }
-    
-    protected function _isHybrid($nameElement)
-    {
-        $hybridMarkers = array('x ', ' x ');
-        foreach($hybridMarkers as $marker) {
-            $parts = explode($marker, $nameElement);
-            if (count($parts) > 1) {
-                return $parts;
-            }
-        }
-        return false;
     }
 }

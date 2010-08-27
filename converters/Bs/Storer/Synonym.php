@@ -9,6 +9,7 @@ class Bs_Storer_Synonym extends Bs_Storer_TaxonAbstract
 {
    public function store(Model $synonym)
     {
+        // Omit records that refer to themselves
         if ($synonym->infraSpecificMarker == '' && $synonym->infraspecies == '') {
     		$this->_setTaxonomicRankId($synonym);
      	} else {
@@ -50,28 +51,35 @@ $this->printObject($synonym);
     
     protected function _setSynonymNameElements(Model $synonym)
     {
+        $nameElements = array(
+            $this->_getTaxonomicRankId('genus') => $synonym->genus, 
+            $this->_getTaxonomicRankId('species') => $synonym->species 
+        );
+        if ($synonym->infraSpecificMarker != '') {
+            $nameElements[$synonym->taxonomicRankId] = $synonym->infraspecies;
+        }
+        $synonym->nameElementIds = $nameElements;
+        $stmt = $this->_dbh->prepare(
+            'INSERT INTO `synonym_name_element` ('.
+            '`taxonomic_rank_id`, `scientific_name_element_id`, '.
+            '`synonym_id`, `hybrid_order`) VALUES (?, ?, ?, ?)'
+        );
         foreach ($synonym->nameElementIds as $rankId => $nameElement) {
-            $nameElement = strtolower($nameElement);
             if ($hybridElements = $this->_isHybrid($nameElement)) {
                 foreach ($hybridElements as $hybridOrder => $hybridElement) {
+                    // Start order with 1 rather than 0
                     $hybridOrder++;
-                    $stmt = $this->_dbh->prepare(
-                        'INSERT INTO `scientific_name_element` ('.
-                        '`taxonomic_rank_id`, `scientific_name_element` '.
-                        '`synonym_id`, `hybrid_order`) VALUE (?, ?, ?, ?, ?)'
-                    );
+                    $nameElementId = 
+                        $this->_getScientificNameElementId($hybridElement);
                     $stmt->execute(array(
-                        $rankId, $hybridElement, $synonym->id, $hybridOrder)
+                        $rankId, $nameElementId, $synonym->id, $hybridOrder)
                     );
                 }
             } else {
-                $stmt = $this->_dbh->prepare(
-                    'INSERT INTO `scientific_name_element` ('.
-                    '`taxonomic_rank_id`, `scientific_name_element` '.
-                    '`synonym_id`, `hybrid_order`) VALUE (?, ?, ?, ?, ?)'
-                );
+                $nameElementId = 
+                        $this->_getScientificNameElementId($nameElement);
                 $stmt->execute(array(
-                    $rankId, $nameElement, $synonym->id, NULL)
+                    $rankId, $nameElementId, $synonym->id, NULL)
                 );
             }
         }
