@@ -13,19 +13,13 @@ abstract class Bs_Storer_Abstract
     protected function _recordExists($id_field, $table, array $where)
     {
     	$query = 'SELECT '.$id_field.' FROM `'.$table.'` WHERE ';
-        $print_query = $query;
     	foreach ($where as $field => $value) {
 		    $query .= ' (`'.$field.'` = :'.$field;
-            $print_query .= ' (`'.$field.'` = '.$value;
             if ($value == NULL) {
                 $query .= ' OR `'.$field.'` IS NULL';
-                $print_query .= ' OR `'.$field.'` IS NULL';
             }
             $query .= ') AND ';
-            $print_query .= ') AND ';
      	}
-    	echo substr($print_query, 0, -5).'<br>';
-    	
 		$stmt = $this->_dbh->prepare(substr($query, 0, -5));
 		if ($stmt->execute($where) && $stmt->rowCount() == 1) {
             return $stmt->fetchColumn(0);
