@@ -40,6 +40,14 @@ abstract class Bs_Storer_Abstract
         unset($stmt);
     }
     
+    public function getLastKeyArray($array)
+    {
+        end($array);
+        $key = key($array);
+        reset($array);
+        return $key;
+    }
+    
     public function printObject($object)
     {
         echo '<pre>';

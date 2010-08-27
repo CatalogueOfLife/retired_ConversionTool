@@ -81,8 +81,10 @@ class Bs_Storer_HigherTaxon extends Bs_Storer_TaxonAbstract
             '`scientific_name_element_id`, `parent_id`) VALUES (?, ?, ?)'
         );
         $stmt->execute(array(
-           $taxon->id, $nameElementId, $taxon->parentId
-           )
+               $taxon->id, 
+               $this->getLastKeyArray($taxon->nameElementIds), 
+               $taxon->parentId
+             )
         );
         return $taxon;
     }
