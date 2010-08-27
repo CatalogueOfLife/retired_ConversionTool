@@ -23,9 +23,13 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon
     	}
     	$this->_getScientificNameStatusId($taxon);
     	$this->_setScientificNameElements($taxon);
-    	
-/*      $this->_setTaxonNameElement($taxon);  // Needs parent_id!  */
-
+        // Abort if parent taxon does not match for infraspecies
+    	if (!$this->_setTaxonNameElement($taxon)) {
+    	    $this->_logger->debug(
+    	       'SKIPPED '.$taxon->name.': parent incorrectly set'
+    	    );
+    	    return;
+    	}
     	$this->_setTaxon($taxon);
     	if ($taxon->specialistId != '') {
     		$this->_setTaxonScrutiny($taxon);
@@ -39,7 +43,7 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon
         $this->_setTaxonCommonNames($taxon);
         $this->_setTaxonSynonyms($taxon);
         
-$this->printObject($taxon); 
+//$this->printObject($taxon); 
     	
     }
     

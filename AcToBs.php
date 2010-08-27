@@ -77,7 +77,7 @@ for ($limit = 5000, $offset = 0; $offset < $total; $offset += $limit) {
     } catch (PDOException $e) {
         echo '<pre>'; print_r($taxon); echo '</pre>';
         echo formatException($e);
-    }
+   }
 }
 echo '<br>Done!</p>';
 

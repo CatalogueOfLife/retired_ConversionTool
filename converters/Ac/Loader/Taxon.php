@@ -25,7 +25,6 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
     
     public function load($offset, $limit)
     {
-        // Statement that includes proper examples
         $stmt = $this->_dbh->prepare(
             'SELECT t1.`record_id` as id, t1.`taxon` as taxonomicRank, '.
             't1.`name`, t2.`genus`, t2.`species`, t2.`infraspecies`, '.
