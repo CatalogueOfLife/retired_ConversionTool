@@ -53,8 +53,7 @@ class Bs_Storer_TaxonAbstract extends Bs_Storer_Abstract
             return $taxon;
         }
         throw new Exception('Taxonomic rank id could not be set!');
-        return false;
-    }
+     }
 
     protected function _setInfraSpecificMarkerId(Model $taxon) 
     {

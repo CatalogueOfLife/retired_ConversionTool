@@ -47,7 +47,6 @@ class Bs_Storer_Uri extends Bs_Storer_Abstract
             return $id;
         }
         throw new Exception('Could not get scheme id for '.$scheme);
-        return false;
     }
     
     private function _getUriSchemeId($resourceIdentifier) 
