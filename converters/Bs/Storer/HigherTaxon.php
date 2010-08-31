@@ -36,13 +36,11 @@ class Bs_Storer_HigherTaxon extends Bs_Storer_TaxonAbstract
     {
         // All names are stored in lower case
         $name = strtolower($taxon->name);
-        $stmt = $this->_dbh->prepare(
-            'SELECT id FROM `scientific_name_element` WHERE `name_element` = ?'
+        $nameElementId = $this->_recordExists(
+            'id', 'scientific_name_element',
+            array('name_element' => $name)
         );
-        $result = $stmt->execute(array($name));
-        if ($result && $stmt->rowCount() == 1) {
-            $nameElementId = $stmt->fetchColumn(0);
-        } else {
+        if (!$nameElementId) {
             $stmt = $this->_dbh->prepare(
                 'INSERT INTO `scientific_name_element` '.
                 '(`name_element`) VALUE (?)'
@@ -50,12 +48,8 @@ class Bs_Storer_HigherTaxon extends Bs_Storer_TaxonAbstract
             $stmt->execute(array($name));
             $nameElementId =  $this->_dbh->lastInsertId();
         }
-        if (isset($nameElementId)) {
-            $taxon->nameElementIds[] = $nameElementId;
-            return $taxon;
-        }
-        throw new Exception('Scientific name element could not be set!');
-        return false;
+        $taxon->nameElementIds[] = $nameElementId;
+        return $taxon;
     }
     
     protected function _setTaxonNameElement(Model $taxon) 
@@ -67,11 +61,9 @@ class Bs_Storer_HigherTaxon extends Bs_Storer_TaxonAbstract
         // Verify for infraspecies if parent is present and matches 
         // record in the checklist; if not abort
         if (isset($taxon->infraspecies) && $taxon->infraspecies != '') {
-            $stmt = $this->_dbh->prepare(
-                'SELECT `taxonomic_rank_id` FROM `taxon` WHERE `id` = ?'
+            $parentRankId = $this->_recordExists(
+                'taxonomic_rank_id', 'taxon', array('id' => $taxon->parentId)
             );
-            $result = $stmt->execute(array($taxon->parentId));
-            $parentRankId = $stmt->fetchColumn(0);
             if ($parentRankId != $this->_getTaxonomicRankId('species')) {
                 return false;
             }

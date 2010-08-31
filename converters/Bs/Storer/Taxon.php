@@ -58,13 +58,11 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon
         }
         foreach ($nameElements as $rankId => $nameElement) {
 	        $name = strtolower($nameElement);
-	        $stmt = $this->_dbh->prepare(
-	            'SELECT id FROM `scientific_name_element` WHERE `name_element` = ?'
-	        );
-	        $result = $stmt->execute(array($name));
-	        if ($result && $stmt->rowCount() == 1) {
-	            $nameElementId =  $stmt->fetchColumn(0);
-	        } else {
+            $nameElementId = $this->_recordExists(
+                'id', 'scientific_name_element',
+                array('name_element' => $name)
+            );
+	        if (!$nameElementId) {
 	            $stmt = $this->_dbh->prepare(
 	                'INSERT INTO `scientific_name_element` '.
 	                '(`name_element`) VALUE (?)'
@@ -72,9 +70,7 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon
 	            $stmt->execute(array($name));
 	            $nameElementId =  $this->_dbh->lastInsertId();
 	        }
-	        if (isset($nameElementId)) {
-	            $taxon->nameElementIds[$rankId] = $nameElementId;
-	        }
+	        $taxon->nameElementIds[$rankId] = $nameElementId;
         }
         // At least two elements should have been set for (infra)species
         if (count($taxon->nameElementIds) >= 2) {

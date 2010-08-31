@@ -21,4 +21,8 @@ class Dictionary
             isset(self::$concepts[$name]) ? self::$concepts[$name] : false
         );
     }
+
+    public static function dumpAll() {
+        var_dump(self::$concepts);
+    }
 }

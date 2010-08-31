@@ -37,12 +37,10 @@ class Bs_Storer_Uri extends Bs_Storer_Abstract
         if ($id = Dictionary::get('uri_scheme', $scheme)) {
             return $id;
         }
-        $stmt = $this->_dbh->prepare(
-           'SELECT id FROM `uri_scheme` WHERE scheme = ?'
+        $id = $this->_recordExists(
+            'id', 'uri_scheme', array('scheme' => $scheme)
         );
-        $result = $stmt->execute(array($scheme));
-        if ($result && $stmt->rowCount() == 1) {
-            $id = $stmt->fetchColumn(0);
+        if ($id) {
             Dictionary::add('uri_scheme', $scheme, $id);
             return $id;
         }

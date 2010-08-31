@@ -42,12 +42,11 @@ class Bs_Storer_TaxonAbstract extends Bs_Storer_Abstract
             $taxon->taxonomicRankId = $id;
             return $taxon;
         }
-        $stmt = $this->_dbh->prepare(
-            'SELECT id FROM `taxonomic_rank` WHERE `rank` = ?'
+        $id = $this->_recordExists(
+            'id', 'taxonomic_rank', 
+            array('rank' => $taxon->taxonomicRank)
         );
-        $result = $stmt->execute(array($taxon->taxonomicRank));
-        if ($result && $stmt->rowCount() == 1) {
-            $id = $stmt->fetchColumn(0);
+        if ($id) {
             Dictionary::add('ranks', $taxon->taxonomicRank, $id);
             $taxon->taxonomicRankId = $id;
             return $taxon;
@@ -70,12 +69,10 @@ class Bs_Storer_TaxonAbstract extends Bs_Storer_Abstract
             $taxon->taxonomicRankId = $markerId;
             return $taxon;
         }
-        $stmt = $this->_dbh->prepare(
-            'SELECT id FROM `taxonomic_rank` WHERE `rank` = ?'
+        $markerId = $this->_recordExists(
+            'id', 'taxonomic_rank', array('rank' => $marker)
         );
-        $result = $stmt->execute(array($marker));
-        if ($result && $stmt->rowCount() == 1) {
-            $markerId = $stmt->fetchColumn(0);
+        if ($markerId) {
             Dictionary::add('ranks', $marker, $markerId);
             $taxon->taxonomicRankId = $markerId;
             return $taxon;
@@ -100,18 +97,16 @@ class Bs_Storer_TaxonAbstract extends Bs_Storer_Abstract
             $taxon->scientificNameStatusId = $id;
             return $taxon;
         }
-        $stmt = $this->_dbh->prepare(
-            'SELECT id FROM `scientific_name_status` WHERE `name_status` = ?'
+        $id = $this->_recordExists(
+            'id', 'scientific_name_status', 
+            array('name_status' => $taxon->scientificNameStatus)
         );
-        $result = $stmt->execute(array($taxon->scientificNameStatus));
-        if ($result && $stmt->rowCount() == 1) {
-            $id = $stmt->fetchColumn(0);
+        if ($id) {
             Dictionary::add('statuses', $taxon->scientificNameStatusId, $id);
             $taxon->scientificNameStatusId = $id;
             return $taxon;
         }
         throw new Exception('Scientific name status could not be set!');
-        return false;
     }
 
     protected function _isHybrid($nameElement)
@@ -132,12 +127,10 @@ class Bs_Storer_TaxonAbstract extends Bs_Storer_Abstract
         if ($id = Dictionary::get('ranks', $rank)) {
             return $id;
         }
-        $stmt = $this->_dbh->prepare(
-            'SELECT id FROM `taxonomic_rank` WHERE `rank` = ?'
+        $id = $this->_recordExists(
+            'id', 'taxonomic_rank', array('rank' => $rank)
         );
-        $result = $stmt->execute(array($rank));
-        if ($result && $stmt->rowCount() == 1) {
-            $id = $stmt->fetchColumn(0);
+        if ($id) {
             Dictionary::add('ranks', $rank, $id);
             return $id;
         }
@@ -147,13 +140,11 @@ class Bs_Storer_TaxonAbstract extends Bs_Storer_Abstract
     protected function _getScientificNameElementId($nameElement)
     {
         $name = strtolower($nameElement);
-        $stmt = $this->_dbh->prepare(
-            'SELECT id FROM `scientific_name_element` WHERE `name_element` = ?'
+        $nameElementId = $this->_recordExists(
+            'id', 'scientific_name_element', 
+            array('name_element' => $nameElement)
         );
-        $result = $stmt->execute(array($name));
-        if ($result && $stmt->rowCount() == 1) {
-            $nameElementId =  $stmt->fetchColumn(0);
-        } else {
+        if (!$nameElementId) {
             $stmt = $this->_dbh->prepare(
                 'INSERT INTO `scientific_name_element` '.
                 '(`name_element`) VALUE (?)'

@@ -59,12 +59,9 @@ class Bs_Storer_CommonName extends Bs_Storer_Abstract
             $commonName->languageIso = $iso;
             return $commonName;
         }
-        $stmt = $this->_dbh->prepare(
-            'SELECT `iso` FROM `language` WHERE `name` = ?'
-        );
-        $result = $stmt->execute(array($commonName->language));
-        if ($result && $stmt->rowCount() == 1) {
-            $iso = $stmt->fetchColumn(0);
+        $iso = $this->_recordExists('iso', 'language', 
+            array('name' => $commonName->language));
+        if ($iso) {
             Dictionary::add('languages', $commonName->language, $iso);
             $commonName->languageIso = $iso;
             return $commonName;
@@ -77,12 +74,9 @@ class Bs_Storer_CommonName extends Bs_Storer_Abstract
             $commonName->countryIso = $iso;
             return $commonName;
         }
-        $stmt = $this->_dbh->prepare(
-            'SELECT `iso` FROM `country` WHERE `name` = ?'
-        );
-        $result = $stmt->execute(array($commonName->country));
-        if ($result && $stmt->rowCount() == 1) {
-            $iso = $stmt->fetchColumn(0);
+        $iso = $this->_recordExists('iso', 'country', 
+            array('name' => $commonName->country));
+        if ($iso) {
             Dictionary::add('countries', $commonName->country, $iso);
             $commonName->countryIso = $iso;
             return $commonName;
@@ -150,7 +144,8 @@ class Bs_Storer_CommonName extends Bs_Storer_Abstract
     
     private function _setReferenceToCommonName(Model $commonName) 
     {
-        $refToCN = $this->_recordExists('reference_id', 'reference_to_common_name', 
+        $refToCN = $this->_recordExists('reference_id', 
+            'reference_to_common_name', 
             array(
                 'reference_id' => $commonName->referenceId,
                 'common_name_id' => $commonName->id)
