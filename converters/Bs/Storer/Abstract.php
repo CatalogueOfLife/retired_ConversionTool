@@ -10,9 +10,9 @@ abstract class Bs_Storer_Abstract
         $this->_logger = $logger;
     }
     
-    protected function _recordExists($field, $table, array $where)
+    protected function _recordExists($id, $table, array $where)
     {
-    	$query = 'SELECT `'.$field.'` FROM `'.$table.'` WHERE ';
+    	$query = 'SELECT `'.$id.'` FROM `'.$table.'` WHERE ';
     	foreach ($where as $field => $value) {
 		    $query .= ' (`'.$field.'` = :'.$field;
             if ($value == NULL) {

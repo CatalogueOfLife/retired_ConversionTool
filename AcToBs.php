@@ -67,7 +67,7 @@ echo '<p>Preparing higher taxa...<br>';
 $total = $loader->count('HigherTaxon');
 $ind->init($total);
 echo "Transferring $total higher taxa<br>";
-for ($limit = 5000, $offset = 0; $offset < $total; $offset += $limit) {    
+for ($limit = 10000, $offset = 0; $offset < $total; $offset += $limit) {    
     try {
         $taxa = $loader->load('HigherTaxon', $offset, $limit);
         foreach($taxa as $taxon) {
@@ -87,7 +87,7 @@ echo '<p>Preparing species and infraspecies...<br>';
 $total = $loader->count('Taxon');
 $ind->init($total);
 echo "Transferring $total taxa<br>";
-for ($limit = 2500, $offset = 0; $offset < $total; $offset += $limit) {    
+for ($limit = 5000, $offset = 0; $offset < $total; $offset += $limit) {    
     try {
         $taxa = $loader->load('Taxon', $offset, $limit);
         foreach($taxa as $taxon) {
