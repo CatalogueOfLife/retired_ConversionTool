@@ -11,7 +11,7 @@ class Ac_Loader_HigherTaxon extends Ac_Loader_Abstract
     {
         $stmt = $this->_dbh->prepare(
             'SELECT COUNT(1) FROM `taxa` WHERE `taxon` NOT LIKE "%species" '.
-            'AND `is_accepted_name` = 1'
+            'AND `is_accepted_name` = 1 AND `name` != ""'
         );
         $stmt->execute();
         $res = $stmt->fetchColumn(0);
@@ -25,8 +25,7 @@ class Ac_Loader_HigherTaxon extends Ac_Loader_Abstract
             'SELECT record_id as id, LOWER(taxon) as taxonomicRank, name, '.
             'lsid, parent_id as parentId FROM `taxa` WHERE '.
             'taxon NOT LIKE "%species" AND is_accepted_name = 1 '.
-            'ORDER BY record_id '.
-            'LIMIT :offset, :limit'
+            'AND `name` != "" ORDER BY record_id  LIMIT :offset, :limit'
         );
         $stmt->bindParam('offset', $offset, PDO::PARAM_INT);
         $stmt->bindParam('limit', $limit, PDO::PARAM_INT);
