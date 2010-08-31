@@ -15,7 +15,7 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
         $stmt = $this->_dbh->prepare(
             'SELECT COUNT(1) FROM taxa t1, scientific_names t2 WHERE '.
             't1.`is_accepted_name` = 1 AND t1.`taxon` LIKE "%species" AND '.
-            't1.`name_code` = t2.`name_code`'
+            't1.`name_code` = t2.`name_code` AND t1.`name` != ""'
         );
         $stmt->execute();
         $res = $stmt->fetchColumn(0);
@@ -26,16 +26,20 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
     public function load($offset, $limit)
     {
         $stmt = $this->_dbh->prepare(
-            'SELECT t1.`record_id` as id, t1.`taxon` as taxonomicRank, '.
+            'SELECT t1.`record_id` AS id, t1.`taxon` AS taxonomicRank, '.
             't1.`name`, t2.`genus`, t2.`species`, t2.`infraspecies`, '.
-            't2.`infraspecies_marker` as infraSpecificMarker, t1.`lsid`, '.
-            't1.`parent_id` as parentId, t1.`database_id` as sourceDatabaseId, '.
-            't1.`name_code` as originalId, t2.`author` as authorString, '.
-            't1.`sp2000_status_id` as scientificNameStatusId,'.
-            't2.`web_site` as uri, t2.`comment` as additionalData, '.
-            't2.`scrutiny_date` as scrutinyDate, t2.`specialist_id` as specialistId '.
-            'FROM taxa t1, scientific_names t2 WHERE t1.`is_accepted_name` = 1 '.
-            'AND t1.`taxon` LIKE "%species" AND t1.`name_code` = t2.`name_code` '.
+            't2.`infraspecies_marker` AS infraSpecificMarker, t1.`lsid`, '.
+            't1.`parent_id` AS parentId, '.
+            't1.`database_id` AS sourceDatabaseId, '.
+            't1.`name_code` AS originalId, t2.`author` AS authorString, '.
+            't1.`sp2000_status_id` AS scientificNameStatusId,'.
+            't2.`web_site` AS uri, t2.`comment` AS additionalData, '.
+            't2.`scrutiny_date` AS scrutinyDate, '.
+            't2.`specialist_id` AS specialistId '.
+            'FROM taxa t1, scientific_names t2 '.
+            'WHERE t1.`is_accepted_name` = 1 '.
+            'AND t1.`taxon` LIKE "%species" AND t1.`name` != ""' .
+            'AND t1.`name_code` = t2.`name_code` '.
             'LIMIT :offset, :limit'
         );
         $stmt->bindParam('offset', $offset, PDO::PARAM_INT);
