@@ -15,7 +15,7 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
         $stmt = $this->_dbh->prepare(
             'SELECT COUNT(1) FROM taxa t1, scientific_names t2 WHERE '.
             't1.`is_accepted_name` = 1 AND t1.`taxon` LIKE "%species" AND '.
-            't1.`name_code` = t2.`name_code` AND t1.`name` != ""'
+            't1.`name_code` = t2.`name_code`'
         );
         $stmt->execute();
         $res = $stmt->fetchColumn(0);
@@ -38,7 +38,7 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
             't2.`specialist_id` AS specialistId '.
             'FROM taxa t1, scientific_names t2 '.
             'WHERE t1.`is_accepted_name` = 1 '.
-            'AND t1.`taxon` LIKE "%species" AND t1.`name` != ""' .
+            'AND t1.`taxon` LIKE "%species" ' .
             'AND t1.`name_code` = t2.`name_code` '.
             'LIMIT :offset, :limit'
         );
