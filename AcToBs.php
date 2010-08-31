@@ -48,7 +48,7 @@ foreach ($config as $k => $v) {
 }
 $loader = new Ac_Loader(DbHandler::getInstance('source'), $logger);
 $storer = new Bs_Storer(DbHandler::getInstance('target'), $logger, $ind);
-
+/*
 echo '<p>Deleting old data...<br>';
 $storer->clearDb();
 echo 'Done!</p>';
@@ -80,7 +80,7 @@ for ($limit = 5000, $offset = 0; $offset < $total; $offset += $limit) {
    }
 }
 echo '<br>Done!</p>';
-
+*/
 // Taxa
 echo '<p>Preparing species and infraspecies...<br>';
 $total = $loader->count('Taxon');
