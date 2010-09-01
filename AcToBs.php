@@ -4,10 +4,10 @@
 	<meta http-equiv="content-type" content="text/html; charset=utf-8">
 	<title>Annual Checklist to Base Scheme</title>
 </head>
-<body style="font: 12px verdana;">
+<body style="font: 12px Verdana;">
 <h3>Annual Checklist to Base Scheme</h3>
-
 <?php
+require_once 'library.php';
 alwaysFlush();
 set_include_path('library' . PATH_SEPARATOR . get_include_path());
 
@@ -18,9 +18,6 @@ require_once 'converters/Bs/Storer.php';
 require_once 'library/Zend/Log/Writer/Stream.php';
 require_once 'library/Zend/Log.php';
 require_once 'Indicator.php';
-
-require_once 'converters/Bs/Storer/HigherTaxon.php';
-require_once 'converters/Bs/Storer/Taxon.php';
 
 /**
  * Logger initialization
@@ -100,31 +97,6 @@ for ($limit = 5000, $offset = 0; $offset < $total; $offset += $limit) {
     }
 }
 echo '<br>Done!</p>';
-
-function alwaysFlush() {
-	@ini_set('zlib.output_compression', 0);
-	@ini_set('implicit_flush', 1);
-	for ($i = 0; $i < ob_get_level(); $i++) { ob_end_flush(); }
-	ob_implicit_flush(1);
-	set_time_limit(0);
-}
-
-function formatException(Exception $e) {
-    $trace = $e->getTrace();
-
-    $result = 'Exception: "';
-    $result .= $e->getMessage();
-    $result .= '" @ ';
-    if($trace[0]['class'] != '') {
-        $result .= $trace[0]['class'];
-        $result .= '->';
-    }
-    $result .= $trace[0]['function'];
-    $result .= '();<br />';
-
-    return $result;
-}
-
 ?>
 </body>
 </html>

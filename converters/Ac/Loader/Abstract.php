@@ -1,4 +1,9 @@
 <?php
+/**
+ * Abstract loader
+ * 
+ * @author Nœria Torrescasana Aloy
+ */
 abstract class Ac_Loader_Abstract
 {
     protected $_dbh;

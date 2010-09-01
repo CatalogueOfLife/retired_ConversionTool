@@ -138,7 +138,7 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon
         $author->authorString = $taxon->authorString;
         $storer = new Bs_Storer_Author($this->_dbh, $this->_logger);
         $storer->store($author);
-        
+
         $stmt = $this->_dbh->prepare(
             'INSERT INTO `taxon_detail` (`taxon_id`, `author_string_id`, '.
             '`scientific_name_status_id`, `additional_data`, `scrutiny_id`) '.

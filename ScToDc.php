@@ -1,11 +1,6 @@
 <?php
-// Some settings to always flush and avoid timeouts...
-@ini_set('zlib.output_compression', 0);
-@ini_set('implicit_flush', 1);
-for ($i = 0; $i < ob_get_level(); $i++) { ob_end_flush(); }
-ob_implicit_flush(1);
-set_time_limit(0);
-
+require_once 'library.php';
+alwaysFlush();
 set_include_path('library' . PATH_SEPARATOR . get_include_path());
 
 require_once 'DbHandler.php';
@@ -52,8 +47,6 @@ $storer = new Dc_Storer(DbHandler::getInstance('target'), $logger, $ind);
  * Conversion
  */
 // Clear references
-
-
 $storer->clear('Reference');
 
 // Databases

@@ -3,10 +3,21 @@ require_once 'Interface.php';
 require_once 'Abstract.php';
 require_once 'converters/Ac/Model/AcToBs/HigherTaxon.php';
 
+/**
+ * HigherTaxon loader
+ * 
+ * @author Nœria Torrescasana Aloy, Ruud Altenburg
+ *
+ */
 class Ac_Loader_HigherTaxon extends Ac_Loader_Abstract
     implements Ac_Loader_Interface
 {
     
+    /**
+     * Count number of higher taxa in Annual Checklist
+     * 
+     * @return int
+     */
     public function count()
     {
         $stmt = $this->_dbh->prepare(
@@ -19,6 +30,15 @@ class Ac_Loader_HigherTaxon extends Ac_Loader_Abstract
         return $res;
     }
     
+    /**
+     * Load higher taxa from Annual Checklist
+     * 
+     * Iterates through all higher taxa and fetches objects in batches
+     * 
+     * @param int $offset offset value for LIMIT in query
+     * @param int $limit number of rows to be returned in query
+     * @return array $taxa array of HigherTaxon objects
+     */
     public function load($offset, $limit)
     {
         $stmt = $this->_dbh->prepare(

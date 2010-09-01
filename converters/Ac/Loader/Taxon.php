@@ -1,4 +1,9 @@
 <?php
+/**
+ * 
+ * @author Nœria Torrescasana Aloy, Ruud Altenburg
+ *
+ */
 require_once 'Interface.php';
 require_once 'Abstract.php';
 require_once 'converters/Ac/Model/AcToBs/Taxon.php';
@@ -10,6 +15,11 @@ require_once 'converters/Ac/Model/AcToBs/Synonym.php';
 class Ac_Loader_Taxon extends Ac_Loader_Abstract
     implements Ac_Loader_Interface
 {
+    /**
+     * Count number of (infra)species in Annual Checklist
+     * 
+     * @return int
+     */
     public function count()
     {
         $stmt = $this->_dbh->prepare(
@@ -23,6 +33,15 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
         return $res;
     }
     
+    /**
+     * Load taxa from Annual Checklist
+     * 
+     * Iterates through all higher taxa and fetches objects in batches
+     * 
+     * @param int $offset offset value for LIMIT in query
+     * @param int $limit number of rows to be returned in query
+     * @return array $taxa array of Taxon objects
+     */
     public function load($offset, $limit)
     {
         $stmt = $this->_dbh->prepare(
@@ -87,10 +106,10 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
     protected function _setTaxonReferences(Model $taxon)
     {
         $stmt = $this->_dbh->prepare(
-			'SELECT `author` as authors, `year`, `title`, `source` as text '.
-            'FROM `references` t1, `scientific_name_references` t2 WHERE ' .
-			't2.`name_code` = ? AND t1.`record_id` = t2.`reference_id` AND '.
-			't2.`reference_type` != "ComNameRef"'
+			'SELECT `author` AS authors, `year`, `title`, `source` AS text '.
+            'FROM `references` t1, `scientific_name_references` t2 '.
+            'WHERE t2.`name_code` = ? AND t1.`record_id` = t2.`reference_id` '.
+            'AND t2.`reference_type` != "ComNameRef"'
 		);
 		$stmt->execute(array($taxon->originalId));
 		$taxon->references = $stmt->fetchAll(PDO::FETCH_CLASS, 'Reference');
@@ -101,8 +120,8 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
     protected function _setTaxonDistribution(Model $taxon)
     {
         $stmt = $this->_dbh->prepare(
-            'SELECT `distribution` as freeText FROM `distribution` WHERE ' .
-            '`name_code` = ?'
+            'SELECT `distribution` AS freeText FROM `distribution` '.
+            'WHERE `name_code` = ?'
         );
         $stmt->execute(array($taxon->originalId));
         $taxon->distribution = $stmt->fetchAll(PDO::FETCH_CLASS, 'Distribution');

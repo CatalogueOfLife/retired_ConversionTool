@@ -1,4 +1,9 @@
 <?php
+/**
+ * Abstract storer
+ * 
+ * @author Nœria Torrescasana Aloy, Ruud Altenburg
+ */
 abstract class Bs_Storer_Abstract
 {
     protected $_dbh;
@@ -10,13 +15,23 @@ abstract class Bs_Storer_Abstract
         $this->_logger = $logger;
     }
     
-    protected function _recordExists($id, $table, array $where)
+    /**
+     * Test if a single record exists in storer database
+     * 
+     * Returns the value of $return_column or false if record does not exist.
+     * 
+     * @param mixed $return_column value in this field will be returned
+     * @param string $table table to be searched
+     * @param array $where associative array with pairs column => value
+     * @return int|str|false value of $return_column or false if record does not exist
+     */
+    protected function _recordExists($return_column, $table, array $where)
     {
-    	$query = 'SELECT `'.$id.'` FROM `'.$table.'` WHERE ';
-    	foreach ($where as $field => $value) {
-		    $query .= ' (`'.$field.'` = :'.$field;
+    	$query = 'SELECT `'.$return_column.'` FROM `'.$table.'` WHERE ';
+    	foreach ($where as $column => $value) {
+		    $query .= ' (`'.$column.'` = :'.$column;
             if ($value == NULL) {
-                $query .= ' OR `'.$field.'` IS NULL';
+                $query .= ' OR `'.$column.'` IS NULL';
             }
             $query .= ') AND ';
      	}
@@ -27,6 +42,12 @@ abstract class Bs_Storer_Abstract
 	    return false;
     }
     
+    /**
+     * Returns the last value from an array
+     * 
+     * @param array $array
+     * @return mixed last value of array
+     */
     public function getLastKeyArray($array)
     {
         end($array);
@@ -35,6 +56,9 @@ abstract class Bs_Storer_Abstract
         return $key;
     }
     
+    /**
+     * Print object (or array) using print_r()
+     */
     public function printObject($object)
     {
         echo '<pre>';
@@ -42,6 +66,15 @@ abstract class Bs_Storer_Abstract
         echo '</pre>';
     }
     
+    /**
+     * Parse date from Annual Checklist to yyyy-mm-dd
+     * 
+     * Strips off specific strings used in Annual Checklist 2010 and tries to
+     * format to valid date. Returns NULL if string cannot be parsed.
+     * 
+     * @param string $date
+     * @return date|NULL correctly formatted MySQL date or NULL if parsing is not possible
+     */
     public function parseAcDate($date) {
     	$date = trim($date);
     	// First strip off FishBase string if it is present
