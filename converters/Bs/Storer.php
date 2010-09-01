@@ -76,6 +76,12 @@ class Bs_Storer
     }
     */
     
+    /**
+     * Passes store function on to appropriate storer class
+     * 
+     * @param class $object class defined in model or, when extended,
+     * in converters/Ac/Model
+     */
     public function store(Model $object)
     {
     	$storer = $this->_getStorer(get_class($object), true);   	
@@ -84,6 +90,11 @@ class Bs_Storer
         return $res;
     }
     
+    /**
+     * Passes storeAll function on to appropriate storer class
+     * 
+     * Not used in this conversion; see ScToDc for implementation.
+     */
     public function storeAll(array $arr)
     {
     	if(empty($arr)) {
@@ -100,10 +111,11 @@ class Bs_Storer
      * Clears all entries in Base Scheme database from a previous import
      * 
      * Rather than clearing individual tables as in the ScToDc conversion,
-     * this function is used to clear the entire database. Emptying individual 
-     * tables is practically impossible because of the strict foreign key 
-     * contraints in the Base Scheme. Also resets AUTO_INCREMENT values and
-     * clear custom entries from the the taxonomic_rank table.
+     * this function is used to clear the entire database, using the column 
+     * order in the static $dbTables array. Emptying individual tables is 
+     * practically impossible because of the strict foreign key contraints 
+     * in the Base Scheme. Also resets AUTO_INCREMENT values and clears 
+     * custom entries from the the taxonomic_rank table.
      */
     public function clearDb()
     {

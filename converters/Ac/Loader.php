@@ -47,11 +47,17 @@ class Ac_Loader
         return $loader;
     }
     
+    /**
+     * Passes load function on to appropriate loader class
+     */
     public function load($what, $offset = 0, $limit = 100)
     {
         return $this->_getLoader($what)->load($offset, $limit);
     }
     
+    /**
+     * Passes count function on to appropriate loader class
+     */
     public function count($what)
     {
          return $this->_getLoader($what)->count();
