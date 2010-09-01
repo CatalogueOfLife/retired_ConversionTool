@@ -1,9 +1,4 @@
 <?php
-/**
- * 
- * @author Nœria Torrescasana Aloy, Ruud Altenburg
- *
- */
 require_once 'Interface.php';
 require_once 'Abstract.php';
 require_once 'converters/Ac/Model/AcToBs/Taxon.php';
@@ -12,6 +7,11 @@ require_once 'model/AcToBs/Distribution.php';
 require_once 'converters/Ac/Model/AcToBs/CommonName.php';
 require_once 'converters/Ac/Model/AcToBs/Synonym.php';
 
+/**
+ * 
+ * @author Nœria Torrescasana Aloy, Ruud Altenburg
+ *
+ */
 class Ac_Loader_Taxon extends Ac_Loader_Abstract
     implements Ac_Loader_Interface
 {

@@ -1,6 +1,14 @@
 <?php
 require_once 'Loader/Interface.php';
 
+/**
+ * Loader
+ * 
+ * Dynamically loads the appropriate class. In the script that runs the 
+ * conversion, only Class has to be given rather than Ac_Loader_Class
+ * 
+ * @author Nœria Torrescasana Aloy
+ */
 class Ac_Loader
 {
     protected $_dbh;
@@ -12,6 +20,16 @@ class Ac_Loader
         $this->_logger = $logger;
     }
     
+    /**
+     * Dynamically loads the appropriate loader class
+     * 
+     * Takes a simplified notation of the loader class that should be used
+     * and dispatches the load() or count() methods to that class
+     * 
+     * @param string $name class name
+     * @throws exception
+     * @return class $loader loader class
+     */
     private function _getLoader($name)
     {
         $class = 'Ac_Loader_' . $name;
