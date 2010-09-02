@@ -24,7 +24,11 @@ class Bs_Storer_CommonName extends Bs_Storer_Abstract
     private static $languageMap = array (
         'Malay' => 'Malay (individual language)',
         'Greek' => 'Modern Greek (1453-)',
-        'Swahili' => 'Swahili (individual language)'
+        'Waray-waray' => 'Waray (Philippines)',
+        'Swahili' => 'Swahili (individual language)',
+        'Rumanian' => 'Romanian',
+        'Slovene' => 'Slovenian',
+        'Hungarian (Magyar)' => 'Hungarian'
     );
     
     // Incomplete set of countries in Sp2010ac database that cannot be
@@ -33,7 +37,17 @@ class Bs_Storer_CommonName extends Bs_Storer_Abstract
         'China Main' => 'China',
         'UK' => 'United Kingdom',
         'Czech Rep' => 'Czech Republic',
-        'Russian Fed' => 'Russia'
+        'Russian Fed' => 'Russia',
+        'Papua N Guin' => 'Papua New Guinea',
+        'Fr Guiana' => 'French Guiana',
+        'Korea Rep' => 'Korea, South',
+        'Cape Verde' => 'Cape Verde Islands',
+        'Solomon Is' => 'Solomon Islands',
+        'NethAntilles' => 'Netherlands Antilles',
+        'Fr Polynesia' => 'French Polynesia',
+        'Serbia' => 'Serbia and Montenegro',
+        'United States' => 'USA',
+        'U.S.A.' => 'USA'
     );
     
     public function store(Model $commonName)

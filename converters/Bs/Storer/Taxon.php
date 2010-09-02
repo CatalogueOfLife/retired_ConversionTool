@@ -159,17 +159,10 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon
     {
         $storer = new Bs_Storer_Distribution($this->_dbh, $this->_logger);
     	foreach ($taxon->distribution as $distribution) {
+	        $distribution->taxonId = $taxon->id;
 	        $storer->store($distribution);
-	        $stmt = $this->_dbh->prepare(
-	            'INSERT INTO `distribution_free_text` (`taxon_detail_id`, '.
-	            '`region_free_text_id`) VALUES (?, ?)'
-	        );
-	        $stmt->execute(array(
-	            $taxon->id, 
-	            $distribution->id)
-	        );
     	}
-        unset($storer, $distribution);
+        unset($storer);
     	return $taxon;
     }
     

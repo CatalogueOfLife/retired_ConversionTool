@@ -14,16 +14,16 @@
     }
 
     /**
-     * Format PHP exception
+     * Format exception
      * 
-     * Dumps the exception on the screen in a better readable format
+     * Logs and optionally dumps the exception on the screen 
+     * in a better readable format.
      * 
-     * @param $e
-     * @return string
+     * @param object $e exception to be formatted
+     * @returns string
      */
     function formatException(Exception $e) {
         $trace = $e->getTrace();
-    
         $result = 'Exception: "';
         $result .= $e->getMessage();
         $result .= '" @ ';
@@ -32,6 +32,6 @@
             $result .= '->';
         }
         $result .= $trace[0]['function'];
-        $result .= '();<br />';
+        $result .= '();<br>';
         return $result;
     }

@@ -4,6 +4,7 @@ require_once 'Abstract.php';
 require_once 'converters/Ac/Model/AcToBs/Taxon.php';
 require_once 'model/AcToBs/Reference.php';
 require_once 'model/AcToBs/Distribution.php';
+require_once 'converters/Ac/Model/AcToBs/Distribution.php';
 require_once 'converters/Ac/Model/AcToBs/CommonName.php';
 require_once 'converters/Ac/Model/AcToBs/Synonym.php';
 
@@ -23,9 +24,11 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
     public function count()
     {
         $stmt = $this->_dbh->prepare(
-            'SELECT COUNT(1) FROM taxa t1, scientific_names t2 WHERE '.
-            't1.`is_accepted_name` = 1 AND t1.`taxon` LIKE "%species" AND '.
-            't1.`name_code` = t2.`name_code`'
+            'SELECT COUNT(1) FROM taxa t1, scientific_names t2 '.
+            'WHERE t1.`is_accepted_name` = 1 '.
+            'AND t2.`sp2000_status_id` in (1,4) '.
+            'AND t1.`taxon` LIKE "%species" '.
+            'AND t1.`name_code` = t2.`name_code`'
         );
         $stmt->execute();
         $res = $stmt->fetchColumn(0);
@@ -57,9 +60,10 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
             't2.`specialist_id` AS specialistId '.
             'FROM taxa t1, scientific_names t2 '.
             'WHERE t1.`is_accepted_name` = 1 '.
+            'AND t2.`sp2000_status_id` in (1,4) '.
             'AND t1.`taxon` LIKE "%species" ' .
             'AND t1.`name_code` = t2.`name_code` '.
-            'LIMIT :offset, :limit'
+            'LIMIT :offset, :limit '
         );
         $stmt->bindParam('offset', $offset, PDO::PARAM_INT);
         $stmt->bindParam('limit', $limit, PDO::PARAM_INT);
@@ -124,7 +128,8 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
             'WHERE `name_code` = ?'
         );
         $stmt->execute(array($taxon->originalId));
-        $taxon->distribution = $stmt->fetchAll(PDO::FETCH_CLASS, 'Distribution');
+        $taxon->distribution = $stmt->fetchAll(PDO::FETCH_CLASS, 
+            'Bs_Model_AcToBs_Distribution');
         unset($stmt);
         return $taxon;
     }

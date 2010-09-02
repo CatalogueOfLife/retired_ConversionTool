@@ -133,4 +133,17 @@ class Bs_Storer
         $stmt->execute(array(0));
         unset($stmt);
     }
+    
+
+    public function disableForeignKeyChecks()
+    {
+        $stmt = $this->_dbh->prepare('SET foreign_key_checks = 0');
+        $stmt->execute();
+    }
+
+    public function enableForeignKeyChecks()
+    {
+        $stmt = $this->_dbh->prepare('SET foreign_key_checks = 1');
+        $stmt->execute();
+    }
 }

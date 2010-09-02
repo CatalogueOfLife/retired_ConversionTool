@@ -144,7 +144,7 @@ class Bs_Storer_TaxonAbstract extends Bs_Storer_Abstract
             'id', 'scientific_name_element', 
             array('name_element' => $nameElement)
         );
-        if (!$nameElementId) {
+        if (!$nameElementId && trim($name) != '') {
             $stmt = $this->_dbh->prepare(
                 'INSERT INTO `scientific_name_element` '.
                 '(`name_element`) VALUE (?)'

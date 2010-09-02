@@ -4,13 +4,13 @@
 	<meta http-equiv="content-type" content="text/html; charset=utf-8">
 	<title>Annual Checklist to Base Scheme</title>
 </head>
-<body style="font: 12px Verdana;">
+<body style="font: 12px verdana;">
 <h3>Annual Checklist to Base Scheme</h3>
+
 <?php
-require_once 'library.php';
-alwaysFlush();
 set_include_path('library' . PATH_SEPARATOR . get_include_path());
 
+require_once 'library.php';
 require_once 'DbHandler.php';
 require_once 'Dictionary.php';
 require_once 'converters/Ac/Loader.php';
@@ -18,6 +18,8 @@ require_once 'converters/Bs/Storer.php';
 require_once 'library/Zend/Log/Writer/Stream.php';
 require_once 'library/Zend/Log.php';
 require_once 'Indicator.php';
+
+alwaysFlush();
 
 /**
  * Logger initialization
@@ -45,7 +47,7 @@ foreach ($config as $k => $v) {
 }
 $loader = new Ac_Loader(DbHandler::getInstance('source'), $logger);
 $storer = new Bs_Storer(DbHandler::getInstance('target'), $logger, $ind);
-
+/*
 echo '<p>Clearing old data...<br>';
 $storer->clearDb();
 echo 'Done!</p>';
@@ -78,13 +80,14 @@ for ($limit = 10000, $offset = 0; $offset < $total; $offset += $limit) {
    }
 }
 echo '<br>Done!</p>';
-
+*/
 // Taxa
 echo '<p>Preparing species and infraspecies...<br>';
 $total = $loader->count('Taxon');
 $ind->init($total);
 echo "Transferring $total taxa<br>";
-for ($limit = 5000, $offset = 0; $offset < $total; $offset += $limit) {    
+//$storer->disableForeignKeyChecks();
+for ($limit = 7500, $offset = 0; $offset < $total; $offset += $limit) {    
     try {
         $taxa = $loader->load('Taxon', $offset, $limit);
         foreach($taxa as $taxon) {
