@@ -4,6 +4,11 @@ require_once 'model/AcToBs/Author.php';
 require_once 'converters/Bs/Storer/Author.php';
 require_once 'converters/Bs/Storer/Reference.php';
 
+/**
+ * Synonym storer
+ * 
+ * @author Nœria Torrescasana Aloy, Ruud Altenburg
+ */
 class Bs_Storer_Synonym extends Bs_Storer_TaxonAbstract
     implements Bs_Storer_Interface
 {

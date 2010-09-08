@@ -4,6 +4,11 @@ require_once 'Abstract.php';
 require_once 'model/AcToBs/Reference.php';
 require_once 'converters/Bs/Storer/Reference.php';
 
+/**
+ * CommonName storer
+ * 
+ * @author Nœria Torrescasana Aloy, Ruud Altenburg
+ */
 class Bs_Storer_CommonName extends Bs_Storer_Abstract
     implements Bs_Storer_Interface
 {

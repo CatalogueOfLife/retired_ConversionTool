@@ -9,6 +9,11 @@ require_once 'converters/Bs/Storer/Distribution.php';
 require_once 'converters/Bs/Storer/CommonName.php';
 require_once 'converters/Bs/Storer/Synonym.php';
 
+/**
+ * Taxon storer
+ * 
+ * @author Nœria Torrescasana Aloy, Ruud Altenburg
+ */
 class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon
     implements Bs_Storer_Interface
 {

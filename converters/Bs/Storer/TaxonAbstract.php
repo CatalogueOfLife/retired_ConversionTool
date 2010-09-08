@@ -2,8 +2,14 @@
 require_once 'Interface.php';
 require_once 'Abstract.php';
 
+/**
+ * Taxon storer abstract
+ * 
+ * Second abstract class for HigherTaxon, Taxon and Synonym
+ * 
+ * @author Nœria Torrescasana Aloy, Ruud Altenburg
+ */
 class Bs_Storer_TaxonAbstract extends Bs_Storer_Abstract
-
 {
     public static $hybridMarkers = array('x ', ' x ');
     // Overview of infraspecific markers in Sp2010ac database that can be

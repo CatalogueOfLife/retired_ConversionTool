@@ -4,6 +4,11 @@ require_once 'Abstract.php';
 require_once 'model/AcToBs/Uri.php';
 require_once 'converters/Bs/Storer/Uri.php';
 
+/**
+ * Database storer
+ * 
+ * @author Nœria Torrescasana Aloy, Ruud Altenburg
+ */
 class Bs_Storer_Database extends Bs_Storer_Abstract
     implements Bs_Storer_Interface
 {

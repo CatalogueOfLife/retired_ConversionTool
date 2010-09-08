@@ -3,6 +3,11 @@ require_once 'converters/Bs/Storer/TaxonAbstract.php';
 require_once 'model/AcToBs/Uri.php';
 require_once 'converters/Bs/Storer/Uri.php';
 
+/**
+ * HigherTaxon storer
+ * 
+ * @author Nœria Torrescasana Aloy, Ruud Altenburg
+ */
 class Bs_Storer_HigherTaxon extends Bs_Storer_TaxonAbstract
     implements Bs_Storer_Interface
 {

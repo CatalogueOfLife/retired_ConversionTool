@@ -39,7 +39,7 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
     /**
      * Load taxa from Annual Checklist
      * 
-     * Iterates through all higher taxa and fetches objects in batches
+     * Iterates through all taxa and fetches objects in batches
      * 
      * @param int $offset offset value for LIMIT in query
      * @param int $limit number of rows to be returned in query

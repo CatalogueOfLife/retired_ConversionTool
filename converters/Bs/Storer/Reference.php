@@ -2,6 +2,11 @@
 require_once 'Interface.php';
 require_once 'Abstract.php';
 
+/**
+ * Reference storer
+ * 
+ * @author Nœria Torrescasana Aloy, Ruud Altenburg
+ */
 class Bs_Storer_Reference extends Bs_Storer_Abstract
     implements Bs_Storer_Interface
 {

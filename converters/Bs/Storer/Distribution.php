@@ -2,6 +2,11 @@
 require_once 'Interface.php';
 require_once 'Abstract.php';
 
+/**
+ * Distribution storer
+ * 
+ * @author Nœria Torrescasana Aloy, Ruud Altenburg
+ */
 class Bs_Storer_Distribution extends Bs_Storer_Abstract
     implements Bs_Storer_Interface
 {

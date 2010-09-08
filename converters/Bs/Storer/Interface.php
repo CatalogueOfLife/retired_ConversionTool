@@ -1,10 +1,8 @@
 <?php
 /**
- * Loader interface
+ * Storer interface
  * 
- * Required methods for each storer object
- * 
- * @author Nœria Torrescasana Aloy, Ruud ALtenburg
+ * @author Nœria Torrescasana Aloy, Ruud Altenburg
  */
 interface Bs_Storer_Interface
 {
