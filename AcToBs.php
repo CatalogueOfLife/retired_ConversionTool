@@ -87,7 +87,7 @@ $total = $loader->count('Taxon');
 $ind->init($total);
 echo "Transferring $total taxa<br>";
 //$storer->disableForeignKeyChecks();
-for ($limit = 7500, $offset = 0; $offset < $total; $offset += $limit) {    
+for ($limit = 5000, $offset = 0; $offset < $total; $offset += $limit) {    
     try {
         $taxa = $loader->load('Taxon', $offset, $limit);
         foreach($taxa as $taxon) {

@@ -50,11 +50,16 @@ class Bs_Storer_Distribution extends Bs_Storer_Abstract
     
     private function _isExistingRegion(Model $distribution)
     {
-        $regionId = $this->_recordExists('region_standard_id', 'region', 
+        if ($id = Dictionary::get('regions', $distribution->freeText)) {
+            $distribution->regionId = $id;
+            return $distribution;
+        }
+        $id = $this->_recordExists('id', 'region', 
             array('name' => $distribution->freeText)
         );
-        if ($regionId) {
-            $distribution->regionId = $regionId;
+        if ($id) {
+            Dictionary::add('regions', $distribution->freeText, $id);
+            $distribution->regionId = $id;
             return $distribution;
         }
         return false;
