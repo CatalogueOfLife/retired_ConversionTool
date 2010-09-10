@@ -84,15 +84,15 @@ echo '<br>Done!</p>';
 // Taxa
 echo '<p>Preparing species and infraspecies...<br>';
 $total = $loader->count('Taxon');
-$ind->init($total);
+$ind->init($total, 75, 20);
 echo "Transferring $total taxa<br>";
-//$storer->disableForeignKeyChecks();
-for ($limit = 5000, $offset = 0; $offset < $total; $offset += $limit) {    
+for ($limit = 2500, $offset = 0; $offset < $total; $offset += $limit) {    
     try {
         $taxa = $loader->load('Taxon', $offset, $limit);
         foreach($taxa as $taxon) {
             $storer->store($taxon);
         }
+        //echo '<br><br>'.showMemoryUse().' memory used<br><br>';
         unset($taxa);
     } catch (PDOException $e) {
         echo '<pre>'; print_r($taxon); echo '</pre>';

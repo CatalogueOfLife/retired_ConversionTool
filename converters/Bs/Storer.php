@@ -84,9 +84,13 @@ class Bs_Storer
      */
     public function store(Model $object)
     {
-    	$storer = $this->_getStorer(get_class($object), true);   	
+    	$class = get_class($object);
+    	$storer = $this->_getStorer($class, true);   	
+        $start = microtime(true);
         $res = $storer->store($object);
-        $this->_indicator->iterate();
+        // Show stats for taxon import
+        $this->_indicator->iterate(microtime(true) - $start);
+        //$this->_indicator->iterate();
         return $res;
     }
     
@@ -132,18 +136,5 @@ class Bs_Storer
         );
         $stmt->execute(array(0));
         unset($stmt);
-    }
-    
-
-    public function disableForeignKeyChecks()
-    {
-        $stmt = $this->_dbh->prepare('SET foreign_key_checks = 0');
-        $stmt->execute();
-    }
-
-    public function enableForeignKeyChecks()
-    {
-        $stmt = $this->_dbh->prepare('SET foreign_key_checks = 1');
-        $stmt->execute();
     }
 }

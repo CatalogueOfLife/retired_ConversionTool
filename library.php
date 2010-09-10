@@ -35,3 +35,11 @@
         $result .= '();<br>';
         return $result;
     }
+
+    function showMemoryUse() {
+        $unit = array('B','KB','MB','GB','TB','PB');
+        $memory = memory_get_usage(true);
+        return round($memory/pow(1024,($i = floor(log($memory, 1024)))), 2).
+            ' '.$unit[$i];
+    }
+    

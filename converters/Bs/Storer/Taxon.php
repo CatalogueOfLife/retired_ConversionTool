@@ -20,14 +20,15 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon
     public function store(Model $taxon)
     {
      	// Species rank id
+     	//$start = microtime(true);
      	if ($taxon->infraSpecificMarker == '' && $taxon->infraspecies == '') {
     		$this->_setTaxonomicRankId($taxon);
     	// Infraspecies rank id
      	} else {
             $this->_setInfraSpecificMarkerId($taxon);
     	}
-    	$this->_getScientificNameStatusId($taxon);
-    	$this->_setScientificNameElements($taxon);
+        $this->_getScientificNameStatusId($taxon);
+        $this->_setScientificNameElements($taxon);
         $this->_setTaxon($taxon);
         // Abort if parent taxon does not match for infraspecies
         if (!$this->_setTaxonNameElement($taxon)) {
@@ -43,13 +44,16 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon
             $this->_setTaxonReferences($taxon);
     	}
     	$this->_setTaxonLsid($taxon);
-        $this->_setTaxonDetail($taxon);
-        $this->_setTaxonDistribution($taxon);
-        $this->_setTaxonCommonNames($taxon);
-        $this->_setTaxonSynonyms($taxon);
-        
-//$this->printObject($taxon); 
-    	
+    	$this->_setTaxonDetail($taxon);
+    	$this->_setTaxonDistribution($taxon);
+    	$this->_setTaxonCommonNames($taxon);
+    	$this->_setTaxonSynonyms($taxon);
+
+    	/*$end = microtime(true) - $start;
+    	if ($end > 2) {
+    	    echo '<br>Slow storing object ('.round($end, 3).' s):<br>';
+    	    $this->printObject($taxon);
+    	}*/
     }
     
     protected function _setScientificNameElements(Model $taxon) 
@@ -178,6 +182,7 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon
             $commonName->taxonId = $taxon->id;
             $storer->store($commonName);
         }
+        unset($storer);
     }
     
     protected function _setTaxonSynonyms(Model $taxon)
@@ -187,5 +192,6 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon
             $synonym->taxonId = $taxon->id;
             $storer->store($synonym);
         }
+        unset($storer);
     }
 }
