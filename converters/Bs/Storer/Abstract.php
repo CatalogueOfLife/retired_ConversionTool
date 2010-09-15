@@ -43,6 +43,17 @@ abstract class Bs_Storer_Abstract
     }
     
     /**
+     * Converts HTML entities to UTF8
+     * 
+     * @param string $string
+     * @return string converted string
+     */
+    public function convertHtmlToUtf($string) 
+    {
+        return html_entity_decode($string, ENT_COMPAT, 'UTF-8');
+    }
+    
+    /**
      * Returns the last value from an array
      * 
      * @param array $array

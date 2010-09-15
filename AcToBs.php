@@ -81,18 +81,19 @@ for ($limit = 10000, $offset = 0; $offset < $total; $offset += $limit) {
 }
 echo '<br>Done!</p>';
 */
+
 // Taxa
 echo '<p>Preparing species and infraspecies...<br>';
 $total = $loader->count('Taxon');
-$ind->init($total, 75, 20);
+$ind->init($total, 100, 5);
 echo "Transferring $total taxa<br>";
-for ($limit = 2500, $offset = 0; $offset < $total; $offset += $limit) {    
+for ($limit = 500, $offset = 0; $offset < $total; $offset += $limit) {    
     try {
         $taxa = $loader->load('Taxon', $offset, $limit);
+        echo showMemoryUse().' memory used<br>';
         foreach($taxa as $taxon) {
             $storer->store($taxon);
         }
-        //echo '<br><br>'.showMemoryUse().' memory used<br><br>';
         unset($taxa);
     } catch (PDOException $e) {
         echo '<pre>'; print_r($taxon); echo '</pre>';

@@ -1,4 +1,13 @@
 <?php
+/**
+ * Indicator
+ * 
+ * Class to display progress of running script by printing dots and percentage 
+ * done. Optionally (by default) also displays current running time and estimated
+ * remaining time.
+ * 
+ * @author Nœria Torrescasana Aloy, Ruud Altenburg
+ */
 class Indicator
 {
 	protected $_enabled = false;
@@ -14,12 +23,23 @@ class Indicator
     protected $_markersPerCycleCounter = 0;
     protected $_cycleCounter = 0;
     protected $_summarizedDuration = 0;
+    protected $_start = 0;
     
+    /**
+     * Overwrite default breakline
+     */
     public function setBreakLine ($breakLine)
     {
     	$this->_breakLine = $breakLine;
     }
     
+    /**
+     * Initialize indicator
+     * 
+     * @param int $numberOfIterations total number of records
+     * @param int $markersPerLine number of dots per line; if not set default is used
+     * @param int $iterationsPerMarker number of request per dot; if not set default is used
+     */
     public function init($numberOfIterations, $markersPerLine = null, 
         $iterationsPerMarker = null)
     {
@@ -34,7 +54,15 @@ class Indicator
         $this->reset();
     }
     
-    public function iterate($duration = false)
+    /**
+     * Main method displaying progress
+     * 
+     * Currently flush() is used to flush the buffer but it's safer to set
+     * alwaysFlush() (in library.php) at the top of the converter script document
+     * 
+     * @param bool $displayRemaining optionally disable display of running/remaining time
+     */
+    public function iterate($displayRemaining = true)
     {
     	if(!$this->_enabled) {
     		return;
@@ -46,9 +74,6 @@ class Indicator
             flush();
             $this->_iterationCounter = 0;
             $this->_markersPerCycleCounter ++;
-            if ($duration) {
-                $this->_summarizedDuration += $duration;
-            }
             if ($this->_markersPerCycleCounter >= $this->_markersPerLine) {
                 if ($this->_markersPerCycleCounter > 0 && 
                         $this->_totalNumberOfIterations > 0) {
@@ -58,7 +83,7 @@ class Indicator
                     );
                     echo ' ' . $currentPercentageDone . '% done';
                 }
-                if ($this->_summarizedDuration > 0) {
+                if ($displayRemaining) {
                     $this->_printRemainingTime();
                 }
     		    echo $this->_breakLine;
@@ -68,28 +93,50 @@ class Indicator
      	}
     }
     
+    /**
+     * Disable iterator
+     */
     public function disable() {
     	$this->reset();
     	$this->_enabled = false;
     }
     
+    /**
+     * Reset iterator
+     * 
+     * Used when iterator is used for a different cycle
+     */
     public function reset()
     {
     	$this->_iterationCounter = 0;
     	$this->_markersPerCycleCounter = 0;
     	$this->_cycleCounter = 0;
+    	$this->_start = microtime(true);
     }
     
-    public function formatRemainingTime($time)
+    /**
+     * Format time in seconds to d:h:m:s format
+     * 
+     * Typically takes the difference between two microtime(true) instances.
+     * Displays days only if relevant.
+     * 
+     * @param float $time time in seconds
+     * @return string formatted time
+     */ 
+    public function formatTime($time)
     {
         $remaining = '';
+        $units = array();
         $days = floor($time / 86400);
         $hours = floor((($time / 86400) - $days) * 24);
         $minutes = floor((((($time / 86400) - $days) * 24) - 
             $hours) * 60);
         $seconds = floor((((((($time / 86400) - $days) * 24) - 
             $hours) * 60) - $minutes) * 60);
-        foreach (array($days, $hours, $minutes, $seconds) as $unit) {
+        // Only print days if these are set
+        $days > 0 ? $units[] = $days : false;
+        array_push($units, $hours, $minutes, $seconds);
+        foreach ($units as $unit) {
             if ($unit < 10) {
                 $remaining .= "0";
             }
@@ -98,13 +145,18 @@ class Indicator
         return substr($remaining, 0, -1);
     }
     
+    /**
+     * Prints running and remaining time
+     * 
+     * @return string running and remaining time
+     */
     private function _printRemainingTime()
     {
-        $averageRequest = $this->_summarizedDuration / $this->_cycleCounter;
-        $remainingTime = $this->formatRemainingTime(
-            ($this->_totalNumberOfIterations - 
-            $this->_cycleCounter) * $averageRequest);
-        echo '; '.round((1 / $averageRequest), 2).
-            ' request/s, '.$remainingTime.' remaining';
+        $now = microtime(true) - $this->_start;
+        $runningTime = $this->formatTime($now);
+        $remainingTime = $this->formatTime(
+            ($this->_totalNumberOfIterations / $this->_cycleCounter) * $now
+        );
+        echo "; running $runningTime, remaining $remainingTime";
     }
 }

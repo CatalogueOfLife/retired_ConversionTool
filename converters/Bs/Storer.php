@@ -7,7 +7,7 @@ require_once 'Storer/Interface.php';
  * Dynamically loads the appropriate class. In the script that runs the 
  * conversion, only Class has to be given rather than Ac_Storer_Class
  * 
- * @author Nœria Torrescasana Aloy
+ * @author Nœria Torrescasana Aloy, Ruud Altenburg
  */
 class Bs_Storer
 {
@@ -21,7 +21,7 @@ class Bs_Storer
      * in $dbTables array below.
      */
     private static $dbTables = array(
-        'distribution_free_text', 'region_free_text', 'taxon_detail', 
+        'distribution, distribution_free_text', 'region_free_text', 'taxon_detail', 
         'scrutiny', 'specialist', 'reference_to_synonym', 
         'synonym_name_element', 'synonym', 'author_string', 
         'taxon_name_element', 'scientific_name_element', 'uri_to_taxon', 
@@ -30,7 +30,8 @@ class Bs_Storer
         'uri_to_taxon', 'uri', 'taxon', 'source_database'
     );
     
-    public function __construct(PDO $dbh, Zend_Log $logger, Indicator $indicator)
+    public function __construct(PDO $dbh, Zend_Log $logger, 
+        Indicator $indicator)
     {
         $this->_dbh = $dbh;
         $this->_logger = $logger;
@@ -45,7 +46,7 @@ class Bs_Storer
      * 
      * @param string $name class name
      * @throws exception
-     * @return class $loader loader class
+     * @return class loader class
      */
     private function _getStorer($name, $isClass = false)
     {
@@ -88,9 +89,7 @@ class Bs_Storer
     	$storer = $this->_getStorer($class, true);   	
         $start = microtime(true);
         $res = $storer->store($object);
-        // Show stats for taxon import
-        $this->_indicator->iterate(microtime(true) - $start);
-        //$this->_indicator->iterate();
+        $this->_indicator->iterate();
         return $res;
     }
     

@@ -1,12 +1,27 @@
 <?php
+/**
+ * Dictionary
+ * 
+ * Associative array to store previously inserted elements. This alleviates the
+ * need for MySQL lookup queries but note that a large array gobbles up a lot
+ * of memory! Use only for small data sets.
+ * 
+ * @author Nœria Torrescasana Aloy
+ */
 class Dictionary
 {
     protected static $concepts = array();
     
+    /**
+     * Set method
+     */
     public static function set($name, array $values) {
         self::$concepts[$name] = $values;
     }
     
+    /**
+     * Add element method
+     */
     public static function add($name, $key, $value) {
         self::$concepts[$name][$key] = $value;
     }

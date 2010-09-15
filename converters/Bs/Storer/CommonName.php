@@ -57,7 +57,10 @@ class Bs_Storer_CommonName extends Bs_Storer_Abstract
     
     public function store(Model $commonName)
     {
-        // First translate language and country if necessary
+        // First decode HTML entries to UTF8
+        $commonName->commonNameElement = 
+            $this->convertHtmlToUtf($commonName->commonNameElement);
+        // Translate language and country if necessary
         if (array_key_exists($commonName->language, self::$languageMap)) {
             $commonName->language = self::$languageMap[$commonName->language];
         }

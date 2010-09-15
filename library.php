@@ -36,6 +36,9 @@
         return $result;
     }
 
+    /**
+     * Shows currently PHP memory use, nicely formatted
+     */
     function showMemoryUse() {
         $unit = array('B','KB','MB','GB','TB','PB');
         $memory = memory_get_usage(true);
