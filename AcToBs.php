@@ -85,9 +85,9 @@ echo '<br>Done!</p>';
 // Taxa
 echo '<p>Preparing species and infraspecies...<br>';
 $total = $loader->count('Taxon');
-$ind->init($total, 100, 5);
+$ind->init($total, 100, 10);
 echo "Transferring $total taxa<br>";
-for ($limit = 500, $offset = 0; $offset < $total; $offset += $limit) {    
+for ($limit = 1000, $offset = 0; $offset < $total; $offset += $limit) {    
     try {
         $taxa = $loader->load('Taxon', $offset, $limit);
         echo showMemoryUse().' memory used<br>';

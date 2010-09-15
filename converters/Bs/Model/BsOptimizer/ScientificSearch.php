@@ -1,7 +1,5 @@
 <?php
-require_once 'Model.php';
-
-class Taxon implements Model
+class ScientificSearch
 {
     public $id;
     public $kingdom;
@@ -21,4 +19,6 @@ class Taxon implements Model
     public $acceptedSpeciesAuthor;
     public $sourceDatabaseId;
     public $sourceDatabaseName;
+    
+    private $taxonomicRankId;
 }
