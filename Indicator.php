@@ -155,7 +155,8 @@ class Indicator
         $now = microtime(true) - $this->_start;
         $runningTime = $this->formatTime($now);
         $remainingTime = $this->formatTime(
-            ($this->_totalNumberOfIterations / $this->_cycleCounter) * $now
+            ($this->_totalNumberOfIterations - $this->_cycleCounter) * 
+            $now / $this->_cycleCounter
         );
         echo "; running $runningTime, remaining $remainingTime";
     }

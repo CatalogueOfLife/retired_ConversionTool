@@ -21,8 +21,8 @@ class Bs_Storer
      * in $dbTables array below.
      */
     private static $dbTables = array(
-        'distribution, distribution_free_text', 'region_free_text', 'taxon_detail', 
-        'scrutiny', 'specialist', 'reference_to_synonym', 
+        'distribution', 'distribution_free_text', 'region_free_text', 
+        'taxon_detail', 'scrutiny', 'specialist', 'reference_to_synonym', 
         'synonym_name_element', 'synonym', 'author_string', 
         'taxon_name_element', 'scientific_name_element', 'uri_to_taxon', 
         'reference_to_taxon', 'reference_to_common_name', 'common_name', 

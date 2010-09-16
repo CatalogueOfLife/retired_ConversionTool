@@ -21,4 +21,6 @@ class ScientificSearch
     public $sourceDatabaseName;
     
     private $taxonomicRankId;
+    private $scientificNameStatusId;
+    private $authorStringId;
 }
