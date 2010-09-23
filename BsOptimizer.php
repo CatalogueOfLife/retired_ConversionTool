@@ -11,7 +11,6 @@
 	require_once 'library.php';
 	require_once 'DbHandler.php';
 	require_once 'Indicator.php';
-	require_once 'converters/Bs/Model/BsOptimizer/ScientificSearch.php';
 	
 	alwaysFlush();
 	$config = parse_ini_file('config/AcToBs.ini', true);
@@ -28,10 +27,27 @@
 	}
 	$pdo = DbHandler::getInstance('target');
 	$indicator = new Indicator();
+	define('PATH', realpath('.').PATH_SEPARATOR.'docs_and_dumps'.
+	PATH_SEPARATOR.'dumps'.PATH_SEPARATOR.'base_scheme'.PATH_SEPARATOR.'ac'.
+	PATH_SEPARATOR);
+	
+	// Create denormalized tables
+	$sql = file_get_contents(PATH.'denormalized_schema.sql');
+	echo $sql;
 	
 	
-	// Fill _search_scientific table
-	clearTable('_search_scientific');
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 /*	$total = getTotalRecords('SELECT COUNT(1) FROM `taxon`');
 	$indicator->init($total, 100);
 	
@@ -79,7 +95,7 @@
 		unset($taxon);
 		//printObject($taxon);
 	}
-*/	
+	
 	$total = getTotalRecords('SELECT COUNT(1) FROM `synonym`');
 	$indicator->init($total, 100);
 	
@@ -134,6 +150,19 @@
 		
 	}
 
+*/	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 
 
 

@@ -23,7 +23,7 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon
      	// in the loader because either status or record_id are duplicated.
      	// It is faster to skip them in the storer than in the loader.
      	if ($this->_recordExists('id', 'taxon', array('id' => $taxon->id))) {
-     	    return;
+     	    return false;
      	}
         
         // Species rank id
@@ -42,7 +42,7 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon
     	    $this->_logger->debug(
     	       'SKIPPED '.$taxon->name.': parent incorrectly set'
     	    );
-    	    return;
+    	    return false;
     	}
     	if ($taxon->specialistId != '') {
     		$this->_setTaxonScrutiny($taxon);
@@ -55,12 +55,6 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon
     	$this->_setTaxonDistribution($taxon);
     	$this->_setTaxonCommonNames($taxon);
     	$this->_setTaxonSynonyms($taxon);
-
-    	/*$end = microtime(true) - $start;
-    	if ($end > 2) {
-    	    echo '<br>Slow storing object ('.round($end, 3).' s):<br>';
-    	    $this->printObject($taxon);
-    	}*/
     }
     
     protected function _setScientificNameElements(Model $taxon) 

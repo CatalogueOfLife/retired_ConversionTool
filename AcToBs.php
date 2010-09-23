@@ -8,6 +8,7 @@
 <h3>Annual Checklist to Base Scheme</h3>
 
 <?php
+ini_set('memory_limit', '512M');
 set_include_path('library' . PATH_SEPARATOR . get_include_path());
 
 require_once 'library.php';
@@ -64,7 +65,7 @@ echo '<br>Done!</p>';
 // Higher Taxa
 echo '<p>Preparing higher taxa...<br>';
 $total = $loader->count('HigherTaxon');
-$ind->init($total);
+$ind->init($total, 100, 100);
 echo "Transferring $total higher taxa<br>";
 for ($limit = 10000, $offset = 0; $offset < $total; $offset += $limit) {    
     try {
@@ -82,14 +83,16 @@ for ($limit = 10000, $offset = 0; $offset < $total; $offset += $limit) {
 echo '<br>Done!</p>';
 
 // Taxa
+// Needs about 350MB memory for 3000 records per loop, 
+// decrease if less is available!
 echo '<p>Preparing species and infraspecies...<br>';
 $total = $loader->count('Taxon');
-$ind->init($total, 100, 20);
+$ind->init($total, 100, 30);
 echo "Transferring $total taxa<br>";
-for ($limit = 2000, $offset = 0; $offset < $total; $offset += $limit) {    
+for ($limit = 3000, $offset = 0; $offset < $total; $offset += $limit) {    
     try {
         $taxa = $loader->load('Taxon', $offset, $limit);
-        echo showMemoryUse().' memory used<br>';
+        //echo showMemoryUse().' memory used<br>';
         foreach($taxa as $taxon) {
             $storer->store($taxon);
         }
