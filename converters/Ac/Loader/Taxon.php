@@ -152,6 +152,8 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
 
     protected function _setTaxonSynonyms(Model $taxon)
     {
+    	// Note that there are circular references of synonyms pointing to
+    	// themselves, solved by the last statement in the query
     	$stmt = $this->_dbh->prepare(
     	   'SELECT t1.`record_id` AS id, t1.`name_code` AS originalId, '.
     	   't1.`genus`, t1.`species`, t1.`infraspecies`, '.

@@ -14,7 +14,11 @@ class Bs_Storer_Synonym extends Bs_Storer_TaxonAbstract
 {
    public function store(Model $synonym)
     {
-        // Omit records that refer to themselves
+        // Exit if id already exists; test needed because error occurred 
+        // during import.
+        if ($this->_recordExists('id', 'synonym', array('id' => $synonym->id))) {
+            return false;
+        }
         if ($synonym->infraSpecificMarker == '' && $synonym->infraspecies == '') {
     		$this->_setTaxonomicRankId($synonym);
      	} else {
@@ -69,7 +73,7 @@ class Bs_Storer_Synonym extends Bs_Storer_TaxonAbstract
             '`taxonomic_rank_id`, `scientific_name_element_id`, '.
             '`synonym_id`, `hybrid_order`) VALUES (?, ?, ?, ?)'
         );
-/*        foreach ($synonym->nameElementIds as $rankId => $nameElement) {
+/*      foreach ($synonym->nameElementIds as $rankId => $nameElement) {
             if ($hybridElements = $this->_isHybrid($nameElement)) {
                 foreach ($hybridElements as $hybridOrder => $hybridElement) {
                     // Start order with 1 rather than 0
