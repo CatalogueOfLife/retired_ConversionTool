@@ -168,6 +168,7 @@
         // Create indices
         foreach ($indices as $index) {
             echo "Adding index to $index...<br>";
+            // Combined index
             if (strpos($index, ',') !== false) {
                 $query2 = 'ALTER TABLE `'.$table.'` ADD INDEX (';
                 $indexParts = explode(',', $index);
@@ -178,6 +179,7 @@
                 //echo "<b>$query2</b><br>";
                 $stmt2 = $pdo->prepare($query3);
                 $stmt2->execute();
+            // Single index
             } else {
                 $query3 = 'ALTER TABLE `'.$table.'` ADD INDEX (`'.$index.'`)';
                 //echo "$query3<br>";
