@@ -51,6 +51,9 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon
             $this->_setTaxonReferences($taxon);
     	}
     	$this->_setTaxonLsid($taxon);
+        if ($taxon->uri != '') {
+    	    $this->_setTaxonUri($taxon);
+        }
     	$this->_setTaxonDetail($taxon);
     	$this->_setTaxonDistribution($taxon);
     	$this->_setTaxonCommonNames($taxon);
@@ -163,6 +166,24 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon
         );
         unset($storer, $author);
         return $taxon;
+    }
+    
+    protected function _setTaxonUri(Model $taxon)
+    {
+        $uri = new Uri();
+        $uri->resourceIdentifier = $taxon->uri;
+        $storer = new Bs_Storer_Uri($this->_dbh, $this->_logger);
+        $uri->uriSchemeId = $storer->_getUriSchemeId();
+        $storer->store($uri);
+        
+        $stmt = $this->_dbh->prepare(
+            'INSERT INTO `uri_to_taxon` (uri_id, taxon_id) VALUES (?, ?)'
+        );
+        $stmt->execute(array(
+            $uri->id,
+            $taxon->id)
+        );
+        unset($storer, $uri);
     }
     
     protected function _setTaxonDistribution(Model $taxon)

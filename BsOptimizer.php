@@ -26,323 +26,193 @@
 		DbHandler::createInstance($k, $v, $o);
 	}
 	$pdo = DbHandler::getInstance('target');
-	$indicator = new Indicator();
-	define('PATH', realpath('.').PATH_SEPARATOR.'docs_and_dumps'.
-	PATH_SEPARATOR.'dumps'.PATH_SEPARATOR.'base_scheme'.PATH_SEPARATOR.'ac'.
-	PATH_SEPARATOR);
-	
-	// Create denormalized tables
-	$sql = file_get_contents(PATH.'denormalized_schema.sql');
-	echo $sql;
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-/*	$total = getTotalRecords('SELECT COUNT(1) FROM `taxon`');
-	$indicator->init($total, 100);
-	
-	echo "<p>Adding $total valid taxa to _search_scientific table</p>";
+	// Path to sql files
+	/*define('PATH', 
+	   realpath('.').PATH_SEPARATOR.
+	   'docs_and_dumps'.PATH_SEPARATOR.
+	   'dumps'.PATH_SEPARATOR.
+	   'base_scheme'.PATH_SEPARATOR.
+	   'ac'.PATH_SEPARATOR); Doesn't work; PATH_SEPARATOR returns : on Mac OS X */
+    define('PATH', realpath('.').'/docs_and_dumps/dumps/base_scheme/ac/');
+    define('DENORMALIZED_TABLES_PATH', 'denormalized_tables/');
+    
+	   // Names of sql files, omit .sql extension!
+    define('SCHEMA_SQL', 'denormalized_schema.sql');
 
-	$insert = $pdo->prepare('INSERT INTO `_search_scientific` 
-		(`id`, `kingdom`, `phylum`, `class`, `order`, `superfamily`, `family`, `genus`, `subgenus`,
-		`species`, `infraspecies`, `author`, `status`, `source_database_id`, `source_database_name`)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-
-	$stmt = $pdo->prepare('SELECT `id`, `taxonomic_rank_id` as taxonomicRankId, 
-		`source_database_id` as sourceDatabaseId FROM `taxon`');
-	$stmt->execute();
-	while ($taxon = $stmt->fetchObject('ScientificSearch')) {
-		$indicator->iterate();
-		$taxonomicRank = getTaxonomicRank($taxon->taxonomicRankId);
-		$nameElement = upperCaseNameElement($taxonomicRank, getTaxonNameElement($taxon->id));
-		setProperty($taxon, $taxonomicRank, $nameElement);
-		
-		// Loop through all parents to get the complete taxonomic structure
-		// Animalia is the top level that should be excluded
-		if ($taxonomicRank != 'Animalia') {
-			$parentId = getParentId($taxon->id);
-			do {
-				$parentTaxonomicRank = getTaxonomicRank(
-					getTaxonomicRankId($parentId)
-				);
-				$parentNameElement = upperCaseNameElement(
-					$parentTaxonomicRank, getTaxonNameElement($parentId)
-				);
-				$parentId = getParentId($parentId);
-				setProperty($taxon, $parentTaxonomicRank, $parentNameElement);
-			} while ($parentId !== false);
-		}
-		$taxon->author = getTaxonAuthorString($taxonomicRank, $taxon->id);
-		$taxon->sourceDatabaseName = getSourceDatabaseName($taxon->sourceDatabaseId);
-		if (isSpeciesOrInfraspecies($taxonomicRank)) {
-			$taxon->status = getScientificNameStatus(getScientificNameStatusId($taxon->id));
-		}
-		$insert->execute(array($taxon->id, $taxon->kingdom, $taxon->phylum, $taxon->class, 
-			$taxon->order, $taxon->superfamily, $taxon->family, $taxon->genus, $taxon->subgenus,
-			$taxon->species, $taxon->infraspecies, $taxon->author, $taxon->status, 
-			$taxon->sourceDatabaseId, $taxon->sourceDatabaseName)
-		);
-		unset($taxon);
-		//printObject($taxon);
+    define('SEARCH_ALL', '_search_all');
+    define('SEARCH_ALL_COMMON_NAMES', '_search_all_common_names');
+    define('SEARCH_DISTRIBUTION', '_search_distribution');
+    define('SEARCH_SCIENTIFIC', '_search_scientific');
+    define('SOURCE_DATABASE_DETAILS', '_source_database_details');
+    define('SOURCE_DATABASE_TAXONOMIC_COVERAGE', '_source_database_taxonomic_coverage');
+    define('SPECIES_DETAILS', '_species_details');
+    define('TAXON_TREE', '_taxon_tree');
+    define('TOTALS', '_totals');
+    
+    $files = array(
+        array(
+            'path' => PATH,
+            'dumpFile' => SCHEMA_SQL,
+            'message' => 'Creating denormalized tables'
+        ),
+        array(
+            'path' => PATH.DENORMALIZED_TABLES_PATH,
+            'dumpFile' => SEARCH_ALL,
+            'message' => 'Filling '.SEARCH_ALL.' table'
+        ),
+        array(
+            'path' => PATH.DENORMALIZED_TABLES_PATH,
+            'dumpFile' => SEARCH_DISTRIBUTION,
+            'message' => 'Filling '.SEARCH_DISTRIBUTION.' table'
+        ),
+        array(
+            'path' => PATH.DENORMALIZED_TABLES_PATH,
+            'dumpFile' => SEARCH_SCIENTIFIC,
+            'message' => 'Filling '.SEARCH_SCIENTIFIC.' table'
+            
+        ),
+        array(
+            'path' => PATH.DENORMALIZED_TABLES_PATH,
+            'dumpFile' => SOURCE_DATABASE_DETAILS,
+            'message' => 'Filling '.SOURCE_DATABASE_DETAILS.' table'
+        ),
+        array(
+            'path' => PATH.DENORMALIZED_TABLES_PATH,
+            'dumpFile' => SPECIES_DETAILS,
+            'message' => 'Filling '.SPECIES_DETAILS.' table'
+        ),
+        array(
+            'path' => PATH.DENORMALIZED_TABLES_PATH,
+            'dumpFile' => TAXON_TREE,
+            'message' => 'Filling '.TAXON_TREE.' table'
+        ),
+        array(
+            'path' => PATH.DENORMALIZED_TABLES_PATH,
+            'dumpFile' => TOTALS,
+            'message' => 'Filling '.TOTALS.' table'
+        )
+    );
+    
+    // Denormalized tables and their indices
+    $tables = array(
+        SEARCH_ALL => array('name_element', 'name'),
+        SEARCH_DISTRIBUTION => array('distribution'),
+        SEARCH_SCIENTIFIC => array(
+            'kingdom', 'phylum', 'class', 'order', 'superfamily', 
+            'family', 'species', 'infraspecies', 'genus,species,infraspecies'
+        ),
+        SOURCE_DATABASE_DETAILS => array('id'),
+        SOURCE_DATABASE_TAXONOMIC_COVERAGE => array('source_database_id'),
+        SPECIES_DETAILS => array('taxon_id'),
+        TAXON_TREE => array('taxon_id', 'parent_id'),
+        TOTALS => array()
+    );
+    
+    echo '<h3>Creating and filling denormalized tables</h3>';
+    echo '<p>Depending on your server, this action may takes minutes to
+        hours to complete.</p>';
+    
+    foreach ($files as $file) {
+        $start = microtime(true);
+        writeSql($file['path'], $file['dumpFile'], $file['message']);
+        $runningTime = round(microtime(true) - $start);
+        echo "Script took $runningTime seconds to complete</p>";
+    };	
+	
+    $start = microtime(true);
+    echo '<p>Adding common names to _search_all table...<br>';
+    $sql = file_get_contents(
+        PATH.DENORMALIZED_TABLES_PATH.SEARCH_ALL_COMMON_NAMES.'.sql'
+    );
+    $pdo->query('ALTER TABLE `_search_all` DISABLE KEYS');
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute();
+    while ($cn = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        insertCommonNameElements($cn);
+    }
+    $pdo->query('ALTER TABLE `_search_all` ENABLE KEYS');
+    $runningTime = round(microtime(true) - $start);
+    echo "Script took $runningTime seconds to complete</p>";
+    echo '</p><p>Ready!</p>';
+    
+    
+	function writeSql($path, $dumpFile, $message) {
+        $pdo = DbHandler::getInstance('target');
+	    echo '<p>'.$message.'...<br>';
+        try {
+            $sql = file_get_contents($path.$dumpFile.'.sql');
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute();
+        } catch (PDOException $e) {
+            echo $e->getMessage();
+        }   
 	}
 	
-	$total = getTotalRecords('SELECT COUNT(1) FROM `synonym`');
-	$indicator->init($total, 100);
-	
-    echo "<p>Adding $total synonyms to _search_scientific table</p>";
-
-	$insert = $pdo->prepare('INSERT INTO `_search_scientific` 
-		(`id`, `genus`, `subgenus`,
-		`species`, `infraspecies`, `author`, `status`, `accepted_species_id`, 
-		`accepted_species_name`, `accepted_species_author`, `source_database_id`, 
-		`source_database_name`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-
-	$stmt = $pdo->prepare('SELECT `id`, `taxon_id` as acceptedSpeciesId, 
-		`author_string_id` as authorStringId, `scientific_name_status_id` as scientificNameStatusId
-		FROM `synonym` LIMIT 0, 15');
-	$stmt->execute();
-	while ($synonym = $stmt->fetchObject('ScientificSearch')) {
-		//$indicator->iterate();
-		setSynonymsNameElements($synonym);
-		$synonym->author = getSynonymAuthorString($synonym->authorStringId);
-		$synonym->status = getScientificNameStatus($synonym->scientificNameStatusId);
-
-		//$taxonomicRank = getSynonymRank($synonym);
-
-		$acceptedTaxon = array('infraspecies', 'species', 'genus');
-		$acceptedTaxonomicRank = getTaxonomicRank(
-			getTaxonomicRankId($synonym->acceptedSpeciesId)
-		);
-		$acceptedNameElement = upperCaseNameElement(
-			$acceptedTaxonomicRank, getTaxonNameElement($synonym->acceptedSpeciesId)
-		);
-		$acceptedTaxon[$acceptedTaxonomicRank] = $acceptedNameElement;
-		if ($acceptedTaxonomicRank != 'genus') {
-			$parentId = getParentId($synonym->acceptedSpeciesId);
-			do {
-				$parentTaxonomicRank = getTaxonomicRank(
-					getTaxonomicRankId($parentId)
-				);
-				$parentNameElement = upperCaseNameElement(
-					$parentTaxonomicRank, getTaxonNameElement($parentId)
-				);
-				$parentId = getParentId($parentId);
-				$acceptedTaxon[$parentTaxonomicRank] = $parentNameElement;
-			} while ($parentTaxonomicRank != 'family');
-		}
-		$synonym->acceptedSpeciesName = trim(ucfirst($acceptedTaxon['genus']).' '.
-			$acceptedTaxon['species'].' '.$acceptedTaxon['infraspecies']);
-		$synonym->acceptedSpeciesAuthor = getTaxonAuthorString(
-		    $acceptedTaxonomicRank, $synonym->acceptedSpeciesId
-		);
-			
-		printObject($synonym);
-		
-	}
-
-*/	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-
-
-
-	function getSynonymRank($synonym) {
-		foreach (array('infraspecies', 'species', 'genus') as $rank) {
-			if (isset($synonym->$rank)) {
-				return $rank;
-			}
-		}
-	}
-
-	function getSynonymAuthorString($authorId) {
-		$pdo = DbHandler::getInstance('target');
-		$stmt = $pdo->prepare('SELECT `string` FROM `author_string` WHERE `id` = ?');
-		$stmt->execute(array($authorId));
-        $result = $stmt->fetchColumn(0);
-        unset($stmt);
-        return $result;
+	function insertCommonNameElements($cn) {
+        $pdo = DbHandler::getInstance('target');
+        $insert = 'INSERT INTO `_search_all` 
+            (`id`, `name_element`, `name`, `rank`, `name_status`, 
+            `name_status_suffix`, `group`, `source_database`, 
+            `source_database_id`, `accepted_taxon_id`) 
+            VALUES 
+            (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+        $cnElements = explode(' ', $cn['name']);
+        foreach ($cnElements as $cne) {
+            $stmt = $pdo->prepare($insert);
+            $stmt->execute(
+                array(
+                    $cn['id'],
+                    strtolower($cne),
+                    $cn['name'],
+                    $cn['rank'],
+                    $cn['name_status'],
+                    $cn['name_status_suffix'],
+                    $cn['kingdom'],
+                    $cn['source_database'],
+                    $cn['source_database_id'],
+                    $cn['accepted_taxon_id']
+                )
+            );
+        }
 	}
 	
-	function getSynonymNameElement($scientificNameElementId) {
-		$pdo = DbHandler::getInstance('target');
-		$stmt = $pdo->prepare('SELECT `name_element` FROM `scientific_name_element` 
-			WHERE `id` = ?');
-		$stmt->execute(array($scientificNameElementId));
-        $result = $stmt->fetchColumn(0);
-        unset($stmt);
-        return $result;
-	}
-	
-	function setSynonymsNameElements($synonym) {
-		$pdo = DbHandler::getInstance('target');
-		$stmt = $pdo->prepare('SELECT `taxonomic_rank_id`, `scientific_name_element_id` 
-			FROM `synonym_name_element` WHERE `synonym_id` = ?');
-		$stmt->execute(array($synonym->id));
-		while ($row = $stmt->fetch()) {
-			$taxonomicRank = getTaxonomicRank($row[0]);
-			$nameElement = upperCaseNameElement($taxonomicRank, getSynonymNameElement($row[1]));
-			setProperty($synonym, $taxonomicRank, $nameElement);
-		}
-		return $synonym;
-	}
-
-	function getTaxonomicRankId($taxonId) {
-		$pdo = DbHandler::getInstance('target');
-		$stmt = $pdo->prepare('SELECT `taxonomic_rank_id` FROM `taxon` WHERE `id` = ?');
-		$stmt->execute(array($taxonId));
-        $result = $stmt->fetchColumn(0);
-        unset($stmt);
-        return $result;
-	}
-	
-	function getTaxonomicRank($rankId) {
-		if (!$rankId) {
-			return false;
-		}
-		$taxonomicRanks = array(
-			54 => 'kingdom',	 	 	 	 	 	 	 
-			76 => 'phylum',		 	 	 	 	 	 	 
-			6 => 'class',		 	 	 	 	 	 	 
-			72 => 'order',	 	 	 	 	 	 	 
-			112 => 'superfamily',		 	 	 	 	 	 	 
-			17 => 'family',	 	 	 	 	 	 	 
-			20 => 'genus',	 	 	 	 	 	 
-			96 => 'subgenus',	 	 	 	 	 	 	 
-			83 => 'species'
-		);
-		if (array_key_exists($rankId, $taxonomicRanks)) {
-			return $taxonomicRanks[$rankId];
-		}
-		return 'infraspecies';
-	}
-	
-	function getTaxonNameElement($taxonId) {
-		$pdo = DbHandler::getInstance('target');
-		$stmt = $pdo->prepare('SELECT t2.`name_element` FROM `taxon_name_element` t1, 
-			`scientific_name_element` t2 WHERE t1.`scientific_name_element_id` = t2.`id` 
-			AND `taxon_id` = ?');
-		$stmt->execute(array($taxonId));
-        $result = $stmt->fetchColumn(0);
-        unset($stmt);
-        return $result;
-	}
-	
-	function getParentId($taxonId) {
-		$pdo = DbHandler::getInstance('target');
-		$stmt = $pdo->prepare('SELECT `parent_id` FROM `taxon_name_element` WHERE `taxon_id` = ?');
-		$stmt->execute(array($taxonId));
-        $result = $stmt->fetchColumn(0);
-        unset($stmt);
-        return $result;
-	}
-	
-	function getTaxonAuthorString($taxonomicRank, $taxonId) {
-		// Skip higher taxa
-		if (!isSpeciesOrInfraspecies($taxonomicRank)) {
-			return null;
-		}
-		$pdo = DbHandler::getInstance('target');
-		$stmt = $pdo->prepare('SELECT t2.`string` FROM `taxon_detail` t1, `author_string` t2 
-			WHERE t1.`author_string_id` = t2.`id` AND t1.`taxon_id` = ?');
-		$stmt->execute(array($taxonId));
-        $result = $stmt->fetchColumn(0);
-        unset($stmt);
-        return $result;
-	}
-	
-	function getSourceDatabaseName($databaseId) {
-		$pdo = DbHandler::getInstance('target');
-		$stmt = $pdo->prepare('SELECT `name` FROM `source_database` WHERE `id` = ?');
-		$stmt->execute(array($databaseId));
-        $result = $stmt->fetchColumn(0);
-        unset($stmt);
-        return $result;
-	}
-	
-	function getScientificNameStatusId($taxonId) {
-		$pdo = DbHandler::getInstance('target');
-		$stmt = $pdo->prepare('SELECT `scientific_name_status_id` FROM `taxon_detail` 
-			WHERE `taxon_id` = ?');
-		$stmt->execute(array($taxonId));
-        $result = $stmt->fetchColumn(0);
-        unset($stmt);
-        return $result;
-	}
-	
-	function getScientificNameStatus($statusId) {
-		if (!$statusId) {
-			return false;
-		}
-		$scientificNameStatuses = array(
-			1 => 'accepted name',
-			2 => 'ambiguous synonym',
-			3 => 'misapplied name',
-			4 => 'provisionally accepted name',
-			5 => 'synonym'
-		);
-		return $scientificNameStatuses[$statusId];
-	}
-	
-	// General functions
-	function clearTable($table) {
-		$pdo = DbHandler::getInstance('target');
-        $stmt = $pdo->prepare('TRUNCATE TABLE `'.$table.'`');
-        $stmt->execute();
-	}
-	
-	function getTotalRecords($query) {
-		$pdo = DbHandler::getInstance('target');
-        $stmt = $pdo->prepare($query);
-        $stmt->execute();
-        $result = $stmt->fetchColumn(0);
-        unset($stmt);
-        return $result;
-	}
-	
-	function isSpeciesOrInfraspecies($taxonomicRank) {
-		if (strpos($taxonomicRank, 'species') !== false) {
-			return true;
-		}
-		return false;
-	}
-	
-	function upperCaseNameElement($taxonomicRank, $nameElement) {
-		if (!isSpeciesOrInfraspecies($taxonomicRank)) {
-			return ucfirst($nameElement);
-		}
-		return $nameElement;
-	}
-	
-	function setProperty($object, $property, $value) {
-		if (property_exists($object, $property)) {
-			$object->$property = $value;
-		}
-		return $object;
-	}
-	
-	function printObject($object) {
-		echo '<pre>';
-		print_r($object);
-		echo '</pre>';
-	}
+    
+    echo '<h3>Optimizing denormalized tables</h3>';
+    echo '<p>Table columns are trimmed to the minimum size and 
+        indices are created.</p>';
+    
+	foreach ($tables as $table => $indices) {
+	    echo "<p>Processing table $table...<br>";
+	    $stmt = $pdo->prepare(
+	       'SHOW COLUMNS FROM `'.$table.'` WHERE `Type` LIKE "varchar%"'
+	    );
+	    $stmt->execute();
+	    while ($cl = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $column = $cl['Field'];
+            echo 'Processing column '.$column.'...<br>';
+            $stmt2 = $pdo->prepare(
+                'SELECT MAX(LENGTH(`'.$column.'`)) FROM `'.$table.'`'
+            );
+            $stmt2->execute();
+            $maxLength = $stmt2->fetch();
+            //var_dump($maxLength);
+            $query = 'ALTER TABLE `'.$table.'` CHANGE `'.$column.'` `'.
+                $column.'` VARCHAR('.$maxLength[0].') ';
+            $cl['Null'] == 'NO' ? $query .= 'NOT NULL' : $query .= 'NULL';
+            $query .= ' DEFAULT \''.$cl['Default'].'\'';
+            
+            echo "$query<br>";
+            
+            //print_r($tables[$table]);
+            if (in_array($column, $indices)) {
+                echo "Adding index to $column...<br>";
+                $query2 = 'ALTER TABLE `'.$table.'` ADD INDEX '.$column;
+                echo "$query2<br>";
+            };
+            
+             
+            
+	    }
+        echo '</p>';
+	};
 ?>
