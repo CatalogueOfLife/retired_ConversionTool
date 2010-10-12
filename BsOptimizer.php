@@ -36,9 +36,10 @@
     define('PATH', realpath('.').'/docs_and_dumps/dumps/base_scheme/ac/');
     define('DENORMALIZED_TABLES_PATH', 'denormalized_tables/');
     
-	   // Names of sql files, omit .sql extension!
+    // SQL for denormalized tables
     define('SCHEMA_SQL', 'denormalized_schema.sql');
 
+    // Names of SQL queries in files, omit .sql extension!
     define('SEARCH_ALL', '_search_all');
     define('SEARCH_ALL_COMMON_NAMES', '_search_all_common_names');
     define('SEARCH_DISTRIBUTION', '_search_distribution');
