@@ -109,7 +109,7 @@
         TOTALS => array()
     );
     
-    echo '<h3>Creating and filling denormalized tables</h3>';
+/*    echo '<h4>Creating and filling denormalized tables</h4>';
     echo '<p>Depending on your server, this action may takes minutes to
         hours to complete.</p>';
     
@@ -134,14 +134,13 @@
     $pdo->query('ALTER TABLE `_search_all` ENABLE KEYS');
     $runningTime = round(microtime(true) - $start);
     echo "Script took $runningTime seconds to complete</p>";
-    echo '</p><p>Ready!</p>';
-    
-    echo '<h3>Optimizing denormalized tables</h3>';
+*/    
+    echo '<h4>Optimizing denormalized tables</h4>';
     echo '<p>Table columns are trimmed to the minimum size and 
         indices are created.</p>';
     
     foreach ($tables as $table => $indices) {
-        echo "<p>Processing table $table...<br>";
+        echo "<p><b>Processing table $table...</b><br>";
         $stmt = $pdo->prepare(
            'SHOW COLUMNS FROM `'.$table.'` WHERE `Type` LIKE "varchar%"'
         );
@@ -162,14 +161,15 @@
                 $column.'` VARCHAR('.$maxLength[0].') ';
             $cl['Null'] == 'NO' ? $query .= 'NOT NULL' : $query .= 'NULL';
             $query .= ' DEFAULT \''.$cl['Default'].'\'';
-            
-            echo "$query<br>";
-            
-            //print_r($tables[$table]);
+            //echo "$query<br>";
+            $stmt2 = $pdo->prepare($query);
+            $stmt2->execute();
             if (in_array($column, $indices)) {
                 echo "Adding index to $column...<br>";
-                $query2 = 'ALTER TABLE `'.$table.'` ADD INDEX `'.$column.'`';
-                echo "$query2<br>";
+                $query2 = 'ALTER TABLE `'.$table.'` ADD INDEX (`'.$column.'`)';
+                //echo "$query2<br>";
+                $stmt2 = $pdo->prepare($query2);
+                $stmt2->execute();
             };
         }
         // Check if combined indices have to be created
@@ -181,7 +181,9 @@
                     $query3 .= '`'.$indexParts[$i].'`,';
                 }
                 $query3 = substr($query3, 0, -1).')';
-                echo "<b>$query3</b><br>";
+                $stmt2 = $pdo->prepare($query3);
+                $stmt2->execute();
+                //echo "<b>$query3</b><br>";
             }
         }
         echo '</p>';
