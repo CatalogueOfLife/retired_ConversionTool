@@ -109,7 +109,7 @@
         TOTALS => array()
     );
     
-/*    echo '<h4>Creating and filling denormalized tables</h4>';
+    echo '<h4>Creating and filling denormalized tables</h4>';
     echo '<p>Depending on your server, this action may takes minutes to
         hours to complete.</p>';
     
@@ -134,7 +134,7 @@
     $pdo->query('ALTER TABLE `_search_all` ENABLE KEYS');
     $runningTime = round(microtime(true) - $start);
     echo "Script took $runningTime seconds to complete</p>";
-*/    
+    
     echo '<h4>Optimizing denormalized tables</h4>';
     echo '<p>Table columns are trimmed to the minimum size and 
         indices are created.</p>';
@@ -148,7 +148,7 @@
         // Trim all varchar fields to minimum size and create indices
         while ($cl = $stmt->fetch(PDO::FETCH_ASSOC)) {
             $column = $cl['Field'];
-            echo 'Processing column '.$column.'...<br>';
+            echo 'Shrinking column '.$column.'...<br>';
             $stmt2 = $pdo->prepare(
                 'SELECT MAX(LENGTH(`'.$column.'`)) FROM `'.$table.'`'
             );
@@ -164,26 +164,25 @@
             //echo "$query<br>";
             $stmt2 = $pdo->prepare($query);
             $stmt2->execute();
-            if (in_array($column, $indices)) {
-                echo "Adding index to $column...<br>";
-                $query2 = 'ALTER TABLE `'.$table.'` ADD INDEX (`'.$column.'`)';
-                //echo "$query2<br>";
-                $stmt2 = $pdo->prepare($query2);
-                $stmt2->execute();
-            };
         }
-        // Check if combined indices have to be created
+        // Create indices
         foreach ($indices as $index) {
+            echo "Adding index to $index...<br>";
             if (strpos($index, ',') !== false) {
-                $query3 = 'ALTER TABLE `'.$table.'` ADD INDEX (';
+                $query2 = 'ALTER TABLE `'.$table.'` ADD INDEX (';
                 $indexParts = explode(',', $index);
                 for ($i = 0; $i < count($indexParts); $i++) {
-                    $query3 .= '`'.$indexParts[$i].'`,';
+                    $query2 .= '`'.$indexParts[$i].'`,';
                 }
-                $query3 = substr($query3, 0, -1).')';
+                $query2 = substr($query2, 0, -1).')';
+                //echo "<b>$query2</b><br>";
                 $stmt2 = $pdo->prepare($query3);
                 $stmt2->execute();
-                //echo "<b>$query3</b><br>";
+            } else {
+                $query3 = 'ALTER TABLE `'.$table.'` ADD INDEX (`'.$index.'`)';
+                //echo "$query3<br>";
+                $stmt2 = $pdo->prepare($query3);
+                $stmt2->execute();
             }
         }
         echo '</p>';
