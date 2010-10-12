@@ -37,7 +37,7 @@
     define('DENORMALIZED_TABLES_PATH', 'denormalized_tables/');
     
     // SQL for denormalized tables
-    define('SCHEMA_SQL', 'denormalized_schema.sql');
+    define('SCHEMA_SQL', 'denormalized_schema');
 
     // Names of SQL queries in files, omit .sql extension!
     define('SEARCH_ALL', '_search_all');
