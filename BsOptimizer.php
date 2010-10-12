@@ -177,7 +177,7 @@
                 }
                 $query2 = substr($query2, 0, -1).')';
                 //echo "<b>$query2</b><br>";
-                $stmt2 = $pdo->prepare($query3);
+                $stmt2 = $pdo->prepare($query2);
                 $stmt2->execute();
             // Single index
             } else {
