@@ -8,6 +8,8 @@ require_once 'converters/Bs/Storer/Author.php';
 require_once 'converters/Bs/Storer/Distribution.php';
 require_once 'converters/Bs/Storer/CommonName.php';
 require_once 'converters/Bs/Storer/Synonym.php';
+require_once 'model/AcToBs/Uri.php';
+require_once 'converters/Bs/Storer/Uri.php';
 
 /**
  * Taxon storer
@@ -173,7 +175,6 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon
         $uri = new Uri();
         $uri->resourceIdentifier = $taxon->uri;
         $storer = new Bs_Storer_Uri($this->_dbh, $this->_logger);
-        $uri->uriSchemeId = $storer->_getUriSchemeId();
         $storer->store($uri);
         
         $stmt = $this->_dbh->prepare(

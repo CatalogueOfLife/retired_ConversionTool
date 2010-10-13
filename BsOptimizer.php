@@ -190,7 +190,13 @@
         echo '</p>';
     };
     
-    echo '<p>Ready!</p>';
+    echo '<h4>Analyzing denormalized tables</h4><p>';
+    foreach ($tables as $table => $indices) {
+        echo "Analyzing table $table...<br>";
+        $pdo->query('ANALYZE TABLE `'.$table.'`');
+    }    
+    
+    echo '</p><p>Ready!</p>';
 
     
     
