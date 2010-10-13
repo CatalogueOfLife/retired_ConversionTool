@@ -37,8 +37,8 @@ $config = parse_ini_file('config/AcToBs.ini', true);
 // extract db options
 foreach ($config as $k => $v) {
     $o = array();
-    if (isset($config["options"])) {
-        $options = explode(",", $config["options"]);
+    if (isset($v["options"])) {
+        $options = explode(",", $v["options"]);
         foreach ($options as $option) {
             $parts = explode("=", trim($option));
             $o[$parts[0]] = $parts[1];
@@ -46,6 +46,7 @@ foreach ($config as $k => $v) {
     }
     DbHandler::createInstance($k, $v, $o);
 }
+
 $loader = new Ac_Loader(DbHandler::getInstance('source'), $logger);
 $storer = new Bs_Storer(DbHandler::getInstance('target'), $logger, $ind);
 

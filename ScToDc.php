@@ -27,8 +27,8 @@ $config = parse_ini_file('config/ScToDc.ini', true);
 // extract db options
 foreach ($config as $k => $v) {
     $o = array();
-    if (isset($config["options"])) {
-        $options = explode(",", $config["options"]);
+    if (isset($v["options"])) {
+        $options = explode(",", $v["options"]);
         foreach ($options as $option) {
             $parts = explode("=", trim($option));
             $o[$parts[0]] = $parts[1];
