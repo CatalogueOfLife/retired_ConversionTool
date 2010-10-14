@@ -190,8 +190,7 @@
         // Create fulltext index on distribution
         if ($table == SEARCH_DISTRIBUTION) {
             echo "Adding FULLTEXT index to distribution...<br>";
-            $query4 = 'ALTER TABLE `'.$table.'` ADD INDEX 
-                FULLINDEX (`distribution`)';
+            $query4 = 'ALTER TABLE `'.$table.'` ADD FULLTEXT (`distribution`)';
             $stmt2 = $pdo->prepare($query4);
             $stmt2->execute();
         }
