@@ -97,7 +97,7 @@
     // Denormalized tables and their indices
     $tables = array(
         SEARCH_ALL => array('name_element', 'name'),
-        SEARCH_DISTRIBUTION => array('distribution'),
+        SEARCH_DISTRIBUTION => array(),
         SEARCH_SCIENTIFIC => array(
             'kingdom', 'phylum', 'class', 'order', 'superfamily', 
             'family', 'species', 'infraspecies', 'genus,species,infraspecies'
@@ -186,6 +186,13 @@
                 $stmt2 = $pdo->prepare($query3);
                 $stmt2->execute();
             }
+        }
+        // Create fulltext index on distribution
+        if ($table == SEARCH_DISTRIBUTION) {
+            $query4 = 'ALTER TABLE `'.$table.'` ADD INDEX 
+                FULLINDEX (`distribution`)';
+            $stmt2 = $pdo->prepare($query4);
+            $stmt2->execute();
         }
         echo '</p>';
     };
