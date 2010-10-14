@@ -49,7 +49,8 @@ class Bs_Storer_Uri extends Bs_Storer_Abstract
             Dictionary::add('uri_scheme', $scheme, $id);
             return $id;
         }
-        throw new Exception('Could not get scheme id for '.$scheme);
+        // Assume url is web link by returning false
+        return false;
     }
     
     private function _getUriSchemeId($resourceIdentifier) 

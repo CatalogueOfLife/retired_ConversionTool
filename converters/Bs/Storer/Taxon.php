@@ -176,7 +176,6 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon
         $uri->resourceIdentifier = $taxon->uri;
         $storer = new Bs_Storer_Uri($this->_dbh, $this->_logger);
         $storer->store($uri);
-        
         $stmt = $this->_dbh->prepare(
             'INSERT INTO `uri_to_taxon` (uri_id, taxon_id) VALUES (?, ?)'
         );
