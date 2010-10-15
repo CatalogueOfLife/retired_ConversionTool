@@ -109,9 +109,8 @@
         TOTALS => array()
     );
     
-    echo '<h4>Creating and filling denormalized tables</h4>';
-    echo '<p>Depending on your server, this action may takes minutes to
-        hours to complete.</p>';
+    echo '<p>First denormalized tables are created and filled. Next indices 
+        are created. Note that this script will take hours to complete!</p>';
     
     foreach ($files as $file) {
         $start = microtime(true);
@@ -135,9 +134,8 @@
     $runningTime = round(microtime(true) - $start);
     echo "Script took $runningTime seconds to complete</p>";
     
-    echo '<h4>Optimizing denormalized tables</h4>';
-    echo '<p>Table columns are trimmed to the minimum size and 
-        indices are created.</p>';
+    echo '<p>Optimizing denormalized tables. Table columns are trimmed to 
+        the minimum size and indices are created.</p>';
     
     foreach ($tables as $table => $indices) {
         echo "<p><b>Processing table $table...</b><br>";
