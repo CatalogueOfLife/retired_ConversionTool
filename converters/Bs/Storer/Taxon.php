@@ -21,7 +21,7 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon
 {
     public function store(Model $taxon)
     {
-     	// Check if taxon_id already exist. Some stray taxa appear twice 
+        // Check if taxon_id already exist. Some stray taxa appear twice 
      	// in the loader because either status or record_id are duplicated.
      	// It is faster to skip them in the storer than in the loader.
      	if ($this->_recordExists('id', 'taxon', array('id' => $taxon->id))) {
@@ -29,14 +29,13 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon
      	}
         
         // Species rank id
-     	//$start = microtime(true);
      	if ($taxon->infraSpecificMarker == '' && $taxon->infraspecies == '') {
     		$this->_setTaxonomicRankId($taxon);
     	// Infraspecies rank id
      	} else {
             $this->_setInfraSpecificMarkerId($taxon);
     	}
-        $this->_getScientificNameStatusId($taxon);
+    	$this->_getScientificNameStatusId($taxon);
         $this->_setScientificNameElements($taxon);
         $this->_setTaxon($taxon);
         // Abort if parent taxon does not match for infraspecies

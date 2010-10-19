@@ -19,10 +19,10 @@ class Bs_Storer_Synonym extends Bs_Storer_TaxonAbstract
         if ($this->_recordExists('id', 'synonym', array('id' => $synonym->id))) {
             return false;
         }
-        if ($synonym->infraSpecificMarker == '' && $synonym->infraspecies == '') {
-    		$this->_setTaxonomicRankId($synonym);
+        if (strtolower($synonym->taxonomicRank) == 'infraspecies') {
+    		$this->_setInfraSpecificMarkerId($synonym);
      	} else {
-            $this->_setInfraSpecificMarkerId($synonym);
+            $this->_setTaxonomicRankId($synonym);
     	}
     	$this->_getScientificNameStatusId($synonym);
     	$this->_setSynonym($synonym);
@@ -30,9 +30,7 @@ class Bs_Storer_Synonym extends Bs_Storer_TaxonAbstract
         if (is_array($synonym->references) && count($synonym->references) > 0) {
             $this->_setSynonymReferences($synonym);
         }
-    	
 //$this->printObject($synonym);
-        
     }
     
     protected function _setSynonym(Model $synonym)

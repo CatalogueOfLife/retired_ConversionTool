@@ -66,7 +66,7 @@ class Bs_Storer_TaxonAbstract extends Bs_Storer_Abstract
         // If infraSpecificMarker is empty, but infraspecies is not, set
         // marker to unknown
         if ($marker == '' && $taxon->infraspecies != '') {
-            $marker = 'unknown';
+            $taxon->infraSpecificMarker = $marker = 'unknown';
         }
         if (array_key_exists($marker, self::$markerMap)) {
             $marker = self::$markerMap[$marker];
@@ -90,9 +90,6 @@ class Bs_Storer_TaxonAbstract extends Bs_Storer_Abstract
         $markerId = $this->_dbh->lastInsertId();
         Dictionary::add('ranks', $marker, $markerId);
         $taxon->taxonomicRankId = $markerId;
-        if ($taxon->infraSpecificMarker != $marker) {
-            $taxon->infraSpecificMarker = $marker;
-        }
         return $taxon;
     }
 
