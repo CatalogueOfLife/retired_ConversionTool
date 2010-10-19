@@ -44,6 +44,7 @@
     define('SEARCH_ALL_COMMON_NAMES', '_search_all_common_names');
     define('SEARCH_DISTRIBUTION', '_search_distribution');
     define('SEARCH_SCIENTIFIC', '_search_scientific');
+    define('SEARCH_FAMILY', '_search_family');
     define('SOURCE_DATABASE_DETAILS', '_source_database_details');
     define('SOURCE_DATABASE_TAXONOMIC_COVERAGE', '_source_database_taxonomic_coverage');
     define('SPECIES_DETAILS', '_species_details');
@@ -70,6 +71,12 @@
             'path' => PATH.DENORMALIZED_TABLES_PATH,
             'dumpFile' => SEARCH_SCIENTIFIC,
             'message' => 'Filling '.SEARCH_SCIENTIFIC.' table'
+            
+        ),
+        array(
+            'path' => PATH.DENORMALIZED_TABLES_PATH,
+            'dumpFile' => SEARCH_FAMILY,
+            'message' => 'Filling '.SEARCH_FAMILY.' table'
             
         ),
         array(
