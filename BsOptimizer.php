@@ -232,7 +232,7 @@
             `name_status_suffix`, `name_status_suffix_suffix`, `group`, 
             `source_database`, `source_database_id`, `accepted_taxon_id`) 
             VALUES 
-            (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+            (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
         $cnElements = explode(' ', $cn['name']);
         foreach ($cnElements as $cne) {
             $stmt = $pdo->prepare($insert);
