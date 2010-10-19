@@ -221,9 +221,9 @@
     function insertCommonNameElements($cn) {
         $pdo = DbHandler::getInstance('target');
         $insert = 'INSERT INTO `_search_all` 
-            (`id`, `name_element`, `name`, `rank`, `name_status`, 
-            `name_status_suffix`, `group`, `source_database`, 
-            `source_database_id`, `accepted_taxon_id`) 
+            (`id`, `name_element`, `name`, `name_suffix`, `rank`, `name_status`, 
+            `name_status_suffix`, `name_status_suffix_suffix`, `group`, 
+            `source_database`, `source_database_id`, `accepted_taxon_id`) 
             VALUES 
             (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
         $cnElements = explode(' ', $cn['name']);
@@ -234,9 +234,11 @@
                     $cn['id'],
                     strtolower($cne),
                     $cn['name'],
+                    $cn['name_suffix'],
                     $cn['rank'],
                     $cn['name_status'],
                     $cn['name_status_suffix'],
+                    $cn['name_status_suffix_suffix'],
                     $cn['kingdom'],
                     $cn['source_database'],
                     $cn['source_database_id'],
