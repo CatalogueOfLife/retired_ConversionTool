@@ -45,16 +45,10 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon
     	    );
     	    return false;
     	}
-    	if ($taxon->specialistId != '') {
-    		$this->_setTaxonScrutiny($taxon);
-    	}
-    	if (count($taxon->references) > 0) {
-            $this->_setTaxonReferences($taxon);
-    	}
+    	$this->_setTaxonScrutiny($taxon);
+    	$this->_setTaxonReferences($taxon);
     	$this->_setTaxonLsid($taxon);
-        if ($taxon->uri != '') {
-    	    $this->_setTaxonUri($taxon);
-        }
+        $this->_setTaxonUri($taxon);
     	$this->_setTaxonDetail($taxon);
     	$this->_setTaxonDistribution($taxon);
     	$this->_setTaxonCommonNames($taxon);
@@ -96,6 +90,9 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon
 
     protected function _setTaxonScrutiny(Model $taxon)
     {
+        if ($taxon->specialistId == '') {
+            return $taxon;
+        }
         $specialist = new Specialist();
         $specialist->name = $taxon->specialistName;
         $storer = new Bs_Storer_Specialist($this->_dbh, $this->_logger);
@@ -127,6 +124,9 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon
     
     protected function _setTaxonReferences(Model $taxon)
     {
+        if (count($taxon->references) == 0) {
+            return $taxon;
+        }
         $referenceIds = array();
         $storer = new Bs_Storer_Reference($this->_dbh, $this->_logger);
         foreach ($taxon->references as $reference) {
@@ -171,6 +171,9 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon
     
     protected function _setTaxonUri(Model $taxon)
     {
+        if ($taxon->uri == '') {
+            return $taxon;
+        }
         $uri = new Uri();
         $uri->resourceIdentifier = $taxon->uri;
         $storer = new Bs_Storer_Uri($this->_dbh, $this->_logger);
@@ -189,8 +192,10 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon
     {
         $storer = new Bs_Storer_Distribution($this->_dbh, $this->_logger);
     	foreach ($taxon->distribution as $distribution) {
-	        $distribution->taxonId = $taxon->id;
-	        $storer->store($distribution);
+	        if ($distribution->freeText != '') {
+	            $distribution->taxonId = $taxon->id;
+                $storer->store($distribution);
+	        }
     	}
         unset($storer);
     	return $taxon;
@@ -200,8 +205,10 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon
     {
         $storer = new Bs_Storer_CommonName($this->_dbh, $this->_logger);
         foreach ($taxon->commonNames as $commonName) {
-            $commonName->taxonId = $taxon->id;
-            $storer->store($commonName);
+            if ($commonName->commonNameElement != '') {
+                $commonName->taxonId = $taxon->id;
+                $storer->store($commonName);
+            }
         }
         unset($storer);
     }
