@@ -40,9 +40,6 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon
         $this->_setTaxon($taxon);
         // Abort if parent taxon does not match for infraspecies
         if (!$this->_setTaxonNameElement($taxon)) {
-    	    $this->_logger->debug(
-    	       'SKIPPED '.$taxon->name.': parent incorrectly set'
-    	    );
     	    return false;
     	}
     	$this->_setTaxonScrutiny($taxon);

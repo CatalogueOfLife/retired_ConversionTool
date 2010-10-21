@@ -69,10 +69,9 @@ class Bs_Storer_CommonName extends Bs_Storer_Abstract
             $commonName->country = self::$countryMap[$commonName->country];
         }
         $this->_getCountryIso($commonName);
-        $this->_setCommonNameReference($commonName);
         $this->_setCommonNameElement($commonName);
         $this->_setCommonName($commonName);
-        $this->_setReferenceToCommonName($commonName);
+        $this->_setCommonNameReference($commonName);
         return $commonName;
     }
     
@@ -107,6 +106,11 @@ class Bs_Storer_CommonName extends Bs_Storer_Abstract
     }
     
     private function _setCommonNameReference(Model $commonName) {
+        // Exit if no reference is set
+        if ($commonName->referenceTitle.$commonName->referenceAuthors.
+            $commonName->referenceYear.$commonName->referenceText == '') {
+            return $commonName;
+        }
         $reference = new Reference();
         $reference->title = $commonName->referenceTitle;
         $reference->authors = $commonName->referenceAuthors;
@@ -116,9 +120,12 @@ class Bs_Storer_CommonName extends Bs_Storer_Abstract
         $storer->store($reference);
         
         $commonName->referenceId = $reference->id;
+        $this->_setReferenceToCommonName($commonName);
+        
         unset($reference, $storer);
         return $commonName;
     }
+    
     
     private function _setCommonNameElement(Model $commonName) 
     {

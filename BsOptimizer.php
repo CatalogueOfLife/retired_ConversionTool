@@ -103,7 +103,7 @@
     
     // Denormalized tables and their indices
     $tables = array(
-        SEARCH_ALL => array('name_element', 'name'),
+        SEARCH_ALL => array('id', 'name_element', 'name', 'rank', 'name_status'),
         SEARCH_DISTRIBUTION => array(),
         SEARCH_SCIENTIFIC => array(
             'kingdom', 'phylum', 'class', 'order', 'superfamily', 
@@ -139,7 +139,7 @@
     }
     $pdo->query('ALTER TABLE `_search_all` ENABLE KEYS');
     $runningTime = round(microtime(true) - $start);
-    echo "Script took $runningTime seconds to complete</p>";
+    echo "Script took $runningTime seconds to complete<br><br></p>";
     
     echo '<p>Optimizing denormalized tables. Table columns are trimmed to 
         the minimum size and indices are created.</p>';
@@ -182,15 +182,13 @@
                 }
                 $query2 = substr($query2, 0, -1).')';
                 //echo "<b>$query2</b><br>";
-                $stmt2 = $pdo->prepare($query2);
-                $stmt2->execute();
             // Single index
             } else {
-                $query3 = 'ALTER TABLE `'.$table.'` ADD INDEX (`'.$index.'`)';
-                //echo "$query3<br>";
-                $stmt2 = $pdo->prepare($query3);
-                $stmt2->execute();
+                $query2 = 'ALTER TABLE `'.$table.'` ADD INDEX (`'.$index.'`)';
+                //echo "$query2<br>";
             }
+            $stmt2 = $pdo->prepare($query2);
+            $stmt2->execute();
         }
         // Create fulltext index on distribution
         if ($table == SEARCH_DISTRIBUTION) {

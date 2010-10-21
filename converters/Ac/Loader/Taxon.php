@@ -136,11 +136,11 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
     {
 		$stmt = $this->_dbh->prepare(
 			'SELECT t1.`common_name` AS commonNameElement, t1.`language`, '.
-			't1.`country`, t2.`author` as referenceAuthors, '.
-			't2.`year` AS referenceYear, t2.`title` AS referenceTitle, '.
-			't2.`source` AS referenceText '.
-			'FROM `common_names` t1, `references` t2 '.
-			'WHERE t1.`reference_id` = t2.`record_id` AND t1.`name_code` = ?'
+		    't1.`country`, t2.`author` as referenceAuthors, '.
+		    't2.`year` AS referenceYear, t2.`title` AS referenceTitle, '.
+		    't2.`source` AS referenceText FROM `common_names` t1 '.
+		    'LEFT JOIN `references` t2 ON t1.`reference_id` = t2.`record_id` '.
+		    'WHERE t1.`name_code` =  = ?'
 		);
 		$stmt->execute(array($taxon->originalId));
 		$taxon->commonNames = $stmt->fetchAll(
