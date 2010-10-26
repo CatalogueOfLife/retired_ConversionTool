@@ -1,0 +1,53 @@
+SYSTEM REQUIREMENTS
+====================
+PHP  
+  Required version: 5.2.10+
+
+  * Extensions:
+    pdo   (http://php.net/manual/en/book.pdo.php)
+  
+MySQL
+  Required version: 5.0+
+
+Apache
+  Required version: 2.0+
+  
+
+INSTALLATION
+=============
+1. Extract the application into the desired folder of the web server.
+
+2. Configure the application
+
+   The converter currently supports two conversions, Dynamic to Annual 
+   Checklist and Annual Checklist to Base Scheme, but the former is experimental
+   only and not supported.
+
+   The Annual Checklist to Base Scheme is configured in config/AcToBs.ini
+
+3. PHP and MySQL settings
+
+   For optimal performance, at least 512MB free memory should be available to
+   PHP. If less memory is available and the scripts exits with a memory error, 
+   the number of taxa processed per iteration should be reduced in AcToBs.php. 
+   
+   In line 93:
+      for ($limit = 3000, $offset = 0; $offset < $total; $offset += $limit) {
+   reduce the $limit to 2500 or less.
+   
+   To get an idea of the memory consumption of the script, line 96
+      //echo showMemoryUse().' memory used<br>';
+   can be uncommented.
+   
+   Futhermore, the following settings are strongly advised for MySQL. These
+   should be set in my.cnf in the [mysqld] section:
+      innodb_buffer_pool_size=256M
+      tmp_table_size=128M
+      max_heap_table_size=128M
+       
+   MySQL fulltext search is used to search distributions. The default minimal
+   query string size is four characters.To set this to two characters, add 
+   the following line to your my.cnf in the [mysqld] section:
+      set-variable = ft_min_word_len=2
+    
+   
