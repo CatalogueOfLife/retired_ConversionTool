@@ -103,7 +103,8 @@ for ($limit = 3000, $offset = 0; $offset < $total; $offset += $limit) {
         echo formatException($e);
     }
 }
-echo '<br>Done!</p>';
+echo '<br>All records imported. Next step is to <a href="BsOptimizer.php">
+    create the denormalized search tables</a>.</p>';
 ?>
 </body>
 </html>
