@@ -25,46 +25,71 @@
   <delete dir="${build}" includeemptydirs="true" />
   <mkdir dir="${build}/logs" />
   <mkdir dir="${build}/api" />
+  <mkdir dir="${build}/php-code-browser" />
  <delete dir="${dist}" includeemptydirs="true" />
  <mkdir dir="${dist}" />
 </target>
 
+<!-- Generate documentation -->
+<target name="phpdoc">
+  <exec dir="${basedir}"
+    checkreturn="true"
+    command="phpdoc -ct type -ue on -t ${build}/api
+             -tb /usr/share/php/data/phpUnderControl/data/phpdoc -o HTML:Phpuc:phpuc
+             -d ${basedir}/model -f ${basedir}/index.php" />
+</target>
+   
+<!-- Execute Code Sniffer -->
+<target name="phpcs">
+  <exec dir="${basedir}"
+    command="phpcs --report=checkstyle --standard=Zend
+             --ignore=library/Zend/**,docs_and_dumps/**,logs/**
+             ${basedir} > ${build}/logs/checkstyle.xml" escape="false" />
+</target>
+
+<!-- PHP Code Browser -->
+<target name="phpcb">
+  <exec dir="${basedir}"
+     command="phpcb
+              --log ${build}/logs
+              --source ${basedir}
+              --output ${build}/php-code-browser"/>
+</target>
+
 <!-- Create deliverable -->
-  <target name="dist" depends="clean,checkout">        
-        <mkdir dir="${dist}/source" />
-        <mkdir dir="${dist}/source/${dist.name}" />
-        <copy todir="${dist}/source/${dist.name}">
-        <fileset dir=".">
-          <patternset refid="dist.exc" />
-        </fileset>               
-        </copy>       
-       
-        <!-- zip -->
-        <exec dir="${dist}/source"
-             command="zip -r ${dist}/${dist.name}.r${revision}.zip ${dist.name}"
-             escape="false"/>
-        <!-- tar.gz -->
-        <exec dir="${dist}/source"
-             command="tar czvf ${dist}/${dist.name}.r${revision}.tar.gz ${dist.name}"
-             escape="false"/>
-        <delete dir="${dist}/source" includeemptydirs="true" />
-    </target>
+<target name="dist" depends="clean,checkout">        
+  <mkdir dir="${dist}/source" />
+  <mkdir dir="${dist}/source/${dist.name}" />
+  <copy todir="${dist}/source/${dist.name}">
+    <fileset dir=".">
+      <patternset refid="dist.exc" />
+    </fileset>               
+  </copy>
+<!-- Create Zip and Tar for distribution -->
+  <exec dir="${dist}/source"
+    command="zip -r ${dist}/${dist.name}.r${revision}.zip ${dist.name}" escape="false"/>
+<!-- tar.gz -->
+  <exec dir="${dist}/source"
+     command="tar czvf ${dist}/${dist.name}.r${revision}.tar.gz ${dist.name}" escape="false"/>
+  <delete dir="${dist}/source" includeemptydirs="true" />
+</target>
 
-    <target name="add_version">
-        <reflexive>
-            <fileset dir="${basedir}/config">
-                <include name="AcToBs.ini" />
-            </fileset>
-            <filterchain>
-                  <replacetokens>
-                      <token key="APP.VERSION" value="${project.version}" />
-                      <token key="APP.REVISION" value="${revision}" />
-                  </replacetokens>
-            </filterchain>
-        </reflexive>
-    </target>
+<!-- Add software version and revision number -->
+<target name="add_version">
+  <reflexive>
+    <fileset dir="${basedir}/config">
+      <include name="AcToBs.ini" />
+    </fileset>
+    <filterchain>
+      <replacetokens>
+        <token key="APP.VERSION" value="${project.version}" />
+        <token key="APP.REVISION" value="${revision}" />
+      </replacetokens>
+    </filterchain>
+  </reflexive>
+</target>
 
-<target name="build" depends="checkout,clean,add_version,dist" />
+<target name="build" depends="checkout,clean,phpdoc,phpcs,phpcb,add_version,dist" />
 </project>
 
 
