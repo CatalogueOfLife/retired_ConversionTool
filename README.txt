@@ -41,7 +41,7 @@ CONVERTING DATA
    config/AcToBs.ini
   
 5. Start the conversion by pointing your browser to:
-   http://your_server/path_to_converter/AcToBs.php
+   http://your_server/path_to_converter/index.php
    The conversion will take a long time to finish. Depending on your server,
    this may take more than 24 hrs.
   
