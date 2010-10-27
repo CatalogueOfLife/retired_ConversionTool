@@ -43,10 +43,9 @@ foreach ($config as $k => $v) {
             $parts = explode("=", trim($option));
             $o[$parts[0]] = $parts[1];
         }
+        DbHandler::createInstance($k, $v, $o);
     }
-    DbHandler::createInstance($k, $v, $o);
 }
-
 $loader = new Ac_Loader(DbHandler::getInstance('source'), $logger);
 $storer = new Bs_Storer(DbHandler::getInstance('target'), $logger, $ind);
 

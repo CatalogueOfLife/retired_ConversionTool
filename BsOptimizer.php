@@ -14,6 +14,7 @@
     
     alwaysFlush();
     $config = parse_ini_file('config/AcToBs.ini', true);
+    // extract db options
     foreach ($config as $k => $v) {
         $o = array();
         if (isset($v["options"])) {
@@ -22,10 +23,10 @@
                 $parts = explode("=", trim($option));
                 $o[$parts[0]] = $parts[1];
             }
+            DbHandler::createInstance($k, $v, $o);
         }
-        DbHandler::createInstance($k, $v, $o);
     }
-    $pdo = DbHandler::getInstance('target');
+        $pdo = DbHandler::getInstance('target');
     // Path to sql files
     /*define('PATH', 
        realpath('.').PATH_SEPARATOR.
