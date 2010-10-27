@@ -51,7 +51,7 @@
     </target>
 
     <target name="deploy">
-        <copy todir="${project.path}/config" overwrite="true">
+        <copy todir="${basedir}/config" overwrite="true">
             <filterchain>
                   <replacetokens>
                       <token key="APP.VERSION" value="${project.version}" />
