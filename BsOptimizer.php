@@ -117,7 +117,7 @@
     );
     
     echo '<p>First denormalized tables are created and filled. Next indices 
-        are created. Note that this script will take hours to complete!</p>';
+        are created.</p>';
     
     foreach ($files as $file) {
         $start = microtime(true);
