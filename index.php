@@ -16,7 +16,7 @@
     $table .= '</tr></table>';
     $version = 'v'.$config['settings']['version'];
     if ($config['settings']['revision'] != '') {
-        $version .= 'rev '.$config['settings']['revision'];
+        $version .= ' rev '.$config['settings']['revision'];
     }
 ?>
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
