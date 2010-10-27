@@ -50,7 +50,21 @@
         <delete dir="${dist}/source" includeemptydirs="true" />
     </target>
 
-<target name="build" depends="checkout,clean,dist" />
+    <target name="deploy">
+        <copy todir="${project.path}/config" overwrite="true">
+            <filterchain>
+                  <replacetokens>
+                      <token key="APP.VERSION" value="${project.version}" />
+                      <token key="APP.REVISION" value="${revision}" />
+                  </replacetokens>
+            </filterchain>
+            <fileset dir="${basedir}/config">
+                <include name="AcToBs.ini" />
+            </fileset>
+        </copy>
+    </target>
+
+<target name="build" depends="checkout,clean,dist,deploy" />
 </project>
 
 
