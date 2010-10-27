@@ -50,9 +50,9 @@
         <delete dir="${dist}/source" includeemptydirs="true" />
     </target>
 
-    <target name="deploy">
+    <target name="add_version">
         <reflexive>
-            <fileset dir="${basedir}/source/config">
+            <fileset dir="${basedir}/config">
                 <include name="AcToBs.ini" />
             </fileset>
             <filterchain>
@@ -64,7 +64,7 @@
         </reflexive>
     </target>
 
-<target name="build" depends="checkout,clean,dist,deploy" />
+<target name="build" depends="checkout,clean,add_version,dist" />
 </project>
 
 
