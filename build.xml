@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project default="build">
+
+    <property name="basedir" value="${project.basedir}" />
+    <property name="build" value="${basedir}/../build" />
+    <property file="build.properties" />
+    <property name="dist" value="${basedir}/../dist" />
+    <property name="dist.name" value="${project.name}-${project.version}" />
+
+<patternset id="dist.exc">
+  <!-- exclude some dump files -->
+  <exclude name="docs_and_dumps/dumps/spicecache.sql.zip"/>
+  <exclude name="docs_and_dumps/dumps/dynamic_checklist_empty.sql"/>
+</patternset>
+
+<!-- Checkout latest version from SVN -->
+<target name="checkout">
+  <svnupdate svnpath="svn" nocache="true" todir="${basedir}" />
+  <svnlastrevision svnpath="svn" workingcopy="${basedir}"
+           propertyname="revision"/>
+</target>
+
+<!-- Clean and set up build/dist directories -->
+<target name="clean">
+  <delete dir="${build}" includeemptydirs="true" />
+  <mkdir dir="${build}/logs" />
+  <mkdir dir="${build}/api" />
+ <delete dir="${dist}" includeemptydirs="true" />
+ <mkdir dir="${dist}" />
+</target>
+
+<!-- Create deliverable -->
+  <target name="dist" depends="clean,checkout">        
+        <mkdir dir="${dist}/source" />
+        <mkdir dir="${dist}/source/${dist.name}" />
+        <copy todir="${dist}/source/${dist.name}">
+        <fileset dir=".">
+          <patternset refid="dist.exc" />
+        </fileset>               
+        </copy>       
+       
+        <!-- zip -->
+        <exec dir="${dist}/source"
+             command="zip -r ${dist}/${dist.name}.r${revision}.zip ${dist.name}"
+             escape="false"/>
+        <!-- tar.gz -->
+        <exec dir="${dist}/source"
+             command="tar czvf ${dist}/${dist.name}.r${revision}.tar.gz ${dist.name}"
+             escape="false"/>
+        <delete dir="${dist}/source" includeemptydirs="true" />
+    </target>
+
+<target name="build" depends="checkout,clean,dist" />
+</project>
+
+
