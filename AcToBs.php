@@ -1,8 +1,8 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
 <head>
-	<meta http-equiv="content-type" content="text/html; charset=utf-8">
-	<title>Annual Checklist to Base Scheme</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8">
+<title>Annual Checklist to Base Scheme</title>
 </head>
 <body style="font: 12px verdana;">
 <h3>Annual Checklist to Base Scheme</h3>
@@ -57,7 +57,7 @@ echo 'Done!</p>';
 echo '<p>Transferring databases<br>';
 $ind->init($loader->count('Database'));
 $dbs = $loader->load('Database');
-foreach($dbs as $db) {
+foreach ($dbs as $db) {
     $storer->store($db);
 }
 echo '<br>Done!</p>';
@@ -67,18 +67,21 @@ echo '<p>Preparing higher taxa...<br>';
 $total = $loader->count('HigherTaxon');
 $ind->init($total, 100, 100);
 echo "Transferring $total higher taxa<br>";
-for ($limit = 10000, $offset = 0; $offset < $total; $offset += $limit) {    
+for ($limit = 10000, $offset = 0; $offset < $total; $offset += $limit) {
     try {
         $taxa = $loader->load('HigherTaxon', $offset, $limit);
-        foreach($taxa as $taxon) {
-        	$storer->store($taxon);
+        foreach ($taxa as $taxon) {
+            $storer->store($taxon);
         }
         unset($taxa);
-//        Dictionary::dumpAll();
-    } catch (PDOException $e) {
-        echo '<pre>'; print_r($taxon); echo '</pre>';
+        //        Dictionary::dumpAll();
+    }
+    catch (PDOException $e) {
+        echo '<pre>';
+        print_r($taxon);
+        echo '</pre>';
         echo formatException($e);
-   }
+    }
 }
 echo '<br>Done!</p>';
 
@@ -89,16 +92,19 @@ echo '<p>Preparing species and infraspecies...<br>';
 $total = $loader->count('Taxon');
 $ind->init($total, 100, 30);
 echo "Transferring $total taxa<br>";
-for ($limit = 3000, $offset = 0; $offset < $total; $offset += $limit) {    
+for ($limit = 3000, $offset = 0; $offset < $total; $offset += $limit) {
     try {
         $taxa = $loader->load('Taxon', $offset, $limit);
         //echo showMemoryUse().' memory used<br>';
-        foreach($taxa as $taxon) {
+        foreach ($taxa as $taxon) {
             $storer->store($taxon);
         }
         unset($taxa);
-    } catch (PDOException $e) {
-        echo '<pre>'; print_r($taxon); echo '</pre>';
+    }
+    catch (PDOException $e) {
+        echo '<pre>';
+        print_r($taxon);
+        echo '</pre>';
         echo formatException($e);
     }
 }

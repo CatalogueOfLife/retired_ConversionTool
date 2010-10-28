@@ -34,7 +34,7 @@ CONVERTING DATA
 2. Import the table structure from: 
    docs_and_dumps/dumps/base_scheme/baseschema-schema.sql
   
-3. Import fixed data from:
+3. Import fixed data (countries, languages, etc) from:
    docs_and_dumps/dumps/base_scheme/baseschema-data.sql
   
 4. Configure the database settings in:
