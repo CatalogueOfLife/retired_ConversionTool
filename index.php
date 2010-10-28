@@ -33,7 +33,8 @@ if ($config['settings']['revision'] != '') {
 </head>
 <body style="font: 12px verdana; width: 600px;">
 <h3>4D4Life Conversion Tool</h3>
-<p style="font-size: 10px; margin-bottom: 20px;"><?php
+<p style="font-size: 10px; margin-bottom: 20px;">
+<?php
 echo $version;
 ?></p>
 <p>Welcome to the 4D4Life Conversion Tool. This tool is used to transfer

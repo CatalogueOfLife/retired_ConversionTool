@@ -72,14 +72,12 @@ $files = array(
         'path' => PATH . DENORMALIZED_TABLES_PATH, 
         'dumpFile' => SEARCH_SCIENTIFIC, 
         'message' => 'Filling ' . SEARCH_SCIENTIFIC . ' table'
-    )
-    , 
+    ), 
     array(
         'path' => PATH . DENORMALIZED_TABLES_PATH, 
         'dumpFile' => SEARCH_FAMILY, 
         'message' => 'Filling ' . SEARCH_FAMILY . ' table'
-    )
-    , 
+    ), 
     array(
         'path' => PATH . DENORMALIZED_TABLES_PATH, 
         'dumpFile' => SOURCE_DATABASE_DETAILS, 
@@ -123,6 +121,7 @@ $tables = array(
         'infraspecies', 
         'genus,species,infraspecies'
     ), 
+    SEARCH_FAMILY => array(), 
     SOURCE_DATABASE_DETAILS => array(
         'id'
     ), 
@@ -160,31 +159,26 @@ while ($cn = $stmt->fetch(PDO::FETCH_ASSOC)) {
 }
 $pdo->query('ALTER TABLE `_search_all` ENABLE KEYS');
 $runningTime = round(microtime(true) - $start);
-echo "Script took $runningTime seconds to complete<br><br></p>";
+echo "Script took $runningTime seconds to complete<br></p>";
 
 echo '<p>Optimizing denormalized tables. Table columns are trimmed to 
         the minimum size and indices are created.</p>';
 
 foreach ($tables as $table => $indices) {
     echo "<p><b>Processing table $table...</b><br>";
-    $stmt = $pdo->prepare('SHOW COLUMNS FROM `' . $table . '` WHERE `Type` LIKE "varchar%"');
+    $stmt = $pdo->prepare('SHOW COLUMNS FROM `' . $table . '`');
     $stmt->execute();
-    // Trim all varchar fields to minimum size and create indices
+    // Trim all varchar and int fields to minimum size
     while ($cl = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        $column = $cl['Field'];
-        echo 'Shrinking column ' . $column . '...<br>';
-        $stmt2 = $pdo->prepare('SELECT MAX(LENGTH(`' . $column . '`)) FROM `' . $table . '`');
-        $stmt2->execute();
-        $maxLength = $stmt2->fetch();
-        if ($maxLength[0] == '' || $maxLength[0] == 0) {
-            $maxLength[0] = 1;
+        if (isVarCharField($cl['Type']) || isIntField($cl['Type'])) {
+            echo 'Shrinking column ' . $cl['Field'] . '...<br>';
+            if (isVarCharField($cl['Type'])) {
+                shrinkVarChar($table, $cl);
+            }
+            else {
+                shrinkInt($table, $cl);
+            }
         }
-        $query = 'ALTER TABLE `' . $table . '` CHANGE `' . $column . '` `' . $column . '` VARCHAR(' . $maxLength[0] . ') ';
-        $cl['Null'] == 'NO' ? $query .= 'NOT NULL' : $query .= 'NULL';
-        $query .= ' DEFAULT \'' . $cl['Default'] . '\'';
-        //echo "$query<br>";
-        $stmt2 = $pdo->prepare($query);
-        $stmt2->execute();
     }
     // Create indices
     foreach ($indices as $index) {
@@ -197,12 +191,10 @@ foreach ($tables as $table => $indices) {
                 $query2 .= '`' . $indexParts[$i] . '`,';
             }
             $query2 = substr($query2, 0, -1) . ')';
-            //echo "<b>$query2</b><br>";
-        // Single index
+            // Single index
         }
         else {
             $query2 = 'ALTER TABLE `' . $table . '` ADD INDEX (`' . $index . '`)';
-            //echo "$query2<br>";
         }
         $stmt2 = $pdo->prepare($query2);
         $stmt2->execute();
@@ -239,6 +231,59 @@ function writeSql ($path, $dumpFile, $message)
     }
 }
 
+function isVarCharField ($field)
+{
+    if (strstr(strtolower($field), 'varchar') != false) {
+        return true;
+    }
+    return false;
+}
+
+function isIntField ($field)
+{
+    if (strstr(strtolower($field), 'int') != false) {
+        return true;
+    }
+    return false;
+}
+
+function shrinkVarChar ($table, $cl)
+{
+    $pdo = DbHandler::getInstance('target');
+    $column = $cl['Field'];
+    $stmt = $pdo->prepare('SELECT MAX(LENGTH(`' . $column . '`)) FROM `' . $table . '`');
+    $stmt->execute();
+    $maxLength = $stmt->fetch();
+    if ($maxLength[0] == '' || $maxLength[0] == 0) {
+        $maxLength[0] = 1;
+    }
+    $query = 'ALTER TABLE `' . $table . '` CHANGE `' . $column . '` `' . $column . '` VARCHAR(' . $maxLength[0] . ')  NOT NULL';
+    $stmt = $pdo->prepare($query);
+    $stmt->execute();
+}
+
+function shrinkInt ($table, $cl)
+{
+    $pdo = DbHandler::getInstance('target');
+    $column = $cl['Field'];
+    $type = 'MEDIUMINT';
+    $stmt = $pdo->prepare('SELECT MAX(`' . $column . '`) FROM `' . $table . '`');
+    $stmt->execute();
+    $max = $stmt->fetch();
+    if ($max[0] >= 16777215) {
+        return;
+    }
+    else if ($max[0] <= 255) {
+        $type = 'TINYINT';
+    }
+    else if ($max[0] <= 65535) {
+        $type = 'SMALLINT';
+    }
+    $query = 'ALTER TABLE `' . $table . '` CHANGE `' . $column . '` `' . $column . '` ' . $type . '(' . strlen($max[0]) . ') UNSIGNED NOT NULL';
+    $stmt = $pdo->prepare($query);
+    $stmt->execute();
+}
+
 function insertCommonNameElements ($cn)
 {
     $pdo = DbHandler::getInstance('target');
@@ -252,20 +297,20 @@ function insertCommonNameElements ($cn)
     foreach ($cnElements as $cne) {
         $stmt = $pdo->prepare($insert);
         $stmt->execute(
-        array(
-            $cn['id'], 
-            strtolower($cne), 
-            $cn['name'], 
-            $cn['name_suffix'], 
-            $cn['rank'], 
-            $cn['name_status'], 
-            $cn['name_status_suffix'], 
-            $cn['name_status_suffix_suffix'], 
-            $cn['kingdom'], 
-            $cn['source_database'], 
-            $cn['source_database_id'], 
-            $cn['accepted_taxon_id']
-        ));
+            array(
+                $cn['id'], 
+                strtolower($cne), 
+                $cn['name'], 
+                $cn['name_suffix'], 
+                $cn['rank'], 
+                $cn['name_status'], 
+                $cn['name_status_suffix'], 
+                $cn['name_status_suffix_suffix'], 
+                $cn['kingdom'], 
+                $cn['source_database'], 
+                $cn['source_database_id'], 
+                $cn['accepted_taxon_id']
+            ));
     }
 }
 
