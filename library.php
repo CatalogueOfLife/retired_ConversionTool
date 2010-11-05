@@ -80,7 +80,7 @@ function logInvalidRecords ()
                         WHERE t1.`taxon` = "Infraspecies" AND 
                         t2.`taxon` != "Species" AND 
                         t1.`is_accepted_name` = 1', 
-            'message' => 'Valid infraspecies which genus as parent'
+            'message' => 'Valid infraspecies with genus (not species) as parent'
         )
     );
     $pdo = DbHandler::getInstance('source');
