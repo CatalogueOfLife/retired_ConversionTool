@@ -53,6 +53,10 @@ echo '<p>Clearing old data...<br>';
 $storer->clearDb();
 echo 'Done!</p>';
 
+echo '<p>Logging invalid taxa...<br>';
+logInvalidRecords();
+echo 'Done!</p>';
+
 // Databases
 echo '<p>Transferring databases<br>';
 $ind->init($loader->count('Database'));
