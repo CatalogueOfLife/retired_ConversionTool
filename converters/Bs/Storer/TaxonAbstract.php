@@ -69,7 +69,7 @@ class Bs_Storer_TaxonAbstract extends Bs_Storer_Abstract
         // marker to unknown
         if ($marker == '' && $taxon->infraspecies !=
              '') {
-                $taxon->infraSpecificMarker = $marker = NULL;
+                $taxon->infraSpecificMarker = $marker = '';
         }
         if (array_key_exists($marker, self::$markerMap)) {
             $marker = self::$markerMap[$marker];

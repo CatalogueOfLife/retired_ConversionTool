@@ -75,16 +75,21 @@ for ($limit = 10000, $offset = 0; $offset < $total; $offset += $limit) {
     try {
         $taxa = $loader->load('HigherTaxon', $offset, $limit);
         foreach ($taxa as $taxon) {
-            $storer->store($taxon);
+            try{
+                $storer->store($taxon);
+            }
+            catch (PDOException $e) {
+                echo '<pre>';
+                print_r($taxon);
+                echo '</pre>';
+                echo 'Store error: '.formatException($e);
+            }
         }
         unset($taxa);
         //        Dictionary::dumpAll();
     }
     catch (PDOException $e) {
-        echo '<pre>';
-        print_r($taxon);
-        echo '</pre>';
-        echo formatException($e);
+        echo 'Load error: '.formatException($e);
     }
 }
 echo '<br>Done!</p>';
@@ -101,15 +106,20 @@ for ($limit = 3000, $offset = 0; $offset < $total; $offset += $limit) {
         $taxa = $loader->load('Taxon', $offset, $limit);
         //echo showMemoryUse().' memory used<br>';
         foreach ($taxa as $taxon) {
-            $storer->store($taxon);
+            try {
+                $storer->store($taxon);
+            }
+            catch (PDOException $e) {
+                echo '<pre>';
+                print_r($taxon);
+                echo '</pre>';
+                echo 'Store error: '.formatException($e);
+            }
         }
         unset($taxa);
     }
     catch (PDOException $e) {
-        echo '<pre>';
-        print_r($taxon);
-        echo '</pre>';
-        echo formatException($e);
+        echo 'Load error: '.formatException($e);
     }
 }
 echo '<br>All records imported. Next step is to <a href="BsOptimizer.php">

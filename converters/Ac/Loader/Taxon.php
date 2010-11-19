@@ -140,7 +140,7 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
 		    't2.`year` AS referenceYear, t2.`title` AS referenceTitle, '.
 		    't2.`source` AS referenceText FROM `common_names` t1 '.
 		    'LEFT JOIN `references` t2 ON t1.`reference_id` = t2.`record_id` '.
-		    'WHERE t1.`name_code` =  = ?'
+		    'WHERE t1.`name_code` = ?'
 		);
 		$stmt->execute(array($taxon->originalId));
 		$taxon->commonNames = $stmt->fetchAll(

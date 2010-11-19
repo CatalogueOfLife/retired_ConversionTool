@@ -42,10 +42,10 @@ class Ac_Loader_HigherTaxon extends Ac_Loader_Abstract
     public function load($offset, $limit)
     {
         $stmt = $this->_dbh->prepare(
-            'SELECT record_id as id, LOWER(taxon) as taxonomicRank, name, '.
-            'lsid, parent_id as parentId FROM `taxa` WHERE '.
-            'taxon NOT LIKE "%species" AND is_accepted_name = 1 '.
-            'ORDER BY record_id  LIMIT :offset, :limit'
+            'SELECT `record_id` as id, LOWER(`taxon`) as taxonomicRank, `name`, '.
+            '`lsid`, `parent_id` as parentId FROM `taxa` WHERE '.
+            '`taxon` NOT LIKE "%species" AND `is_accepted_name` = 1 '.
+            'ORDER BY `record_id` LIMIT :offset, :limit'
         );
         $stmt->bindParam('offset', $offset, PDO::PARAM_INT);
         $stmt->bindParam('limit', $limit, PDO::PARAM_INT);
