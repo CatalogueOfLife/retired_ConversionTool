@@ -20,8 +20,7 @@ class Bs_Storer_Synonym extends Bs_Storer_TaxonAbstract implements Bs_Storer_Int
             'id', 'synonym', array(
                 'id' => $synonym->id
             ))) {
-            $this->writeToErrorTable($synonym->id, $synonym->name, $synonym, 
-                'Synonym already exists');
+            $this->writeToErrorTable($synonym->id, $synonym->name, 'Synonym already exists');
             return false;
         }
         if (strtolower($synonym->taxonomicRank) == 'infraspecies') {

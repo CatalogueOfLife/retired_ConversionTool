@@ -105,7 +105,6 @@ function createErrorTable ()
           `id` int(10) unsigned NOT NULL,
           `name` varchar(150) NOT NULL,
           `created` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-          `object` text NOT NULL,
           `message` varchar(150) NOT NULL
         ) ENGINE=MyISAM DEFAULT CHARSET=utf8;');
 }

@@ -28,8 +28,7 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon implements Bs_Storer_Interfa
             'id', 'taxon', array(
                 'id' => $taxon->id
             ))) {
-            $this->writeToErrorTable($taxon->id, $taxon->name, $taxon, 
-                'Taxon already exists');
+            $this->writeToErrorTable($taxon->id, $taxon->name, 'Taxon already exists');
             return false;
         }
         
@@ -47,7 +46,7 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon implements Bs_Storer_Interfa
         $this->_setTaxon($taxon);
         // Abort if parent taxon does not match for infraspecies
         if (!$this->_setTaxonNameElement($taxon)) {
-            $this->writeToErrorTable($taxon->id, $taxon->name, $taxon, 
+            $this->writeToErrorTable($taxon->id, $taxon->name, 
                 'Parent of infraspecies not a species');
             return false;
         }

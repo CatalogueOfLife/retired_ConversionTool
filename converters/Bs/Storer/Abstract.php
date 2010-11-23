@@ -110,14 +110,13 @@ abstract class Bs_Storer_Abstract
         return NULL;
     }
 
-    public function writeToErrorTable ($taxon_id, $name, $object, $message)
+    public function writeToErrorTable ($taxon_id, $name, $message)
     {
         $stmt = $this->_dbh->prepare(
-            'SELECT INTO `_conversion_errors` (`id`, `name`, `object`, `message`) VALUES (?, ?, ?, ?)');
+            'SELECT INTO `_conversion_errors` (`id`, `name`, `message`) VALUES (?, ?, ?)');
         $stmt->execute(array(
-            $id, 
+            $taxon_id, 
             $name, 
-            serialize($object),
             $message
         ));
     }
