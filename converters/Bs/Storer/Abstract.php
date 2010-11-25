@@ -113,7 +113,7 @@ abstract class Bs_Storer_Abstract
     public function writeToErrorTable ($taxon_id, $name, $message)
     {
         $stmt = $this->_dbh->prepare(
-            'SELECT INTO `_conversion_errors` (`id`, `name`, `message`) VALUES (?, ?, ?)');
+            'INSERT INTO `_conversion_errors` (`id`, `name`, `message`) VALUES (?, ?, ?)');
         $stmt->execute(array(
             $taxon_id, 
             $name, 
