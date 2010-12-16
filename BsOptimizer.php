@@ -215,7 +215,44 @@ foreach ($tables as $table => $indices) {
     $pdo->query('ANALYZE TABLE `' . $table . '`');
 }
 
-echo '</p><p>Ready!</p>';
+echo '</p><p>Updating Distribution scientific name and kingdom, this should be done after the indices are created!</p>';
 
+$query5 = 'ALTER TABLE `_search_distribution`
+CHANGE `name` `name` VARCHAR( 255 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ,
+CHANGE `kingdom` `kingdom` VARCHAR( 255 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL';
+$stmt2 = $pdo->prepare($query5);
+$stmt2->execute();
+
+$query6 = 'UPDATE `_search_distribution` AS sd, `_search_all` AS sa SET sd.`name` = sa.`name`, sd.`kingdom` = sa.`group` WHERE sd.`accepted_species_id` = sa.`id`';
+$stmt2 = $pdo->prepare($query6);
+$stmt2->execute();
+
+echo '</p><p>Updating Search_scientific accepted_name and kingdom, this should be done after the indices are created!</p>';
+
+$query7 = 'ALTER TABLE `_search_scientific`
+CHANGE `author` `author` VARCHAR( 255 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ,
+CHANGE `accepted_species_name` `accepted_species_name` VARCHAR( 255 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ,
+CHANGE `accepted_species_author` `accepted_species_author` VARCHAR( 255 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ,
+CHANGE `source_database_name` `source_database_name` VARCHAR( 255 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ';
+$stmt2 = $pdo->prepare($query7);
+$stmt2->execute();
+
+$query8 = 'UPDATE `_search_scientific` AS dss
+SET dss.`author` = IF(dss.`accepted_species_id` = "",
+    (SELECT `string` FROM `taxon_detail` LEFT JOIN `author_string` ON `author_string_id` = `author_string`.`id` WHERE `taxon_id` = dss.`id`),
+    (SELECT `string` FROM `synonym` LEFT JOIN `author_string` ON `synonym`.`author_string_id` = `author_string`.`id` WHERE `synonym`.`id` = dss.`id`)
+),
+dss.`status` = IF(dss.`accepted_species_id` = "",
+    (SELECT `scientific_name_status_id` FROM `taxon_detail` WHERE `taxon_id` = dss.`id`),
+    (SELECT `scientific_name_status_id` FROM `synonym` WHERE `synonym`.`id` = dss.`id`)
+),
+dss.`source_database_name` = (SELECT DISTINCT sa.`source_database` FROM `_search_all` AS sa WHERE dss.`id` = sa.`id` AND sa.`name_status` != 6),
+dss.`accepted_species_author` = (SELECT DISTINCT sa.`name_suffix` FROM `_search_all` AS sa WHERE dss.`accepted_species_id` = sa.`id` AND sa.`name_status` != 6),
+dss.`accepted_species_name` = (SELECT DISTINCT sa.`name` FROM `_search_all` AS sa WHERE dss.`accepted_species_id` = sa.`id` AND sa.`name_status` != 6)
+';
+$stmt2 = $pdo->prepare($query8);
+$stmt2->execute();
+
+echo '</p><p>Ready!</p>';
 
 ?>
