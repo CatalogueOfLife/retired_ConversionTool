@@ -43,13 +43,13 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon implements Bs_Storer_Interfa
         }
         $this->_getScientificNameStatusId($taxon);
         $this->_setScientificNameElements($taxon);
-        $this->_setTaxon($taxon);
         // Abort if parent taxon does not match for infraspecies
         if (!$this->_setTaxonNameElement($taxon)) {
             $this->writeToErrorTable($taxon->id, $taxon->name, 
                 'Parent of infraspecies not a species');
             return false;
         }
+        $this->_setTaxon($taxon);
         $this->_setTaxonScrutiny($taxon);
         $this->_setTaxonReferences($taxon);
         $this->_setTaxonLsid($taxon);
