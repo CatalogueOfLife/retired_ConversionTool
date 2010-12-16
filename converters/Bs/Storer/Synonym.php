@@ -23,7 +23,7 @@ class Bs_Storer_Synonym extends Bs_Storer_TaxonAbstract implements Bs_Storer_Int
             $name = trim(
                 $synonyms->genus . ' ' . $synonyms->species . ' ' . $synonyms->infraspecies);
             $this->writeToErrorTable($synonym->id, $name, 'Synonym already exists');
-            return false;
+            return $synonym;
         }
         if (strtolower($synonym->taxonomicRank) == 'infraspecies') {
             $this->_setInfraSpecificMarkerId($synonym);

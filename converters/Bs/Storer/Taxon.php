@@ -29,7 +29,7 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon implements Bs_Storer_Interfa
                 'id' => $taxon->id
             ))) {
             $this->writeToErrorTable($taxon->id, $taxon->name, 'Taxon already exists');
-            return false;
+            return $taxon;
         }
         
         // Species rank id
