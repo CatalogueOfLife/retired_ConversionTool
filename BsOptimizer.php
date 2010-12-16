@@ -138,6 +138,19 @@ $tables = array(
     TOTALS => array()
 );
 
+$postponed_tables = array(
+    SEARCH_DISTRIBUTION => array(
+        'name', 
+        'kingdom'
+    ), 
+    SEARCH_SCIENTIFIC => array(
+        'author', 
+        'accepted_species_name,', 
+        'accepted_species_author', 
+        'source_database_name'
+    )
+);
+
 echo '<p>First denormalized tables are created and filled. Next indices 
         are created.</p>';
 
@@ -171,6 +184,10 @@ foreach ($tables as $table => $indices) {
     // Trim all varchar and int fields to minimum size
     while ($cl = $stmt->fetch(PDO::FETCH_ASSOC)) {
         if (isVarCharField($cl['Type']) || isIntField($cl['Type'])) {
+            // Postpone shrinking of a few columns until table creation is complete
+            if (array_key_exists($table, $postponed_tables) && in_array($cl['Field'], $postponed_tables[$table])) {
+                continue;
+            } 
             echo 'Shrinking column ' . $cl['Field'] . '...<br>';
             if (isVarCharField($cl['Type'])) {
                 shrinkVarChar($table, $cl);
@@ -209,35 +226,13 @@ foreach ($tables as $table => $indices) {
     echo '</p>';
 }
 
-echo '<p><b>Analyzing denormalized tables</b><br>';
-foreach ($tables as $table => $indices) {
-    echo "Analyzing table $table...<br>";
-    $pdo->query('ANALYZE TABLE `' . $table . '`');
-}
+echo '<p>Updating _search_distribution...<br>';
+$query = 'UPDATE `_search_distribution` AS sd, `_search_all` AS sa SET sd.`name` = sa.`name`, sd.`kingdom` = sa.`group` WHERE sd.`accepted_species_id` = sa.`id`';
+$stmt = $pdo->prepare($query);
+$stmt->execute();
 
-echo '</p><p>Updating Distribution scientific name and kingdom, this should be done after the indices are created!</p>';
-
-$query5 = 'ALTER TABLE `_search_distribution`
-CHANGE `name` `name` VARCHAR( 255 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ,
-CHANGE `kingdom` `kingdom` VARCHAR( 255 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL';
-$stmt2 = $pdo->prepare($query5);
-$stmt2->execute();
-
-$query6 = 'UPDATE `_search_distribution` AS sd, `_search_all` AS sa SET sd.`name` = sa.`name`, sd.`kingdom` = sa.`group` WHERE sd.`accepted_species_id` = sa.`id`';
-$stmt2 = $pdo->prepare($query6);
-$stmt2->execute();
-
-echo '</p><p>Updating Search_scientific accepted_name and kingdom, this should be done after the indices are created!</p>';
-
-$query7 = 'ALTER TABLE `_search_scientific`
-CHANGE `author` `author` VARCHAR( 255 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ,
-CHANGE `accepted_species_name` `accepted_species_name` VARCHAR( 255 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ,
-CHANGE `accepted_species_author` `accepted_species_author` VARCHAR( 255 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ,
-CHANGE `source_database_name` `source_database_name` VARCHAR( 255 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ';
-$stmt2 = $pdo->prepare($query7);
-$stmt2->execute();
-
-$query8 = 'UPDATE `_search_scientific` AS dss
+echo 'Updating _search_scientific...<br>';
+$query = 'UPDATE `_search_scientific` AS dss
 SET dss.`author` = IF(dss.`accepted_species_id` = "",
     (SELECT `string` FROM `taxon_detail` LEFT JOIN `author_string` ON `author_string_id` = `author_string`.`id` WHERE `taxon_id` = dss.`id`),
     (SELECT `string` FROM `synonym` LEFT JOIN `author_string` ON `synonym`.`author_string_id` = `author_string`.`id` WHERE `synonym`.`id` = dss.`id`)
@@ -250,8 +245,22 @@ dss.`source_database_name` = (SELECT DISTINCT sa.`source_database` FROM `_search
 dss.`accepted_species_author` = (SELECT DISTINCT sa.`name_suffix` FROM `_search_all` AS sa WHERE dss.`accepted_species_id` = sa.`id` AND sa.`name_status` != 6),
 dss.`accepted_species_name` = (SELECT DISTINCT sa.`name` FROM `_search_all` AS sa WHERE dss.`accepted_species_id` = sa.`id` AND sa.`name_status` != 6)
 ';
-$stmt2 = $pdo->prepare($query8);
-$stmt2->execute();
+$stmt = $pdo->prepare($query);
+$stmt->execute();
+
+echo 'Shrinking updated columns in _search_distribution and _search_scientific...';
+foreach ($postponed_tables as $table) {
+    foreach ($table as $cl) {
+        echo 'Shrinking column ' . $cl . '...<br>';
+        shrinkVarChar($table, $cl);
+    }
+}
+
+echo '</p><p><b>Analyzing denormalized tables</b><br>';
+foreach ($tables as $table => $indices) {
+    echo "Analyzing table $table...<br>";
+    $pdo->query('ANALYZE TABLE `' . $table . '`');
+}
 
 echo '</p><p>Ready!</p>';
 
