@@ -250,11 +250,12 @@ dss.`accepted_species_name` = (SELECT DISTINCT sa.`name` FROM `_search_all` AS s
 $stmt = $pdo->prepare($query);
 $stmt->execute();
 
-echo 'Shrinking updated columns in _search_distribution and _search_scientific...';
-foreach ($postponed_tables as $table) {
-    foreach ($table as $cl) {
-        echo 'Shrinking column ' . $cl . '...<br>';
-        shrinkVarChar($table, $cl);
+foreach ($postponed_tables as $table => $columns) {
+    foreach ($columns as $cl) {
+        echo 'Shrinking column ' . $cl . ' in table ' . $table . '...<br>';
+        shrinkVarChar($table, array(
+            'Field' => $cl
+        ));
     }
 }
 

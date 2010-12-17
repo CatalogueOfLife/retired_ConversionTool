@@ -51,9 +51,10 @@ class Bs_Storer_TaxonAbstract extends Bs_Storer_Abstract
             $taxon->taxonomicRankId = $id;
             return $taxon;
         }
-        $id = $this->_recordExists('id', 'taxonomic_rank', array(
-            'rank' => $taxon->taxonomicRank
-        ));
+        $id = $this->_recordExists('id', 'taxonomic_rank', 
+            array(
+                'rank' => $taxon->taxonomicRank
+            ));
         if ($id) {
             Dictionary::add('ranks', $taxon->taxonomicRank, $id);
             $taxon->taxonomicRankId = $id;
@@ -78,16 +79,19 @@ class Bs_Storer_TaxonAbstract extends Bs_Storer_Abstract
             $taxon->taxonomicRankId = $markerId;
             return $taxon;
         }
-        $markerId = $this->_recordExists('id', 'taxonomic_rank', array(
-            'rank' => $marker
-        ));
+        $markerId = $this->_recordExists('id', 'taxonomic_rank', 
+            array(
+                'rank' => $marker
+            ));
         if ($markerId) {
             Dictionary::add('ranks', $marker, $markerId);
             $taxon->taxonomicRankId = $markerId;
             return $taxon;
         }
-        $stmt = $this->_dbh->prepare('INSERT INTO `taxonomic_rank` (`rank`, `standard`) VALUE (?, ?)');
+        $stmt = $this->_dbh->prepare(
+            'INSERT INTO `taxonomic_rank` (`rank`, `marker_displayed`, `standard`) VALUE (?, ?, ?)');
         $stmt->execute(array(
+            $marker, 
             $marker, 
             0
         ));
