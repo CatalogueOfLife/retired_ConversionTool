@@ -122,7 +122,7 @@ for ($limit = 3000, $offset = 0; $offset < $total; $offset += $limit) {
         echo 'Load error: '.formatException($e);
     }
 }
-echo '<br>All records imported. Next step is to <a href="BsOptimizer.php">
+echo '</p><p>All records imported. Next step is to <a href="BsOptimizer.php">
     create the denormalized search tables</a>.</p>';
 ?>
 </body>

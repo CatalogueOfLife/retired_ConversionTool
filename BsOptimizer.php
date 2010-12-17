@@ -145,14 +145,13 @@ $postponed_tables = array(
     ), 
     SEARCH_SCIENTIFIC => array(
         'author', 
-        'accepted_species_name,', 
+        'accepted_species_name', 
         'accepted_species_author', 
         'source_database_name'
     )
 );
 
-echo '<p>First denormalized tables are created and filled. Next indices 
-        are created.</p>';
+echo '<p>First denormalized tables are created and filled. Next indices are created.</p>';
 
 foreach ($files as $file) {
     $start = microtime(true);
@@ -174,7 +173,7 @@ $pdo->query('ALTER TABLE `_search_all` ENABLE KEYS');
 $runningTime = round(microtime(true) - $start);
 echo "Script took $runningTime seconds to complete<br></p>";
 
-echo '<p>Optimizing denormalized tables. Table columns are trimmed to 
+echo '<p><br>Optimizing denormalized tables. Table columns are trimmed to 
         the minimum size and indices are created.</p>';
 
 foreach ($tables as $table => $indices) {
@@ -185,9 +184,11 @@ foreach ($tables as $table => $indices) {
     while ($cl = $stmt->fetch(PDO::FETCH_ASSOC)) {
         if (isVarCharField($cl['Type']) || isIntField($cl['Type'])) {
             // Postpone shrinking of a few columns until table creation is complete
-            if (array_key_exists($table, $postponed_tables) && in_array($cl['Field'], $postponed_tables[$table])) {
+            if (array_key_exists(
+                $table, $postponed_tables) && in_array($cl['Field'], 
+                $postponed_tables[$table])) {
                 continue;
-            } 
+            }
             echo 'Shrinking column ' . $cl['Field'] . '...<br>';
             if (isVarCharField($cl['Type'])) {
                 shrinkVarChar($table, $cl);
@@ -226,7 +227,8 @@ foreach ($tables as $table => $indices) {
     echo '</p>';
 }
 
-echo '<p>Updating _search_distribution...<br>';
+echo '<p><b>Post-processing _search_distribution and _search_scientific tables</b><br>';
+echo 'Updating _search_distribution...<br>';
 $query = 'UPDATE `_search_distribution` AS sd, `_search_all` AS sa SET sd.`name` = sa.`name`, sd.`kingdom` = sa.`group` WHERE sd.`accepted_species_id` = sa.`id`';
 $stmt = $pdo->prepare($query);
 $stmt->execute();

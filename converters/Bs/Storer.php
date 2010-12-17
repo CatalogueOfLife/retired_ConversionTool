@@ -21,23 +21,53 @@ class Bs_Storer
      * in $dbTables array below.
      */
     private static $dbTables = array(
-        'distribution', 'distribution_free_text', 'region_free_text', 
-        'taxon_detail', 'scrutiny', 'specialist', 'reference_to_synonym', 
-        'synonym_name_element', 'synonym', 'author_string', 
-        'taxon_name_element', 'scientific_name_element', 'uri_to_taxon', 
-        'reference_to_taxon', 'reference_to_common_name', 'common_name', 
-        'common_name_element', 'reference', 'uri_to_source_database', 
-        'uri_to_taxon', 'uri', 'taxon', 'source_database'
+        'distribution', 
+        'distribution_free_text', 
+        'region_free_text', 
+        'taxon_detail', 
+        'scrutiny', 
+        'specialist', 
+        'reference_to_synonym', 
+        'synonym_name_element', 
+        'synonym', 
+        'author_string', 
+        'taxon_name_element', 
+        'scientific_name_element', 
+        'uri_to_taxon', 
+        'reference_to_taxon', 
+        'reference_to_common_name', 
+        'common_name', 
+        'common_name_element', 
+        'reference', 
+        'uri_to_source_database', 
+        'uri_to_taxon', 
+        'uri', 
+        'taxon', 
+        'source_database'
     );
     
-    public function __construct(PDO $dbh, Zend_Log $logger, 
-        Indicator $indicator)
+    private static $dbDenormalizedTables = array(
+        '_conversion_errors', 
+        '_new_search_name_elements', 
+        '_search_all', 
+        '_search_all_new', 
+        '_search_distribution', 
+        '_search_family', 
+        '_search_scientific', 
+        '_source_database_details', 
+        '_source_database_taxonomic_coverage', 
+        '_species_details', 
+        '_taxon_tree', 
+        '_totals'
+    );
+
+    public function __construct (PDO $dbh, Zend_Log $logger, Indicator $indicator)
     {
         $this->_dbh = $dbh;
         $this->_logger = $logger;
         $this->_indicator = $indicator;
     }
-    
+
     /**
      * Dynamically loads the appropriate storer class
      * 
@@ -48,29 +78,29 @@ class Bs_Storer
      * @throws exception
      * @return class loader class
      */
-    private function _getStorer($name, $isClass = false)
+    private function _getStorer ($name, $isClass = false)
     {
-        if($isClass) {
+        if ($isClass) {
             $class = $name;
             $parts = explode('_', $name);
             $name = current(array_reverse($parts));
         }
         $class = 'Bs_Storer_' . $name;
         
-        if(!include_once('Storer/' . $name . '.php')) {
+        if (!include_once ('Storer/' . $name . '.php')) {
             throw new Exception('Storer class file not found');
         }
-        if(!class_exists($class)) {
+        if (!class_exists($class)) {
             throw new Exception('Storer class undefined');
         }
         $storer = new $class($this->_dbh, $this->_logger);
-        if(!$storer instanceof Bs_Storer_Interface) {
+        if (!$storer instanceof Bs_Storer_Interface) {
             unset($storer);
             throw new Exception('Invalid storer instance');
         }
         return $storer;
     }
-    
+
     /*
     public function clear($what) {
         return $this->_getStorer($what)->clear();
@@ -83,27 +113,27 @@ class Bs_Storer
      * @param class $object class defined in model or, when extended,
      * in converters/Ac/Model
      */
-    public function store(Model $object)
+    public function store (Model $object)
     {
-    	$class = get_class($object);
-    	$storer = $this->_getStorer($class, true);   	
+        $class = get_class($object);
+        $storer = $this->_getStorer($class, true);
         $start = microtime(true);
         $res = $storer->store($object);
         $this->_indicator->iterate();
         return $res;
     }
-    
+
     /**
      * Passes storeAll function on to appropriate storer class
      * 
      * Not used in this conversion; see ScToDc for implementation.
      */
-    public function storeAll(array $arr)
+    public function storeAll (array $arr)
     {
-    	if(empty($arr)) {
-    		return;
-    	}
-        $storer = $this->_getStorer(get_class($arr[0]), true);      
+        if (empty($arr)) {
+            return;
+        }
+        $storer = $this->_getStorer(get_class($arr[0]), true);
         $res = $storer->storeAll($arr);
         unset($arr);
         $this->_indicator->iterate();
@@ -120,20 +150,26 @@ class Bs_Storer
      * in the Base Scheme. Also resets AUTO_INCREMENT values and clears 
      * custom entries from the the taxonomic_rank table.
      */
-    public function clearDb()
+    public function clearDb ()
     {
+        // Empty tables and reset auto-increment values
         foreach (self::$dbTables as $table) {
-            $stmt = $this->_dbh->prepare('TRUNCATE `'.$table.'`');
+            $stmt = $this->_dbh->prepare('TRUNCATE `' . $table . '`');
             $stmt->execute();
-            $stmt = $this->_dbh->prepare(
-                'ALTER TABLE `'.$table.'` AUTO_INCREMENT = 1'
-            );
+            $stmt = $this->_dbh->prepare('ALTER TABLE `' . $table . '` AUTO_INCREMENT = 1');
             $stmt->execute();
         }
+        // Delete denormalized tables
+        foreach (self::$dbDenormalizedTables as $table) {
+            $stmt = $this->_dbh->prepare('DROP TABLE IF EXISTS `' . $table . '`');
+            $stmt->execute();
+        }
+        // Delete non-standard taxonomic ranks
         $stmt = $this->_dbh->prepare(
-            'DELETE FROM `taxonomic_rank` WHERE `standard` = ?'
-        );
-        $stmt->execute(array(0));
+            'DELETE FROM `taxonomic_rank` WHERE `standard` = ?');
+        $stmt->execute(array(
+            0
+        ));
         unset($stmt);
     }
 }

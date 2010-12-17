@@ -21,7 +21,7 @@ class Bs_Storer_Synonym extends Bs_Storer_TaxonAbstract implements Bs_Storer_Int
                 'id' => $synonym->id
             ))) {
             $name = trim(
-                $synonyms->genus . ' ' . $synonyms->species . ' ' . $synonyms->infraspecies);
+                $synonym->genus . ' ' . $synonym->species . ' ' . $synonym->infraspecies);
             $this->writeToErrorTable($synonym->id, $name, 'Synonym already exists');
             return $synonym;
         }
