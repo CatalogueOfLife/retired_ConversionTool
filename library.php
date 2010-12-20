@@ -214,7 +214,7 @@ function insertCommonNameElements ($cn)
     $insert = 'INSERT INTO `_search_all` 
             (`id`, `name_element`, `name`, `name_suffix`, `rank`, `name_status`, 
             `name_status_suffix`, `name_status_suffix_suffix`, `group`, 
-            `source_database`, `source_database_id`, `accepted_taxon_id`) 
+            `source_database_name`, `source_database_id`, `accepted_taxon_id`) 
             VALUES 
             (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
     $cnElements = explode(' ', $cn['name']);
