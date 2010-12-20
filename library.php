@@ -231,7 +231,7 @@ function insertCommonNameElements ($cn)
                 $cn['name_status_suffix'], 
                 $cn['name_status_suffix_suffix'], 
                 $cn['kingdom'], 
-                $cn['source_database'], 
+                $cn['source_database_name'], 
                 $cn['source_database_id'], 
                 $cn['accepted_taxon_id']
             ));
