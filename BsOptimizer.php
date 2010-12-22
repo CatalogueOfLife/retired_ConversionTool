@@ -243,7 +243,7 @@ dss.`status` = IF(dss.`accepted_species_id` = "",
     (SELECT `scientific_name_status_id` FROM `taxon_detail` WHERE `taxon_id` = dss.`id`),
     (SELECT `scientific_name_status_id` FROM `synonym` WHERE `synonym`.`id` = dss.`id`)
 ),
-dss.`source_database_name` = (SELECT DISTINCT sa.`source_database` FROM `_search_all` AS sa WHERE dss.`id` = sa.`id` AND sa.`name_status` != 6),
+dss.`source_database_name` = (SELECT DISTINCT sa.`source_database_name` FROM `_search_all` AS sa WHERE dss.`id` = sa.`id` AND sa.`name_status` != 6),
 dss.`accepted_species_author` = (SELECT DISTINCT sa.`name_suffix` FROM `_search_all` AS sa WHERE dss.`accepted_species_id` = sa.`id` AND sa.`name_status` != 6),
 dss.`accepted_species_name` = (SELECT DISTINCT sa.`name` FROM `_search_all` AS sa WHERE dss.`accepted_species_id` = sa.`id` AND sa.`name_status` != 6)
 ';
