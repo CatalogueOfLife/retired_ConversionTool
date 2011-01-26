@@ -24,8 +24,9 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
     public function count()
     {
         $stmt = $this->_dbh->prepare(
-            'SELECT COUNT(1) FROM taxa t1, scientific_names t2 '.
+            'SELECT COUNT(1) FROM `taxa` t1, `scientific_names` t2 '.
             'WHERE t1.`is_accepted_name` = 1 '.
+            'AND t1.`parent_id` != 0 '.
             'AND t1.`taxon` LIKE "%species" '.
             'AND t1.`name_code` = t2.`name_code` '
         );
@@ -57,9 +58,10 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
             't2.`web_site` AS uri, t2.`comment` AS additionalData, '.
             't2.`scrutiny_date` AS scrutinyDate, '.
             't2.`specialist_id` AS specialistId '.
-            'FROM taxa t1, scientific_names t2 '.
+            'FROM `taxa` t1, `scientific_names` t2 '.
             'WHERE t1.`is_accepted_name` = 1 '.
-            'AND t1.`taxon` LIKE "%species" ' .
+            'AND t1.`parent_id` != 0 '.
+            'AND t1.`taxon` LIKE "%species" '.
             'AND t1.`name_code` = t2.`name_code` '.
             'LIMIT :offset, :limit '
         );
