@@ -39,7 +39,7 @@ INSTALLATION
       //echo showMemoryUse().' memory used<br>';
    can be uncommented.
    
-   Futhermore, the following settings are strongly advised for MySQL. These
+   Furthermore, the following settings are strongly advised for MySQL. These
    should be set in my.cnf in the [mysqld] section:
       innodb_buffer_pool_size=256M
       tmp_table_size=128M
