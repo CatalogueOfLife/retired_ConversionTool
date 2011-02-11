@@ -208,10 +208,42 @@ function shrinkInt ($table, $cl)
 /**
  * Used to create denormalized table
  */
-function insertCommonNameElements ($cn)
+
+function cleanNameElements ($ne, $search_all, $delete_name_elements = array(), $delete_chars = array())
 {
     $pdo = DbHandler::getInstance('target');
-    $insert = 'INSERT INTO `_search_all` 
+    $delete = 'DELETE FROM `' . $search_all . '` WHERE `id` = ? AND `name_element` = ?';
+    $update = 'UPDATE `' . $search_all . '` SET `name_element` = ? WHERE `id` = ? AND `name_element` = ?';
+    $nameElement = $ne['name_element'];
+    // Delete row if name_element matches entry to be deleted
+    if (in_array($nameElement, $delete_name_elements)) {
+        $stmt = $pdo->prepare($delete);
+        $stmt->execute(array(
+            $ne['id'], 
+            $nameElement
+        ));
+        return;
+    }
+    // Replace characters to be deleted with space and then remove double spaces
+    $nameElement = str_replace($delete_chars, ' ', $nameElement);
+    $nameElement = preg_replace('/\s+/', ' ', $nameElement);
+    $nameElement = trim($nameElement);
+    // Update only if parsed value does not match original value
+    if ($nameElement != $ne['name_element']) {
+        $stmt = $pdo->prepare($update);
+        $stmt->execute(
+            array(
+                $nameElement, 
+                $ne['id'], 
+                $ne['name_element']
+            ));
+    }
+}
+
+function insertCommonNameElements ($cn, $search_all)
+{
+    $pdo = DbHandler::getInstance('target');
+    $insert = 'INSERT INTO `' . $search_all . '` 
             (`id`, `name_element`, `name`, `name_suffix`, `rank`, `name_status`, 
             `name_status_suffix`, `name_status_suffix_suffix`, `group`, 
             `source_database_name`, `source_database_id`, `accepted_taxon_id`) 
@@ -236,4 +268,43 @@ function insertCommonNameElements ($cn)
                 $cn['accepted_taxon_id']
             ));
     }
+}
+
+function splitAndInsertNameElements ($ne, $search_all)
+{
+    $pdo = DbHandler::getInstance('target');
+    $insert = 'INSERT INTO `' . $search_all . '` 
+            (`id`, `name_element`, `name`, `name_suffix`, `rank`, `name_status`, 
+            `name_status_suffix`, `name_status_suffix_suffix`, `group`, 
+            `source_database_name`, `source_database_id`, `accepted_taxon_id`, `delete_me`) 
+            VALUES 
+            (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+    $ne['delete_me'] = 2;
+    $elements = explode(' ', $ne['name_element']);
+    foreach ($elements as $nameElement) {
+        $stmt = $pdo->prepare($insert);
+        $ne['name_element'] = $nameElement;
+        $stmt->execute(array_values($ne));
+    }
+}
+
+function updateTaxonTreeName ($id, $taxon_tree, $search_all)
+{
+    $pdo = DbHandler::getInstance('target');
+    $update = 'UPDATE `' . $taxon_tree . '` SET `name` = ? WHERE `taxon_id` = ' . $id;
+    $stmt = $pdo->prepare($update);
+    $stmt->execute(array(
+        getNameFromSearchAll($id, $search_all)
+    ));
+}
+
+function getNameFromSearchAll ($id, $search_all)
+{
+    $pdo = DbHandler::getInstance('target');
+    $query = 'SELECT `name` FROM `' . $search_all . '` WHERE `id` = ?';
+    $stmt = $pdo->prepare($query);
+    $stmt->execute(array(
+        $id
+    ));
+    return $stmt->fetchColumn();
 }

@@ -11,22 +11,8 @@
 require_once 'library.php';
 require_once 'DbHandler.php';
 require_once 'Indicator.php';
-
 alwaysFlush();
-$config = parse_ini_file('config/AcToBs.ini', true);
-// extract db options
-foreach ($config as $k => $v) {
-    $o = array();
-    if (isset($v["options"])) {
-        $options = explode(",", $v["options"]);
-        foreach ($options as $option) {
-            $parts = explode("=", trim($option));
-            $o[$parts[0]] = $parts[1];
-        }
-        DbHandler::createInstance($k, $v, $o);
-    }
-}
-$pdo = DbHandler::getInstance('target');
+
 // Path to sql files
 /*define('PATH', 
        realpath('.').PATH_SEPARATOR.
@@ -51,7 +37,6 @@ define('SOURCE_DATABASE_TAXONOMIC_COVERAGE', '_source_database_taxonomic_coverag
 define('SPECIES_DETAILS', '_species_details');
 define('TAXON_TREE', '_taxon_tree');
 define('TOTALS', '_totals');
-
 $files = array(
     array(
         'path' => PATH, 
@@ -138,7 +123,11 @@ $tables = array(
     TOTALS => array()
 );
 
+// Some columns are not shrunken immediately because some post-processing needs to take place first
 $postponed_tables = array(
+    SEARCH_ALL => array(
+        'name_element'
+    ), 
     SEARCH_DISTRIBUTION => array(
         'name', 
         'kingdom'
@@ -148,8 +137,46 @@ $postponed_tables = array(
         'accepted_species_name', 
         'accepted_species_author', 
         'source_database_name'
+    ), 
+    TAXON_TREE => array(
+        'name'
     )
 );
+
+// Name elements in _search_all table to be discarded
+$delete_name_elements = array(
+    'sp.', 
+    'subsp.', 
+    'sp', 
+    'subsp.', 
+    'spec', 
+    'singular', 
+    'plural'
+);
+
+// Characters in name elements in _search_all table to be discarded
+$delete_chars = array(
+    '(', 
+    ')', 
+    '=', 
+    '?', 
+    '+', 
+    '.'
+);
+
+$config = parse_ini_file('config/AcToBs.ini', true);
+foreach ($config as $k => $v) {
+    $o = array();
+    if (isset($v["options"])) {
+        $options = explode(",", $v["options"]);
+        foreach ($options as $option) {
+            $parts = explode("=", trim($option));
+            $o[$parts[0]] = $parts[1];
+        }
+        DbHandler::createInstance($k, $v, $o);
+    }
+}
+$pdo = DbHandler::getInstance('target');
 
 echo '<p>First denormalized tables are created and filled. Next indices are created.</p>';
 
@@ -161,15 +188,15 @@ foreach ($files as $file) {
 }
 
 $start = microtime(true);
-echo '<p>Adding common names to _search_all table...<br>';
+echo '<p>Adding common names to ' . SEARCH_ALL . ' table...<br>';
 $sql = file_get_contents(PATH . DENORMALIZED_TABLES_PATH . SEARCH_ALL_COMMON_NAMES . '.sql');
-$pdo->query('ALTER TABLE `_search_all` DISABLE KEYS');
+$pdo->query('ALTER TABLE `' . SEARCH_ALL . '` DISABLE KEYS');
 $stmt = $pdo->prepare($sql);
 $stmt->execute();
 while ($cn = $stmt->fetch(PDO::FETCH_ASSOC)) {
-    insertCommonNameElements($cn);
+    insertCommonNameElements($cn, SEARCH_ALL);
 }
-$pdo->query('ALTER TABLE `_search_all` ENABLE KEYS');
+$pdo->query('ALTER TABLE `' . SEARCH_ALL . '` ENABLE KEYS');
 $runningTime = round(microtime(true) - $start);
 echo "Script took $runningTime seconds to complete<br></p>";
 
@@ -227,29 +254,101 @@ foreach ($tables as $table => $indices) {
     echo '</p>';
 }
 
-echo '<p><b>Post-processing _search_distribution and _search_scientific tables</b><br>';
-echo 'Updating _search_distribution...<br>';
-$query = 'UPDATE `_search_distribution` AS sd, `_search_all` AS sa SET sd.`name` = sa.`name`, sd.`kingdom` = sa.`group` WHERE sd.`accepted_species_id` = sa.`id`';
+echo '<p><b>Post-processing ' . SEARCH_ALL . ', ' . SEARCH_DISTRIBUTION . ', ' . SEARCH_SCIENTIFIC . ' and ' . TAXON_TREE . ' tables</b><br>';
+echo 'Updating ' . SEARCH_ALL . '...<br>';
+echo '&nbsp;&nbsp;&nbsp; Cleaning name elements...<br>';
+$query = 'SELECT `id`, `name_element` FROM `' . SEARCH_ALL . '`';
+$stmt = $pdo->prepare($query);
+$stmt->execute();
+while ($ne = $stmt->fetch(PDO::FETCH_ASSOC)) {
+    cleanNameElements($ne, SEARCH_ALL, $delete_name_elements, $delete_chars);
+}
+echo '&nbsp;&nbsp;&nbsp; Creating temporary column to mark rows that should be processed...<br>';
+$query = 'ALTER TABLE `' . SEARCH_ALL . '` ADD `delete_me` TINYINT( 1 ) NOT NULL , ADD INDEX ( `delete_me` ) ';
+$stmt = $pdo->prepare($query);
+$stmt->execute();
+echo '&nbsp;&nbsp;&nbsp; Marking rows with name elements containing spaces...<br>';
+$query = 'UPDATE `' . SEARCH_ALL . '` SET `delete_me` = ? WHERE `name_element` LIKE "% %" and `name_element` != "not assigned"';
+$stmt = $pdo->prepare($query);
+$stmt->execute(array(
+    1
+));
+echo '&nbsp;&nbsp;&nbsp; Splitting rows...<br>';
+$query = 'SELECT * FROM `' . SEARCH_ALL . '` WHERE `delete_me` = 1';
+$stmt = $pdo->prepare($query);
+$stmt->execute();
+while ($ne = $stmt->fetch(PDO::FETCH_ASSOC)) {
+    splitAndInsertNameElements($ne, SEARCH_ALL);
+}
+echo '&nbsp;&nbsp;&nbsp; Deleting original rows...<br>';
+$query = 'DELETE FROM `' . SEARCH_ALL . '` WHERE `delete_me` = ?';
+$stmt = $pdo->prepare($query);
+$stmt->execute(array(
+    1
+));
+echo '&nbsp;&nbsp;&nbsp; Dropping temporary column...<br>';
+$query = 'ALTER TABLE `' . SEARCH_ALL . '` DROP `delete_me`';
 $stmt = $pdo->prepare($query);
 $stmt->execute();
 
-echo 'Updating _search_scientific...<br>';
-$query = 'UPDATE `_search_scientific` AS dss
-SET dss.`author` = IF(dss.`accepted_species_id` = "",
-    (SELECT `string` FROM `taxon_detail` LEFT JOIN `author_string` ON `author_string_id` = `author_string`.`id` WHERE `taxon_id` = dss.`id`),
-    (SELECT `string` FROM `synonym` LEFT JOIN `author_string` ON `synonym`.`author_string_id` = `author_string`.`id` WHERE `synonym`.`id` = dss.`id`)
-),
-dss.`status` = IF(dss.`accepted_species_id` = "",
-    (SELECT `scientific_name_status_id` FROM `taxon_detail` WHERE `taxon_id` = dss.`id`),
-    (SELECT `scientific_name_status_id` FROM `synonym` WHERE `synonym`.`id` = dss.`id`)
-),
-dss.`source_database_name` = (SELECT DISTINCT sa.`source_database_name` FROM `_search_all` AS sa WHERE dss.`id` = sa.`id` AND sa.`name_status` != 6),
-dss.`accepted_species_author` = (SELECT DISTINCT sa.`name_suffix` FROM `_search_all` AS sa WHERE dss.`accepted_species_id` = sa.`id` AND sa.`name_status` != 6),
-dss.`accepted_species_name` = (SELECT DISTINCT sa.`name` FROM `_search_all` AS sa WHERE dss.`accepted_species_id` = sa.`id` AND sa.`name_status` != 6)
-';
+echo 'Updating ' . SEARCH_DISTRIBUTION . '...<br>';
+$query = 'UPDATE `' . SEARCH_DISTRIBUTION . '` AS sd, `' . SEARCH_ALL . '` AS sa SET sd.`name` = sa.`name`, sd.`kingdom` = sa.`group` WHERE sd.`accepted_species_id` = sa.`id`';
 $stmt = $pdo->prepare($query);
 $stmt->execute();
 
+echo 'Updating ' . SEARCH_SCIENTIFIC . '...</p>';
+$query = 'UPDATE `' . SEARCH_SCIENTIFIC . '` AS dss 
+    SET dss.`author` = IF(dss.`accepted_species_id` = "", (
+        SELECT `string` 
+        FROM `taxon_detail` 
+        LEFT JOIN `author_string` ON `author_string_id` = `author_string`.`id` 
+        WHERE `taxon_id` = dss.`id`),
+        (SELECT `string` 
+        FROM `synonym` 
+        LEFT JOIN `author_string` ON `synonym`.`author_string_id` = `author_string`.`id` 
+        WHERE `synonym`.`id` = dss.`id`
+    )
+    ),
+        dss.`status` = IF(dss.`accepted_species_id` = "", (
+        SELECT `scientific_name_status_id` 
+        FROM `taxon_detail` 
+        WHERE `taxon_id` = dss.`id`), (
+            SELECT `scientific_name_status_id` 
+            FROM `synonym` 
+            WHERE `synonym`.`id` = dss.`id`
+        )
+    ),
+    dss.`source_database_name` = (
+        SELECT DISTINCT sa.`source_database_name` 
+        FROM `' . SEARCH_ALL . '` AS sa 
+        WHERE dss.`id` = sa.`id` 
+        AND sa.`name_status` != 6
+    ),
+    dss.`accepted_species_author` = (
+        SELECT DISTINCT sa.`name_suffix` 
+        FROM `' . SEARCH_ALL . '` AS sa 
+        WHERE dss.`accepted_species_id` = sa.`id` 
+        AND sa.`name_status` != 6
+    ),
+    dss.`accepted_species_name` = (
+        SELECT DISTINCT sa.`name` 
+        FROM `' . SEARCH_ALL . '` AS sa 
+        WHERE dss.`accepted_species_id` = sa.`id` 
+        AND sa.`name_status` != 6
+    )';
+$stmt = $pdo->prepare($query);
+$stmt->execute();
+
+echo 'Updating ' . TAXON_TREE . '...<br>';
+$query = 'SELECT `taxon_id` FROM `' . TAXON_TREE . '` 
+          WHERE `rank` NOT IN ("kingdom", "phylum", "class", "order", "family", "superfamily", "genus", "species")';
+$stmt = $pdo->prepare($query);
+$stmt->execute();
+while ($id = $stmt->fetchColumn()) {
+    updateTaxonTreeName($id, TAXON_TREE, SEARCH_ALL);
+}
+
+echo '<p><b>Shinking columns of post-processed tables</b><br>';
 foreach ($postponed_tables as $table => $columns) {
     foreach ($columns as $cl) {
         echo 'Shrinking column ' . $cl . ' in table ' . $table . '...<br>';
