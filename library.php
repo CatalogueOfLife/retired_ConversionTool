@@ -312,21 +312,19 @@ function getNameFromSearchAll ($id, $search_all)
 function copyTaxonomicCoverage ($id, $source_database_details)
 {
     $pdo = DbHandler::getInstance('target');
-    $update = 'UPDATE `' . $source_database_details . '` SET `taxonomic_coverage` = ? WHERE `id` = ' . $id;
+    $update = 'UPDATE `' . $source_database_details . '` SET `taxonomic_coverage` = ?, `is_new` = ? WHERE `id` = ' . $id;
     $stmt = $pdo->prepare($update);
-    $stmt->execute(array(
-        getTaxonomicCoverage($id)
-    ));
+    $stmt->execute(getTaxonomicCoverage($id));
 
 }
 
 function getTaxonomicCoverage ($id)
 {
     $pdo = DbHandler::getInstance('source');
-    $query = 'SELECT `taxonomic_coverage` FROM `databases` WHERE `record_id` = ?';
+    $query = 'SELECT `taxonomic_coverage`, `is_new` FROM `databases` WHERE `record_id` = ?';
     $stmt = $pdo->prepare($query);
     $stmt->execute(array(
         $id
     ));
-    return $stmt->fetchColumn();
+    return $stmt->fetch(PDO::FETCH_NUM);
 }
