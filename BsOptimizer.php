@@ -118,7 +118,8 @@ $tables = array(
     ), 
     TAXON_TREE => array(
         'taxon_id', 
-        'parent_id'
+        'parent_id', 
+        'name'
     ), 
     TOTALS => array()
 );
