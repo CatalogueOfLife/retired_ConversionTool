@@ -27,7 +27,7 @@ INSTALLATION
 
 3. PHP and MySQL settings
 
-   For optimal performance, at least 512MB free memory should be available to
+   For optimal performance, at least 1024MB free memory should be available to
    PHP. If less memory is available and the scripts exits with a memory error, 
    the number of taxa processed per iteration should be reduced in AcToBs.php. 
    

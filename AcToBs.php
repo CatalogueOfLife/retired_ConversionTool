@@ -8,7 +8,7 @@
 <h3>Annual Checklist to Base Scheme</h3>
 
 <?php
-ini_set('memory_limit', '512M');
+ini_set('memory_limit', '1024M');
 set_include_path('library' . PATH_SEPARATOR . get_include_path());
 
 require_once 'library.php';
