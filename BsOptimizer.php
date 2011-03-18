@@ -359,14 +359,6 @@ foreach ($postponed_tables as $table => $columns) {
     }
 }
 
-// Last minute change to revert taxonomic coverage in _source_database_details
-$pdo->query('ALTER TABLE `' . SOURCE_DATABASE_DETAILS . '` ADD `taxonomic_coverage` LONGTEXT NOT NULL');
-$stmt = $pdo->prepare('SELECT `id` FROM `' . SOURCE_DATABASE_DETAILS . '`');
-$stmt->execute();
-while ($id = $stmt->fetchColumn()) {
-    copyTaxonomicCoverage($id, SOURCE_DATABASE_DETAILS);
-}
-
 echo '</p><p><b>Analyzing denormalized tables</b><br>';
 foreach ($tables as $table => $indices) {
     echo "Analyzing table $table...<br>";

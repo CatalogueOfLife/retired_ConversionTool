@@ -6,7 +6,7 @@ require_once 'model/AcToBs/Database.php';
 /**
  * Count and load methods for Database
  * 
- * @author Nœria Torrescasana Aloy, Ruud Altenburg
+ * @author Nï¿½ria Torrescasana Aloy, Ruud Altenburg
  *
  */
 class Ac_Loader_Database extends Ac_Loader_Abstract
@@ -44,6 +44,7 @@ class Ac_Loader_Database extends Ac_Loader_Abstract
             'organization AS organisation, '.
             'abstract, ' .
             'web_site AS uri,' .
+            'taxonomic_coverage AS taxonomicCoverage, ' .
 	        'version FROM `databases`'
         );
         $stmt->execute();
