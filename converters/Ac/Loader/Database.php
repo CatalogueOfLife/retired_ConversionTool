@@ -6,7 +6,7 @@ require_once 'model/AcToBs/Database.php';
 /**
  * Count and load methods for Database
  * 
- * @author Nœria Torrescasana Aloy, Ruud Altenburg
+ * @author Nï¿½ria Torrescasana Aloy, Ruud Altenburg
  *
  */
 class Ac_Loader_Database extends Ac_Loader_Abstract
@@ -44,7 +44,8 @@ class Ac_Loader_Database extends Ac_Loader_Abstract
             'organization AS organisation, '.
             'abstract, ' .
             'web_site AS uri,' .
-	        'version FROM `databases`'
+            'taxonomic_coverage AS taxonomicCoverage, ' .
+            'version FROM `databases`'
         );
         $stmt->execute();
         $res = $stmt->fetchAll(PDO::FETCH_CLASS, 'Database');

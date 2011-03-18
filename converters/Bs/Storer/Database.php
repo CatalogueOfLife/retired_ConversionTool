@@ -7,7 +7,7 @@ require_once 'converters/Bs/Storer/Uri.php';
 /**
  * Database storer
  * 
- * @author Nœria Torrescasana Aloy, Ruud Altenburg
+ * @author Nï¿½ria Torrescasana Aloy, Ruud Altenburg
  */
 class Bs_Storer_Database extends Bs_Storer_Abstract
     implements Bs_Storer_Interface
@@ -17,8 +17,8 @@ class Bs_Storer_Database extends Bs_Storer_Abstract
         $stmt = $this->_dbh->prepare(
             'INSERT INTO `source_database` (id, name, abbreviated_name, ' .
             'group_name_in_english, authors_and_editors, organisation, ' .
-            'contact_person, abstract, version, release_date' .
-            ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            'contact_person, abstract, version, release_date, taxonomic_coverage' .
+            ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         
          $stmt->execute(array(
@@ -31,7 +31,8 @@ class Bs_Storer_Database extends Bs_Storer_Abstract
             $db->contactPerson,
             $db->abstract,
             $db->version,
-            $db->releaseDate)
+            $db->releaseDate,
+            $db->taxonomicCoverage)
         );
         
         if ($db->uri != "") {
@@ -41,13 +42,13 @@ class Bs_Storer_Database extends Bs_Storer_Abstract
             $storer->store($uri);
 
             $stmt = $this->_dbh->prepare(
-	            'INSERT INTO `uri_to_source_database` (uri_id, '.
-	            'source_database_id) VALUES (?, ?)'
-	        );
-	        $stmt->execute(array(
-	            $uri->id,
-	            $db->id)
-	        );
+                'INSERT INTO `uri_to_source_database` (uri_id, '.
+                'source_database_id) VALUES (?, ?)'
+            );
+            $stmt->execute(array(
+                $uri->id,
+                $db->id)
+            );
             unset($storer, $uri);
         }
         return $db;
