@@ -18,7 +18,7 @@ class Bs_Storer_Database extends Bs_Storer_Abstract
             'INSERT INTO `source_database` (id, name, abbreviated_name, ' .
             'group_name_in_english, authors_and_editors, organisation, ' .
             'contact_person, abstract, version, release_date, taxonomic_coverage' .
-            ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         
          $stmt->execute(array(
