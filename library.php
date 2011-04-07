@@ -309,22 +309,147 @@ function getNameFromSearchAll ($id, $search_all)
     return $stmt->fetchColumn();
 }
 
-function copyTaxonomicCoverage ($id, $source_database_details)
+function getIdFromSearchAll ($name, $search_all)
 {
     $pdo = DbHandler::getInstance('target');
-    $update = 'UPDATE `' . $source_database_details . '` SET `taxonomic_coverage` = ?, `is_new` = ? WHERE `id` = ' . $id;
-    $stmt = $pdo->prepare($update);
-    $stmt->execute(getTaxonomicCoverage($id));
-
-}
-
-function getTaxonomicCoverage ($id)
-{
-    $pdo = DbHandler::getInstance('source');
-    $query = 'SELECT `taxonomic_coverage`, `is_new` FROM `databases` WHERE `record_id` = ?';
+    $query = 'SELECT `id` FROM `' . $search_all . '` WHERE `name` = ?';
     $stmt = $pdo->prepare($query);
     $stmt->execute(array(
-        $id
+        $name
     ));
-    return $stmt->fetch(PDO::FETCH_NUM);
+    return $stmt->fetchColumn();
+}
+
+function insertTaxonomicCoverage ($source_database_id, $taxon_id, $sector_number)
+{
+    $pdo = DbHandler::getInstance('target');
+    $insert = 'INSERT INTO `taxonomic_coverage` (`source_database_id`, `taxon_id`, `sector`) VALUES (?, ?, ?)';
+    $stmt = $pdo->prepare($insert);
+    $stmt->execute(array(
+        $source_database_id, 
+        $taxon_id, 
+        $sector_number
+    ));
+}
+
+function getTaxonomicCoverage ($source_database_id)
+{
+    $pdo = DbHandler::getInstance('target');
+    $query = 'SELECT t1.`taxon_id`, t1.`sector`, t2.`taxonomic_rank_id` 
+    FROM `taxonomic_coverage` t1 
+    LEFT JOIN `taxon` AS t2 ON t1.`taxon_id` = t2.`id` 
+    WHERE t1.`source_database_id` = ? 
+    ORDER BY t1.`sector`, t2.`taxonomic_rank_id`';
+    $stmt = $pdo->prepare($query);
+    $stmt->execute(array(
+        $source_database_id
+    ));
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+function determinePointsOfAttachment ($tc)
+{
+    $taxonomic_order = array(
+        54, 
+        76, 
+        6, 
+        72, 
+        112, 
+        17, 
+        20
+    );
+    $old_sector = $old_rank_key = $rank_key = 0;
+    $poa = array();
+    
+    foreach ($tc as $branch) {
+        $sector = $branch['sector'];
+        $taxonomic_rank_id = $branch['taxonomic_rank_id'];
+        $taxon_id = $branch['taxon_id'];
+        
+        if ($sector != $old_sector) {
+            $poa[$sector] = $taxonomic_rank_id;
+            $old_rank_key = 0;
+        }
+        else {
+            $rank_key = array_search($taxonomic_rank_id, $taxonomic_order);
+            $stored_rank_key = array_search($poa[$sector], $taxonomic_order);
+            if ($rank_key >= $stored_rank_key) {
+                $poa[$sector] = $taxonomic_rank_id;
+            }
+        }
+        //echo "$taxon_id - $sector - $taxonomic_rank_id - $rank_key - $old_rank_key - $sectors[$sector]<br>";
+        $old_rank_key = $rank_key;
+        $old_sector = $sector;
+    }
+    return $poa;
+}
+
+function updatePointsOfAttachment ($source_database_id, $sector, $taxonomic_rank_id)
+{
+    $pdo = DbHandler::getInstance('target');
+    
+    // First get all taxa belonging to the specified taxonomic_rank_id...
+    $query = 'SELECT t1.`taxon_id` 
+    FROM `taxonomic_coverage` t1 
+    LEFT JOIN `taxon` AS t2 ON t1.`taxon_id` = t2.`id` 
+    WHERE t2.`taxonomic_rank_id` = ? 
+    AND t1.`sector` = ? 
+    AND t1.`source_database_id` = ?';
+    $stmt = $pdo->prepare($query);
+    $stmt->execute(array(
+        $taxonomic_rank_id, 
+        $sector, 
+        $source_database_id
+    ));
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // ... then update all appropriate records
+    foreach ($rows as $row) {
+        $query = 'UPDATE `taxonomic_coverage` 
+        SET `point_of_attachment` = 1 
+        WHERE `source_database_id` = ? 
+        AND `sector` = ?
+        AND `taxon_id` = ?';
+        $stmt = $pdo->prepare($query);
+        $stmt->execute(
+            array(
+                $source_database_id, 
+                $sector, 
+                $row['taxon_id']
+            ));
+    }
+}
+
+function getPointsOfAttachment ($source_database_id)
+{
+    $pdo = DbHandler::getInstance('target');
+    $query = 'SELECT `taxon_id` FROM `taxonomic_coverage` WHERE `point_of_attachment` = 1 AND `source_database_id` = ?';
+    $stmt = $pdo->prepare($query);
+    $stmt->execute(array(
+        $source_database_id
+    ));
+    $result = array();
+    while ($id = $stmt->fetchColumn()) {
+        $result[] = $id;
+    }
+    return $result;
+}
+
+function setPointsOfAttachment ($source_database_id, $taxon_id, $species_details)
+{
+    $pdo = DbHandler::getInstance('target');
+    $update = 'UPDATE ' . $species_details . ' 
+    SET `point_of_attachment_id` = ' . $taxon_id . ' 
+    WHERE `source_database_id` = ?
+    AND (`kingdom_id` = ' . $taxon_id . ' 
+    OR `phylum_id` = ' . $taxon_id . ' 
+    OR `class_id` = ' . $taxon_id . ' 
+    OR `order_id` = ' . $taxon_id . ' 
+    OR `superfamily_id` = ' . $taxon_id . ' 
+    OR `family_id` = ' . $taxon_id . ' 
+    OR `genus_id` = ' . $taxon_id . ')';
+    $stmt = $pdo->prepare($update);
+    $stmt->execute(array(
+        $source_database_id
+    ));
 }

@@ -92,7 +92,8 @@ $tables = array(
         'name_element', 
         'name', 
         'rank', 
-        'name_status'
+        'name_status',
+        'accepted_taxon_id'
     ), 
     SEARCH_DISTRIBUTION => array(), 
     SEARCH_SCIENTIFIC => array(
@@ -114,12 +115,21 @@ $tables = array(
         'source_database_id'
     ), 
     SPECIES_DETAILS => array(
-        'taxon_id'
+        'taxon_id', 
+        'kingdom_id', 
+        'phylum_id', 
+        'class_id', 
+        'order_id', 
+        'superfamily_id', 
+        'family_id', 
+        'genus_id', 
+        'source_database_id'
     ), 
     TAXON_TREE => array(
         'taxon_id', 
         'parent_id', 
-        'name'
+        'name', 
+        'rank'
     ), 
     TOTALS => array()
 );
@@ -138,6 +148,9 @@ $postponed_tables = array(
         'accepted_species_name', 
         'accepted_species_author', 
         'source_database_name'
+    ), 
+    SPECIES_DETAILS => array(
+        'point_of_attachment_id'
     ), 
     TAXON_TREE => array(
         'name'
@@ -162,7 +175,10 @@ $delete_chars = array(
     '=', 
     '?', 
     '+', 
-    '.'
+    '.', 
+    ',', 
+    ';', 
+    PHP_EOL
 );
 
 $config = parse_ini_file('config/AcToBs.ini', true);
@@ -179,7 +195,9 @@ foreach ($config as $k => $v) {
 }
 $pdo = DbHandler::getInstance('target');
 
-echo '<p>First denormalized tables are created and filled. Next indices are created.</p>';
+echo '<p>First denormalized tables are created, filled and reduced to minimum size. Next indices are created.<br>
+      Finally taxonomic coverage is processed from free text field to true database table to determine 
+      points of attachment for each GSD sector.</p>';
 
 foreach ($files as $file) {
     $start = microtime(true);
@@ -297,7 +315,7 @@ $query = 'UPDATE `' . SEARCH_DISTRIBUTION . '` AS sd, `' . SEARCH_ALL . '` AS sa
 $stmt = $pdo->prepare($query);
 $stmt->execute();
 
-echo 'Updating ' . SEARCH_SCIENTIFIC . '...</p>';
+echo 'Updating ' . SEARCH_SCIENTIFIC . '...<br>';
 $query = 'UPDATE `' . SEARCH_SCIENTIFIC . '` AS dss 
     SET dss.`author` = IF(dss.`accepted_species_id` = "", (
         SELECT `string` 
@@ -349,7 +367,61 @@ while ($id = $stmt->fetchColumn()) {
     updateTaxonTreeName($id, TAXON_TREE, SEARCH_ALL);
 }
 
-echo '<p><b>Shinking columns of post-processed tables</b><br>';
+echo '</p><p><b>Converting taxonomic coverage column to database table</b><br>';
+echo 'Converting text to table...<br>';
+$pdo->query('TRUNCATE TABLE `taxonomic_coverage`');
+$stmt = $pdo->prepare('SELECT `id`, `taxonomic_coverage` FROM `source_database`');
+$stmt->execute();
+while ($tc = $stmt->fetch(PDO::FETCH_ASSOC)) {
+    $sectors = explode(';', $tc['taxonomic_coverage']);
+    foreach ($sectors as $key => $sector) {
+        $sector_number = $key + 1; // Up with 1 to start with 1 rather than 0
+        $taxa = explode(' ', $sector);
+        foreach ($taxa as $taxon) {
+            $taxon = str_replace($delete_chars, '', $taxon);
+            if ($taxon_id = getIdFromSearchAll($taxon, SEARCH_ALL)) {
+                insertTaxonomicCoverage($tc['id'], $taxon_id, $sector_number);
+            }
+        }
+    }
+}
+echo 'Finding points of attachment...<br>';
+$stmt = $pdo->prepare('SELECT `source_database_id` FROM `taxonomic_coverage`');
+$stmt->execute();
+while ($source_database_id = $stmt->fetchColumn()) {
+    $tc = getTaxonomicCoverage($source_database_id);
+    $points_of_attachments = determinePointsOfAttachment($tc);
+    foreach ($points_of_attachments as $sector => $taxonomic_rank_id) {
+        updatePointsOfAttachment($source_database_id, $sector, $taxonomic_rank_id);
+    }
+}
+
+echo 'Updating ' . SPECIES_DETAILS . ' with points of attachments...<br>';
+$stmt = $pdo->prepare('SELECT `id`, `abbreviated_name` FROM `source_database` ORDER BY `abbreviated_name`');
+$stmt->execute();
+while ($row = $stmt->fetch(PDO::FETCH_NUM)) {
+    echo '&nbsp;&nbsp;&nbsp; Processing ' . $row[1] . ' source database...<br>';
+    $points_of_attachments = getPointsOfAttachment($row[0]);
+    foreach ($points_of_attachments as $taxon_id) {
+        setPointsOfAttachment($row[0], $taxon_id, SPECIES_DETAILS);
+    }
+}
+echo 'Deleting temporary indices from ' . SPECIES_DETAILS . '...<br>';
+foreach (array(
+    'kingdom_id', 
+    'phylum_id', 
+    'class_id', 
+    'order_id', 
+    'superfamily_id', 
+    'family_id', 
+    'genus_id', 
+    'source_database_id'
+) as $index) {
+    $stmt = $pdo->prepare('ALTER TABLE ' . SPECIES_DETAILS . ' DROP INDEX ' . $index);
+    $stmt->execute();
+}
+
+echo '<p><b>Shrinking columns of post-processed tables</b><br>';
 foreach ($postponed_tables as $table => $columns) {
     foreach ($columns as $cl) {
         echo 'Shrinking column ' . $cl . ' in table ' . $table . '...<br>';
@@ -357,14 +429,6 @@ foreach ($postponed_tables as $table => $columns) {
             'Field' => $cl
         ));
     }
-}
-
-// Last minute change to revert taxonomic coverage in _source_database_details
-$pdo->query('ALTER TABLE `' . SOURCE_DATABASE_DETAILS . '` ADD `taxonomic_coverage` LONGTEXT NOT NULL');
-$stmt = $pdo->prepare('SELECT `id` FROM `' . SOURCE_DATABASE_DETAILS . '`');
-$stmt->execute();
-while ($id = $stmt->fetchColumn()) {
-    copyTaxonomicCoverage($id, SOURCE_DATABASE_DETAILS);
 }
 
 echo '</p><p><b>Analyzing denormalized tables</b><br>';
