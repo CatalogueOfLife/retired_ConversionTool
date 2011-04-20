@@ -97,6 +97,7 @@ $tables = array(
     ), 
     SEARCH_DISTRIBUTION => array(), 
     SEARCH_SCIENTIFIC => array(
+        'id',
         'kingdom', 
         'phylum', 
         'class', 
@@ -105,8 +106,9 @@ $tables = array(
         'family', 
         'species', 
         'infraspecies', 
-        'genus,species,infraspecies'
-    ), 
+        'genus,species,infraspecies',
+        'accepted_species_id'
+        ), 
     SEARCH_FAMILY => array(), 
     SOURCE_DATABASE_DETAILS => array(
         'id'
