@@ -1,57 +1,55 @@
-{\rtf1\ansi\ansicpg1252\cocoartf1038\cocoasubrtf320
+{\rtf1\ansi\ansicpg1252\cocoartf1038\cocoasubrtf350
 {\fonttbl\f0\fnil\fcharset0 Verdana;}
 {\colortbl;\red255\green255\blue255;}
 {\info
 {\title 4D4Life Conversion Tool}
 {\author Ruud Altenburg}
-{\*\company ETI}}\paperw12240\paperh15840\vieww14000\viewh16540\viewkind0
+{\*\company ETI}}\paperw12240\paperh15840\vieww13980\viewh18060\viewkind0
 \deftab720
-\pard\pardeftab720\ri0
+\pard\pardeftab720\ri0\ql\qnatural
 
 \f0\b\fs24 \cf0 4D4Life Conversion Tool\
-\pard\pardeftab720\ri0
+\pard\pardeftab720\ri0\ql\qnatural
 
 \b0\fs22 \cf0 \
-The document outlines the structure and functionality of the 4D4Life Conversion Tool, used to translate data from different iterations of the Species 2000 database (Spicecache, Annual/Dynamic Checklist and Base Scheme).\
+The document outlines the structure and functionality of the 4D4Life Conversion Tool, used to translate data from different iterations of the Species 2000 database (Annual Checklist, Spicecache and Base Scheme).\
 \
-The converstion tool is written in object oriented PHP and uses the PDO interface to access databases. This means it can be extended to provide other translations. The appropriate version of PHP (5.2+) and PDO library should be loaded. Debugging/error logging is handled by the Zend library.\
+The conversion tool is written in object oriented PHP and uses the PDO interface to access databases. This means it can be extended to provide other translations. The appropriate version of PHP (5.2+) and PDO library should be loaded. Debugging/error logging is handled by the Zend library.\
 \
-Currently the conversion tool contains two translation paths: Spicecache to Annual/Dynamic Checklist (ScToDc; final) and Annual/Dynamic Checklist to Base Scheme (DcToBs; under construction).\
+Currently the conversion tool contains two translation paths: Annual Checklist to Base Scheme (AcToBs; final) and Spicecache to Annual/Dynamic Checklist (ScToDc; experimental).\
 \
-To keep the conversion tool modular, the system strictly separates the loading and storing of data. The structure of the system is outlined below using the ScToDc conversion as an example.\
+To keep the conversion tool modular, the system strictly separates the loading and storing of data. The structure of the system is outlined below using the AcToBs conversion as an example.\
 \
-\pard\pardeftab720\ri0
+\pard\pardeftab720\ri0\ql\qnatural
 
 \b \cf0 Structure\
-\pard\pardeftab720\ri0
+\pard\pardeftab720\ri0\ql\qnatural
 
-\b0 \cf0 Connection settings are stored separately in ini files for each conversion. In our example, ScToDc.ini in 
+\b0 \cf0 Connection settings are stored separately in ini files for each conversion. In our example, AcToBs.ini in 
 \i config
-\i0 , contains the databases settings for the Spicecache and Dynamic Checklist.\
+\i0 , contains the databases settings.\
 \
 Properties for the loader/storer (the variables used to get and put data) are set within a subfolder of 
 \i models
 \i0 , in our case 
-\i models/ScToDc
-\i0 . A common set of methods can set in the Model.php interface. If properties should be used that are not directly related to class, these can be set in loader itself. E.g in our example in 
-\i converters/Sc/Model/ScToDc
-\i0 , the \ul Taxon\ulnone  class is extended with the class \ul Sc_Model_ScToDc_Taxon\ulnone  that a/o incorporates information about the database and specialist.\
+\i models/AcToBs
+\i0 . A common set of methods can set in the Model.php interface. If properties should be used that are not directly related to class, these can be set in loader itself.\
 \
 The loader and storer classes themselves are stored in 
 \i converters
-\i0 . In our example, both the \ul Sc_Loader\ulnone  and \ul Dc_Storer\ulnone  classes dynamically bind the appropriate files and classes. 
-\i converters/Sc/Loader/Loaders.php
-\i0  uses the _getLoader method to load the appropriate converter class: e.g. $loader->load('Taxon') loads the \ul Sc_Loader_Taxon\ulnone  class in the Taxon.php file. By itself, \ul Sc_Loader_Taxon\ulnone  extends the \ul Sc_Loader_Abstract\ulnone  abstract class and loads the \ul Sc_Loader_Interface\ulnone  interface, which makes sure that (in this example) every loader class is checked for count and load methods.\
+\i0 . In our example, both the \ul Ac_Loader\ulnone  and \ul Bs_Storer\ulnone  classes dynamically bind the appropriate files and classes. 
+\i converters/Ac/Loader/Loaders.php
+\i0  uses the _getLoader method to load the appropriate converter class: e.g. $loader->load('Taxon') loads the \ul Ac_Loader_Taxon\ulnone  class in the Taxon.php file. By itself, \ul Ac_Loader_Taxon\ulnone  extends the \ul Ac_Loader_Abstract\ulnone  abstract class and loads the \ul Ac_Loader_Interface\ulnone  interface, which makes sure that (in this example) every loader class is checked for count and load methods.\
 \
 The queries to load and store data are located in the respective classes, e.g. 
-\i converters/Sc/Loader/Taxon.php
+\i converters/Ac/Loader/Taxon.php
 \i0  and 
-\i converters/Dc/Storer/Taxon.php 
+\i converters/Bs/Storer/Taxon.php 
 \i0 for the classes that load and store taxon-related data. As both are strictly separated\'97e.g. no lookups for ids are allowed in the 'storer' database\'97there is a need to temporarily store some data. This is being catered for by the Dictionary class, which may be used to store data in lookup arrays. Note that for the conversion of large database, this may require an increased amount of PHP memory!\
 \
-Some queries may be very slow due to database limitations (e.g. the loading of taxon data in the ScToDc conversion). Progress is monitored using the Indicator class.  \
+Some queries may be very slow due to database limitations (e.g. the loading of taxon data during conversion). Progress is monitored using the Indicator class.  \
 \
-Please review the ScToDc.php file at the root level, which handles the conversion from Spicecache to Dynamic Checklist, for usage of the system.\
+Please review the AcToBs.php file at the root level, which handles the conversion, for usage of the system.\
 \
 \
 \
