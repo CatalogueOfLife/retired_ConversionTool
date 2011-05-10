@@ -343,19 +343,19 @@ $query = 'UPDATE `' . SEARCH_SCIENTIFIC . '` AS dss
         SELECT DISTINCT sa.`source_database_name` 
         FROM `' . SEARCH_ALL . '` AS sa 
         WHERE dss.`id` = sa.`id` 
-        AND sa.`name_status` != 6
+        AND sa.`name_status` = dss.`status`
     ),
     dss.`accepted_species_author` = (
         SELECT DISTINCT sa.`name_suffix` 
         FROM `' . SEARCH_ALL . '` AS sa 
         WHERE dss.`accepted_species_id` = sa.`id` 
-        AND sa.`name_status` != 6
+        AND sa.`name_status` = dss.`status`
     ),
     dss.`accepted_species_name` = (
         SELECT DISTINCT sa.`name` 
         FROM `' . SEARCH_ALL . '` AS sa 
         WHERE dss.`accepted_species_id` = sa.`id` 
-        AND sa.`name_status` != 6
+        AND sa.`name_status` = dss.`status`
     )';
 $stmt = $pdo->prepare($query);
 $stmt->execute();
