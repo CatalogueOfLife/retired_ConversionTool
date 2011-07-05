@@ -34,9 +34,12 @@ define('SEARCH_SCIENTIFIC', '_search_scientific');
 define('SEARCH_FAMILY', '_search_family');
 define('SOURCE_DATABASE_DETAILS', '_source_database_details');
 define('SOURCE_DATABASE_TAXONOMIC_COVERAGE', '_source_database_taxonomic_coverage');
+define('SOURCE_DATABASE_TO_TAXON_TREE_BRANCH', '_source_database_to_taxon_tree_branch');
 define('SPECIES_DETAILS', '_species_details');
 define('TAXON_TREE', '_taxon_tree');
 define('TOTALS', '_totals');
+define('IMPORT_SOURCE_DATABASE_QUALIFIERS', '__import_source_database_qualifiers');
+define('IMPORT_SPECIES_ESTIMATE', '__import_species_estimate');
 $files = array(
     array(
         'path' => PATH, 
@@ -92,12 +95,12 @@ $tables = array(
         'name_element', 
         'name', 
         'rank', 
-        'name_status',
+        'name_status', 
         'accepted_taxon_id'
     ), 
     SEARCH_DISTRIBUTION => array(), 
     SEARCH_SCIENTIFIC => array(
-        'id',
+        'id', 
         'kingdom', 
         'phylum', 
         'class', 
@@ -106,9 +109,9 @@ $tables = array(
         'family', 
         'species', 
         'infraspecies', 
-        'genus,species,infraspecies',
+        'genus,species,infraspecies', 
         'accepted_species_id'
-        ), 
+    ), 
     SEARCH_FAMILY => array(), 
     SOURCE_DATABASE_DETAILS => array(
         'id'
@@ -196,6 +199,7 @@ foreach ($config as $k => $v) {
     }
 }
 $pdo = DbHandler::getInstance('target');
+$indicator = new Indicator();
 
 echo '<p>First denormalized tables are created, filled and reduced to minimum size. Next indices are created.<br>
       Finally taxonomic coverage is processed from free text field to true database table to determine 
@@ -439,6 +443,67 @@ foreach ($tables as $table => $indices) {
     $pdo->query('ANALYZE TABLE `' . $table . '`');
 }
 
+
+echo '</p><p><b>New 1.7 functionality</b><br>
+      Adding species count and source databases to ' . TAXON_TREE . '...<br>';
+$clean = 'UPDATE ' . TAXON_TREE . ' SET `total_species` = 0, `total_species_estimation` = 0, `estimate_source` = ""; 
+          TRUNCATE TABLE `' . SOURCE_DATABASE_TO_TAXON_TREE_BRANCH . '`;';
+$stmt = $pdo->prepare($clean);
+$stmt->execute();
+$query = 'SELECT t1.`taxon_id`, 
+            t1.`rank`, 
+            t1.`name`, 
+            t1.`parent_id`, 
+            t2.`rank` AS parent_rank, 
+            t2.`name` AS parent_name 
+          FROM `' . TAXON_TREE . '` AS t1 
+          LEFT JOIN `' . TAXON_TREE . '` AS t2 ON (t1.`parent_id` = t2.`taxon_id`)';
+$stmt = $pdo->prepare($query);
+$stmt->execute();
+$indicator->init($stmt->rowCount(), 150, 500);
+while ($tt = $stmt->fetch(PDO::FETCH_ASSOC)) {
+    $source_database_ids = getSourceDatabaseIds($tt, SEARCH_SCIENTIFIC, SEARCH_ALL);
+    $species_count = countSpecies($tt, SEARCH_SCIENTIFIC);
+    updateTaxonTree($tt, $source_database_ids, $species_count, TAXON_TREE, SOURCE_DATABASE_TO_TAXON_TREE_BRANCH);
+    $indicator->iterate();
+}
+
+echo '</p><p>Importing species estimates from the ' . IMPORT_SPECIES_ESTIMATE . ' table...<br>';
+$clean = 'UPDATE ' . TAXON_TREE . ' SET `total_species_estimation` = 0, `estimate_source` = ""';
+$stmt = $pdo->prepare($clean);
+$stmt->execute();
+$query = 'SELECT `species_estimate`, `source`, `name`, `rank` 
+          FROM ' . IMPORT_SPECIES_ESTIMATE;
+$stmt = $pdo->prepare($query);
+$stmt->execute();
+$result = $stmt->fetchAll(PDO::FETCH_NUM);
+foreach ($result as $est) {
+    $update = 'UPDATE ' . TAXON_TREE . ' SET 
+               `total_species_estimation` = ?, 
+               `estimate_source` = ? 
+               WHERE `name` = ? 
+               AND `rank` = ?';
+    $stmt = $pdo->prepare($update);
+    $stmt->execute($est);
+}
+echo 'Importing qualifiers from the ' . IMPORT_SOURCE_DATABASE_QUALIFIERS . ' table...<br>';
+$clean = 'UPDATE ' . SOURCE_DATABASE_DETAILS . ' SET `coverage` = "", `completeness` = 0, `confidence` = 0;';
+$stmt = $pdo->prepare($clean);
+$stmt->execute();
+$query = 'SELECT `coverage`, `completeness`, `confidence`, `source_database_name` 
+          FROM ' . IMPORT_SOURCE_DATABASE_QUALIFIERS;
+$stmt = $pdo->prepare($query);
+$stmt->execute();
+$result = $stmt->fetchAll(PDO::FETCH_NUM);
+foreach ($result as $sdd) {
+    $update = 'UPDATE ' . SOURCE_DATABASE_DETAILS . ' SET 
+               `coverage` = ?, 
+               `completeness` = ?,
+               `confidence` = ?  
+               WHERE `short_name` = ?';
+    $stmt = $pdo->prepare($update);
+    $stmt->execute($sdd);
+}
 echo '</p><p>Ready!</p>';
 
 ?>

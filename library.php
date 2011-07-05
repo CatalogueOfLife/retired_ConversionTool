@@ -387,7 +387,6 @@ function determinePointsOfAttachment ($tc)
 function updatePointsOfAttachment ($source_database_id, $sector, $taxonomic_rank_id)
 {
     $pdo = DbHandler::getInstance('target');
-    
     // First get all taxa belonging to the specified taxonomic_rank_id...
     $query = 'SELECT t1.`taxon_id` 
     FROM `taxonomic_coverage` t1 
@@ -452,4 +451,122 @@ function setPointsOfAttachment ($source_database_id, $taxon_id, $species_details
     $stmt->execute(array(
         $source_database_id
     ));
+}
+
+function getSourceDatabaseIds ($tt, $search_scientific, $search_all)
+{
+    $pdo = DbHandler::getInstance('target');
+    $name_elements = explode(' ', $tt['name']);
+    $nr_elements = count($name_elements);
+    // Higher taxon
+    if ($nr_elements == 1 || $tt['name'] == 'Not assigned') {
+        // Top level
+        $query = 'SELECT DISTINCT `source_database_id` 
+                  FROM ' . $search_scientific . ' 
+                  WHERE `' . strtolower($tt['rank']) . '` = ? 
+                  AND `source_database_id` != 0 ';
+        $params = array(
+            $tt['name']
+        );
+        // Extend for any rank but top level
+        if ($tt['parent_id'] != 0) {
+            $query .= 'AND `' . strtolower($tt['parent_rank']) . '` = ? ';
+            $params[] = $tt['parent_name'];
+        }
+    }
+    // Species
+    else if ($nr_elements == 2) {
+        $query = 'SELECT DISTINCT `source_database_id` 
+                  FROM ' . $search_scientific . ' 
+                  WHERE `genus` = ? 
+                  AND `species` = ?
+                  AND `infraspecies` = "" 
+                  AND `source_database_id` != 0 ';
+        $params = array(
+            $name_elements[0], 
+            $name_elements[1]
+        );
+    }
+    // Infraspecies; query _search_all for this
+    else {
+        $query = 'SELECT DISTINCT `source_database_id` 
+                  FROM ' . $search_all . ' 
+                  WHERE `name` = ? 
+                  AND `rank` = ? ';
+        $params = array(
+            $tt['name'], 
+            $tt['rank']
+        );
+    }
+    $stmt = $pdo->prepare($query);
+    $stmt->execute($params);
+    $result = $stmt->fetchAll(PDO::FETCH_NUM);
+    return $result ? $result : array();
+}
+
+function countSpecies ($tt, $search_scientific)
+{
+    $pdo = DbHandler::getInstance('target');
+    $name_elements = explode(' ', $tt['name']);
+    $nr_elements = count($name_elements);
+    if ($nr_elements == 1 || $tt['name'] == 'Not assigned') {
+        $query = 'SELECT COUNT(1) 
+                  FROM `' . $search_scientific . '` 
+                  WHERE `' . strtolower($tt['rank']) . '` = ? 
+                  AND `species` != "" 
+                  AND `infraspecies` = "" 
+                  AND `accepted_species_id` = 0 ';
+        $params = array(
+            $tt['name']
+        );
+        if ($tt['parent_id'] != 0) {
+            $query .= 'AND `' . strtolower($tt['parent_rank']) . '` = ? ';
+            $params[] = $tt['parent_name'];
+        }
+        $stmt = $pdo->prepare($query);
+        $stmt->execute($params);
+        $result = $stmt->fetchAll(PDO::FETCH_NUM);
+        return $result ? $result[0][0] : 0;
+    }
+    else if ($nr_elements == 2) {
+        return 1;
+    }
+    return 0;
+}
+
+function updateTaxonTree ($tt, $source_database_ids, $species_count = 0, $taxon_tree, $sdtttb)
+{
+    $pdo = DbHandler::getInstance('target');
+/*    if (!is_array($source_database_ids)) {
+        print_r($tt);
+        print_r($source_database_ids);
+        echo $species_count;
+        die();
+    }
+*/
+    foreach ($source_database_ids as $row) {
+        $source_database_id = $row[0];
+        try {
+            $stmt = $pdo->prepare(
+                'INSERT INTO ' . $sdtttb . ' (`source_database_id`, `taxon_tree_id`) VALUES (?, ?)');
+            $stmt->execute(
+                array(
+                    $source_database_id, 
+                    $tt['taxon_id']
+                ));
+        }
+        catch (Exception $e) {
+            echo $e->getMessage();
+        }
+    }
+    try {
+        $stmt = $pdo->prepare('UPDATE ' . $taxon_tree . ' SET `total_species` = ? WHERE `taxon_id` = ?');
+        $stmt->execute(array(
+            $species_count, 
+            $tt['taxon_id']
+        ));
+    }
+    catch (Exception $e) {
+        echo $e->getMessage();
+    }
 }
