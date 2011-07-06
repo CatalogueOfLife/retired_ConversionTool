@@ -10,7 +10,7 @@ require_once 'converters/Ac/Model/AcToBs/Synonym.php';
 
 /**
  * 
- * @author Nœria Torrescasana Aloy, Ruud Altenburg
+ * @author Nï¿½ria Torrescasana Aloy, Ruud Altenburg
  *
  */
 class Ac_Loader_Taxon extends Ac_Loader_Abstract
@@ -160,9 +160,8 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
     	   't1.`author` AS authorString, t1.`web_site` AS uri, '.
     	   't1.`infraspecies_marker` AS infraSpecificMarker, '.
     	   't2.`sp2000_status` AS scientificNameStatus, '.
-    	   'IF (t1.`infraspecies_marker` = "" OR t1.`infraspecies_marker` '.
-    	   'IS NULL AND t1.`infraspecies` = "" OR t1.`infraspecies` IS NULL, '.
-    	   '"Species", "Infraspecies") AS taxonomicRank '.
+    	   'IF (t1.`infraspecies` = "" OR t1.`infraspecies` IS NULL, '.
+    	       '"Species", "Infraspecies") AS taxonomicRank '.
            'FROM `scientific_names` t1, `sp2000_statuses` t2 WHERE '.
            't1.`sp2000_status_id` = t2.`record_id` AND '.
     	   't1.`accepted_name_code` = ? AND t1.`is_accepted_name` = 0 AND '.
