@@ -7,7 +7,7 @@ require_once 'converters/Bs/Storer/Reference.php';
 /**
  * Synonym storer
  * 
- * @author Nœria Torrescasana Aloy, Ruud Altenburg
+ * @author Nï¿½ria Torrescasana Aloy, Ruud Altenburg
  */
 class Bs_Storer_Synonym extends Bs_Storer_TaxonAbstract implements Bs_Storer_Interface
 {
@@ -68,7 +68,7 @@ class Bs_Storer_Synonym extends Bs_Storer_TaxonAbstract implements Bs_Storer_Int
             $this->_getTaxonomicRankId('genus') => $synonym->genus, 
             $this->_getTaxonomicRankId('species') => $synonym->species
         );
-        if ($synonym->infraSpecificMarker != '') {
+        if ($synonym->infraspecies != '') {
             $nameElements[$synonym->taxonomicRankId] = $synonym->infraspecies;
         }
         $synonym->nameElementIds = $nameElements;
