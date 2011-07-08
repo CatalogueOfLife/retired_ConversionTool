@@ -104,7 +104,7 @@ echo "Transferring $total taxa<br>";
 for ($limit = 3000, $offset = 0; $offset < $total; $offset += $limit) {
     try {
         $taxa = $loader->load('Taxon', $offset, $limit);
-        echo showMemoryUse().' memory used<br>';
+        //echo showMemoryUse().' memory used<br>';
         foreach ($taxa as $taxon) {
             try {
                 $storer->store($taxon);

@@ -209,11 +209,11 @@ function shrinkInt ($table, $cl)
  * Used to create denormalized table
  */
 
-function cleanNameElements ($ne, $search_all, $delete_name_elements = array(), $delete_chars = array())
+function cleanNameElements ($ne, $delete_name_elements = array(), $delete_chars = array())
 {
     $pdo = DbHandler::getInstance('target');
-    $delete = 'DELETE FROM `' . $search_all . '` WHERE `id` = ? AND `name_element` = ?';
-    $update = 'UPDATE `' . $search_all . '` SET `name_element` = ? WHERE `id` = ? AND `name_element` = ?';
+    $delete = 'DELETE FROM `' . SEARCH_ALL . '` WHERE `id` = ? AND `name_element` = ?';
+    $update = 'UPDATE `' . SEARCH_ALL . '` SET `name_element` = ? WHERE `id` = ? AND `name_element` = ?';
     $nameElement = $ne['name_element'];
     // Delete row if name_element matches entry to be deleted
     if (in_array($nameElement, $delete_name_elements)) {
@@ -240,10 +240,10 @@ function cleanNameElements ($ne, $search_all, $delete_name_elements = array(), $
     }
 }
 
-function insertCommonNameElements ($cn, $search_all)
+function insertCommonNameElements ($cn)
 {
     $pdo = DbHandler::getInstance('target');
-    $insert = 'INSERT INTO `' . $search_all . '` 
+    $insert = 'INSERT INTO `' . SEARCH_ALL . '` 
             (`id`, `name_element`, `name`, `name_suffix`, `rank`, `name_status`, 
             `name_status_suffix`, `name_status_suffix_suffix`, `group`, 
             `source_database_name`, `source_database_id`, `accepted_taxon_id`) 
@@ -270,10 +270,10 @@ function insertCommonNameElements ($cn, $search_all)
     }
 }
 
-function splitAndInsertNameElements ($ne, $search_all)
+function splitAndInsertNameElements ($ne)
 {
     $pdo = DbHandler::getInstance('target');
-    $insert = 'INSERT INTO `' . $search_all . '` 
+    $insert = 'INSERT INTO `' . SEARCH_ALL . '` 
             (`id`, `name_element`, `name`, `name_suffix`, `rank`, `name_status`, 
             `name_status_suffix`, `name_status_suffix_suffix`, `group`, 
             `source_database_name`, `source_database_id`, `accepted_taxon_id`, `delete_me`) 
@@ -288,20 +288,20 @@ function splitAndInsertNameElements ($ne, $search_all)
     }
 }
 
-function updateTaxonTreeName ($id, $taxon_tree, $search_all)
+function updateTaxonTreeName ($id)
 {
     $pdo = DbHandler::getInstance('target');
-    $update = 'UPDATE `' . $taxon_tree . '` SET `name` = ? WHERE `taxon_id` = ' . $id;
+    $update = 'UPDATE `' . TAXON_TREE . '` SET `name` = ? WHERE `taxon_id` = ' . $id;
     $stmt = $pdo->prepare($update);
     $stmt->execute(array(
-        getNameFromSearchAll($id, $search_all)
+        getNameFromSearchAll($id)
     ));
 }
 
-function getNameFromSearchAll ($id, $search_all)
+function getNameFromSearchAll ($id)
 {
     $pdo = DbHandler::getInstance('target');
-    $query = 'SELECT `name` FROM `' . $search_all . '` WHERE `id` = ?';
+    $query = 'SELECT `name` FROM `' . SEARCH_ALL . '` WHERE `id` = ?';
     $stmt = $pdo->prepare($query);
     $stmt->execute(array(
         $id
@@ -309,10 +309,10 @@ function getNameFromSearchAll ($id, $search_all)
     return $stmt->fetchColumn();
 }
 
-function getIdFromSearchAll ($name, $search_all)
+function getIdFromSearchAll ($name)
 {
     $pdo = DbHandler::getInstance('target');
-    $query = 'SELECT `id` FROM `' . $search_all . '` WHERE `name` = ?';
+    $query = 'SELECT `id` FROM `' . SEARCH_ALL . '` WHERE `name` = ?';
     $stmt = $pdo->prepare($query);
     $stmt->execute(array(
         $name
@@ -434,10 +434,10 @@ function getPointsOfAttachment ($source_database_id)
     return $result;
 }
 
-function setPointsOfAttachment ($source_database_id, $taxon_id, $species_details)
+function setPointsOfAttachment ($source_database_id, $taxon_id)
 {
     $pdo = DbHandler::getInstance('target');
-    $update = 'UPDATE ' . $species_details . ' 
+    $update = 'UPDATE ' . SPECIES_DETAILS . ' 
     SET `point_of_attachment_id` = ' . $taxon_id . ' 
     WHERE `source_database_id` = ?
     AND (`kingdom_id` = ' . $taxon_id . ' 
@@ -453,7 +453,7 @@ function setPointsOfAttachment ($source_database_id, $taxon_id, $species_details
     ));
 }
 
-function getSourceDatabaseIds ($tt, $search_scientific, $search_all)
+function getSourceDatabaseIds ($tt)
 {
     $pdo = DbHandler::getInstance('target');
     $name_elements = explode(' ', $tt['name']);
@@ -462,7 +462,7 @@ function getSourceDatabaseIds ($tt, $search_scientific, $search_all)
     if ($nr_elements == 1 || $tt['name'] == 'Not assigned') {
         // Top level
         $query = 'SELECT DISTINCT `source_database_id` 
-                  FROM ' . $search_scientific . ' 
+                  FROM ' . SEARCH_SCIENTIFIC . ' 
                   WHERE `' . strtolower($tt['rank']) . '` = ? 
                   AND `source_database_id` != 0 ';
         $params = array(
@@ -477,7 +477,7 @@ function getSourceDatabaseIds ($tt, $search_scientific, $search_all)
     // Species
     else if ($nr_elements == 2) {
         $query = 'SELECT DISTINCT `source_database_id` 
-                  FROM ' . $search_scientific . ' 
+                  FROM ' . SEARCH_SCIENTIFIC . ' 
                   WHERE `genus` = ? 
                   AND `species` = ?
                   AND `infraspecies` = "" 
@@ -490,7 +490,7 @@ function getSourceDatabaseIds ($tt, $search_scientific, $search_all)
     // Infraspecies; query _search_all for this
     else {
         $query = 'SELECT DISTINCT `source_database_id` 
-                  FROM ' . $search_all . ' 
+                  FROM ' . SEARCH_ALL . ' 
                   WHERE `name` = ? 
                   AND `rank` = ? ';
         $params = array(
@@ -504,14 +504,14 @@ function getSourceDatabaseIds ($tt, $search_scientific, $search_all)
     return $result ? $result : array();
 }
 
-function countSpecies ($tt, $search_scientific)
+function countSpecies ($tt)
 {
     $pdo = DbHandler::getInstance('target');
     $name_elements = explode(' ', $tt['name']);
     $nr_elements = count($name_elements);
     if ($nr_elements == 1 || $tt['name'] == 'Not assigned') {
         $query = 'SELECT COUNT(1) 
-                  FROM `' . $search_scientific . '` 
+                  FROM `' . SEARCH_SCIENTIFIC . '` 
                   WHERE `' . strtolower($tt['rank']) . '` = ? 
                   AND `species` != "" 
                   AND `infraspecies` = "" 
@@ -534,21 +534,14 @@ function countSpecies ($tt, $search_scientific)
     return 0;
 }
 
-function updateTaxonTree ($tt, $source_database_ids, $species_count = 0, $taxon_tree, $sdtttb)
+function updateTaxonTree ($tt, $source_database_ids, $species_count = 0)
 {
     $pdo = DbHandler::getInstance('target');
-/*    if (!is_array($source_database_ids)) {
-        print_r($tt);
-        print_r($source_database_ids);
-        echo $species_count;
-        die();
-    }
-*/
     foreach ($source_database_ids as $row) {
         $source_database_id = $row[0];
         try {
             $stmt = $pdo->prepare(
-                'INSERT INTO ' . $sdtttb . ' (`source_database_id`, `taxon_tree_id`) VALUES (?, ?)');
+                'INSERT INTO ' . SOURCE_DATABASE_TO_TAXON_TREE_BRANCH . ' (`source_database_id`, `taxon_tree_id`) VALUES (?, ?)');
             $stmt->execute(
                 array(
                     $source_database_id, 
@@ -560,7 +553,7 @@ function updateTaxonTree ($tt, $source_database_ids, $species_count = 0, $taxon_
         }
     }
     try {
-        $stmt = $pdo->prepare('UPDATE ' . $taxon_tree . ' SET `total_species` = ? WHERE `taxon_id` = ?');
+        $stmt = $pdo->prepare('UPDATE ' . TAXON_TREE . ' SET `total_species` = ? WHERE `taxon_id` = ?');
         $stmt->execute(array(
             $species_count, 
             $tt['taxon_id']
@@ -569,4 +562,20 @@ function updateTaxonTree ($tt, $source_database_ids, $species_count = 0, $taxon_
     catch (Exception $e) {
         echo $e->getMessage();
     }
+}
+
+function check17ImportTables ()
+{
+    $pdo = DbHandler::getInstance('target');
+    $empty = array();
+    foreach (array(
+        IMPORT_SPECIES_ESTIMATE, 
+        IMPORT_SOURCE_DATABASE_QUALIFIERS
+    ) as $table) {
+        $stmt = $pdo->query('SELECT COUNT(1) FROM `' . $table . '`');
+        if ($stmt->fetchColumn() == 0) {
+            $empty[] = $table;
+        }
+    }
+    return $empty;
 }
