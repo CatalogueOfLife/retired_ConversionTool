@@ -164,8 +164,8 @@ $postponed_tables = array(
         'estimate_source' => 'varchar'
     ),
     SOURCE_DATABASE_TO_TAXON_TREE_BRANCH => array(
-        'source_database_id',
-        'taxon_tree_id'
+        'source_database_id' => 'int',
+        'taxon_tree_id' => 'int'
     ), 
     SOURCE_DATABASE_DETAILS => array(
         'coverage' => 'varchar',
