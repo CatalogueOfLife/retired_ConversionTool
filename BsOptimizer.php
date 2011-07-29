@@ -33,7 +33,6 @@ define('SEARCH_DISTRIBUTION', '_search_distribution');
 define('SEARCH_SCIENTIFIC', '_search_scientific');
 define('SEARCH_FAMILY', '_search_family');
 define('SOURCE_DATABASE_DETAILS', '_source_database_details');
-define('SOURCE_DATABASE_TAXONOMIC_COVERAGE', '_source_database_taxonomic_coverage');
 define('SOURCE_DATABASE_TO_TAXON_TREE_BRANCH', '_source_database_to_taxon_tree_branch');
 define('SPECIES_DETAILS', '_species_details');
 define('TAXON_TREE', '_taxon_tree');
@@ -115,9 +114,6 @@ $tables = array(
     SEARCH_FAMILY => array(), 
     SOURCE_DATABASE_DETAILS => array(
         'id'
-    ), 
-    SOURCE_DATABASE_TAXONOMIC_COVERAGE => array(
-        'source_database_id'
     ), 
     SPECIES_DETAILS => array(
         'taxon_id', 
@@ -213,8 +209,7 @@ foreach ($config as $k => $v) {
 $pdo = DbHandler::getInstance('target');
 $indicator = new Indicator();
 
-// For 1.7: First test if import tables for species estimates and database qualifiers have been filled;
-// if not, abort.
+// For 1.7: First test if import tables for species estimates and database qualifiers have been filled; if not, abort.
 $empty = check17ImportTables();
 if (!empty($empty)) {
     count($empty) == 1 ? $table = $empty[0] . ' is' : $table = 'these tables are';
