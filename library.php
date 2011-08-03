@@ -564,7 +564,7 @@ function updateTaxonTree ($tt, $source_database_ids, $species_count = 0)
     }
 }
 
-function check17ImportTables ()
+function check17ImportTables ($dbName)
 {
     $pdo = DbHandler::getInstance('target');
     $empty = array();
@@ -572,6 +572,14 @@ function check17ImportTables ()
         IMPORT_SPECIES_ESTIMATE, 
         IMPORT_SOURCE_DATABASE_QUALIFIERS
     ) as $table) {
+        $stmt = $pdo->query(
+            'SELECT COUNT(1) FROM `information_schema`.`tables` 
+                             WHERE `table_schema` = "' . $dbName . '" 
+                             AND `table_name` = "' . $table . '";');
+        if ($stmt->fetchColumn() == 0) {
+            $empty[] = $table;
+            continue;
+        }
         $stmt = $pdo->query('SELECT COUNT(1) FROM `' . $table . '`');
         if ($stmt->fetchColumn() == 0) {
             $empty[] = $table;

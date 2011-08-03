@@ -210,16 +210,18 @@ $pdo = DbHandler::getInstance('target');
 $indicator = new Indicator();
 
 // For 1.7: First test if import tables for species estimates and database qualifiers have been filled; if not, abort.
-$empty = check17ImportTables();
+$empty = check17ImportTables($config['target']['dbname']);
 if (!empty($empty)) {
     count($empty) == 1 ? $table = $empty[0] . ' is' : $table = 'these tables are';
     echo '<p>Currently the species estimate per higher taxon and database qualifiers are taken 
     from the tables<br>' . IMPORT_SPECIES_ESTIMATE . ' and ' . IMPORT_SOURCE_DATABASE_QUALIFIERS . '.</p>
-    <p style="color: red; font-weight: bold;">This script can only proceed if ' . $table . ' not empty.</p>
+    <p style="color: red; font-weight: bold;">This script can only proceed if ' . $table . ' present and not empty.</p>
     <p>SQL dumps of the import tables are found at docs_and_dumps/dumps/base_scheme/ac/import_data_1-7.</p>';
     
     exit('</body></html>');
 }
+
+die("STOP!");
 
 
 echo '<p>First denormalized tables are created, filled and reduced to minimum size. Next indices are created.<br>
