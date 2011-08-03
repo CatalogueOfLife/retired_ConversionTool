@@ -216,9 +216,13 @@ if (!empty($empty)) {
     echo '<p>Currently the species estimate per higher taxon and database qualifiers are taken 
     from the tables<br>' . IMPORT_SPECIES_ESTIMATE . ' and ' . IMPORT_SOURCE_DATABASE_QUALIFIERS . '.</p>
     <p style="color: red; font-weight: bold;">This script can only proceed if ' . $table . ' present and not empty.</p>
-    <p>SQL dumps of the import tables are found at docs_and_dumps/dumps/base_scheme/ac/import_data_1-7.</p>';
+    <p>If you are importing into a v1.6 database, you first should upgrade to the v1.7 structure.<br>
+    The upgrade script is found at <b>docs_and_dumps/dumps/base_scheme/ac/upgrade_1-6_to_1-7.sql</b><br>
+    SQL dumps to fill the import tables are found at <b>docs_and_dumps/dumps/base_scheme/ac/import_data_1-7</b>.</p>';
     
     exit('</body></html>');
+    
+    die("AAA");
 }
 
 echo '<p>First denormalized tables are created, filled and reduced to minimum size. Next indices are created.<br>
