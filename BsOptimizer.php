@@ -221,9 +221,6 @@ if (!empty($empty)) {
     exit('</body></html>');
 }
 
-die("STOP!");
-
-
 echo '<p>First denormalized tables are created, filled and reduced to minimum size. Next indices are created.<br>
       Finally taxonomic coverage is processed from free text field to true database table to determine 
       points of attachment for each GSD sector.</p>';
