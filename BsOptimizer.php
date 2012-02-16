@@ -194,12 +194,13 @@ $delete_chars = array(
     PHP_EOL
 );
 
-if($argv[0]) {
-	$config = parse_ini_file($argv[0], true);
+if(isset($argv) && isset($argv[1])) {
+	$config = parse_ini_file($argv[1], true);
 }
 else {
 	$config = parse_ini_file('config/AcToBs.ini', true);
 }
+
 foreach ($config as $k => $v) {
     $o = array();
     if (isset($v["options"])) {
