@@ -154,18 +154,18 @@ $postponed_tables = array(
         'point_of_attachment_id' => 'varchar'
     ), 
     TAXON_TREE => array(
-        'name' => 'varchar',
-        'total_species_estimation' => 'int',
-        'total_species' => 'int',
+        'name' => 'varchar', 
+        'total_species_estimation' => 'int', 
+        'total_species' => 'int', 
         'estimate_source' => 'varchar'
-    ),
+    ), 
     SOURCE_DATABASE_TO_TAXON_TREE_BRANCH => array(
-        'source_database_id' => 'int',
+        'source_database_id' => 'int', 
         'taxon_tree_id' => 'int'
     ), 
     SOURCE_DATABASE_DETAILS => array(
-        'coverage' => 'varchar',
-        'completeness' => 'int',
+        'coverage' => 'varchar', 
+        'completeness' => 'int', 
         'confidence' => 'int'
     )
 );
@@ -194,7 +194,13 @@ $delete_chars = array(
     PHP_EOL
 );
 
-$config = parse_ini_file('config/AcToBs.ini', true);
+if (isset($argv) && isset($argv[1])) {
+    $config = parse_ini_file($argv[1], true);
+}
+else {
+    $config = parse_ini_file('config/AcToBs.ini', true);
+}
+
 foreach ($config as $k => $v) {
     $o = array();
     if (isset($v["options"])) {
@@ -209,17 +215,22 @@ foreach ($config as $k => $v) {
 $pdo = DbHandler::getInstance('target');
 $indicator = new Indicator();
 
-// For 1.7: First test if import tables for species estimates and database qualifiers have been filled; if not, abort.
-$empty = check17ImportTables($config['target']['dbname']);
+// For 1.7+: First test if import tables for species estimates and database qualifiers have been filled; if not, abort.
+$empty = checkImportTables($config['target']['dbname'], 
+    array(
+        IMPORT_SPECIES_ESTIMATE, 
+        IMPORT_SOURCE_DATABASE_QUALIFIERS
+    ));
 if (!empty($empty)) {
     count($empty) == 1 ? $table = $empty[0] . ' is' : $table = 'these tables are';
     echo '<p>Currently the species estimate per higher taxon and database qualifiers are taken 
-    from the tables<br>' . IMPORT_SPECIES_ESTIMATE . ' and ' . IMPORT_SOURCE_DATABASE_QUALIFIERS . '.</p>
+    from the tables<br>' . IMPORT_SPECIES_ESTIMATE . ' and ' .
+         IMPORT_SOURCE_DATABASE_QUALIFIERS . '.</p>
     <p style="color: red; font-weight: bold;">This script can only proceed if ' . $table . ' present and not empty.</p>
     <p>If you are importing into a v1.6 database, you first should upgrade to the v1.7 structure.<br>
     The upgrade script is found at <b>docs_and_dumps/dumps/base_scheme/ac/upgrade_1-6_to_1-7.sql</b><br>
     SQL dumps to fill the import tables are found at <b>docs_and_dumps/dumps/base_scheme/ac/import_data_1-7</b>.</p>';
-    exit('</body></html>');
+exit('</body></html>');
 }
 
 echo '<p>First denormalized tables are created, filled and reduced to minimum size. Next indices are created.<br>
@@ -227,10 +238,10 @@ echo '<p>First denormalized tables are created, filled and reduced to minimum si
       points of attachment for each GSD sector.</p>';
 
 foreach ($files as $file) {
-    $start = microtime(true);
-    writeSql($file['path'], $file['dumpFile'], $file['message']);
-    $runningTime = round(microtime(true) - $start);
-    echo "Script took $runningTime seconds to complete</p>";
+$start = microtime(true);
+writeSql($file['path'], $file['dumpFile'], $file['message']);
+$runningTime = round(microtime(true) - $start);
+echo "Script took $runningTime seconds to complete</p>";
 }
 
 $start = microtime(true);
@@ -240,7 +251,7 @@ $pdo->query('ALTER TABLE `' . SEARCH_ALL . '` DISABLE KEYS');
 $stmt = $pdo->prepare($sql);
 $stmt->execute();
 while ($cn = $stmt->fetch(PDO::FETCH_ASSOC)) {
-    insertCommonNameElements($cn);
+insertCommonNameElements($cn);
 }
 $pdo->query('ALTER TABLE `' . SEARCH_ALL . '` ENABLE KEYS');
 $runningTime = round(microtime(true) - $start);
@@ -250,54 +261,53 @@ echo '<p><br>Optimizing denormalized tables. Table columns are trimmed to
         the minimum size and indices are created.</p>';
 
 foreach ($tables as $table => $indices) {
-    echo "<p><b>Processing table $table...</b><br>";
-    $stmt = $pdo->prepare('SHOW COLUMNS FROM `' . $table . '`');
-    $stmt->execute();
-    // Trim all varchar and int fields to minimum size
-    while ($cl = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        if (isVarCharField($cl['Type']) || isIntField($cl['Type'])) {
-            // Postpone shrinking of a few columns until table creation is complete
-            if (array_key_exists(
-                $table, $postponed_tables) && in_array($cl['Field'], 
-                $postponed_tables[$table])) {
-                continue;
-            }
-            echo 'Shrinking column ' . $cl['Field'] . '...<br>';
-            if (isVarCharField($cl['Type'])) {
-                shrinkVarChar($table, $cl);
-            }
-            else {
-                shrinkInt($table, $cl);
-            }
+echo "<p><b>Processing table $table...</b><br>";
+$stmt = $pdo->prepare('SHOW COLUMNS FROM `' . $table . '`');
+$stmt->execute();
+// Trim all varchar and int fields to minimum size
+while ($cl = $stmt->fetch(PDO::FETCH_ASSOC)) {
+    if (isVarCharField($cl['Type']) || isIntField($cl['Type'])) {
+        // Postpone shrinking of a few columns until table creation is complete
+        if (array_key_exists($table, $postponed_tables) && in_array(
+            $cl['Field'], $postponed_tables[$table])) {
+            continue;
         }
-    }
-    // Create indices
-    foreach ($indices as $index) {
-        echo "Adding index to $index...<br>";
-        // Combined index
-        if (strpos($index, ',') !== false) {
-            $query2 = 'ALTER TABLE `' . $table . '` ADD INDEX (';
-            $indexParts = explode(',', $index);
-            for ($i = 0; $i < count($indexParts); $i++) {
-                $query2 .= '`' . $indexParts[$i] . '`,';
-            }
-            $query2 = substr($query2, 0, -1) . ')';
+        echo 'Shrinking column ' . $cl['Field'] . '...<br>';
+        if (isVarCharField($cl['Type'])) {
+            shrinkVarChar($table, $cl);
         }
-        // Single index
         else {
-            $query2 = 'ALTER TABLE `' . $table . '` ADD INDEX (`' . $index . '`)';
+            shrinkInt($table, $cl);
         }
-        $stmt2 = $pdo->prepare($query2);
-        $stmt2->execute();
     }
-    // Create fulltext index on distribution
-    if ($table == SEARCH_DISTRIBUTION) {
-        echo "Adding FULLTEXT index to distribution...<br>";
-        $query4 = 'ALTER TABLE `' . $table . '` ADD FULLTEXT (`distribution`)';
-        $stmt2 = $pdo->prepare($query4);
-        $stmt2->execute();
+}
+// Create indices
+foreach ($indices as $index) {
+    echo "Adding index to $index...<br>";
+    // Combined index
+    if (strpos($index, ',') !== false) {
+        $query2 = 'ALTER TABLE `' . $table . '` ADD INDEX (';
+        $indexParts = explode(',', $index);
+        for ($i = 0; $i < count($indexParts); $i++) {
+            $query2 .= '`' . $indexParts[$i] . '`,';
+        }
+        $query2 = substr($query2, 0, -1) . ')';
     }
-    echo '</p>';
+    // Single index
+    else {
+        $query2 = 'ALTER TABLE `' . $table . '` ADD INDEX (`' . $index . '`)';
+    }
+    $stmt2 = $pdo->prepare($query2);
+    $stmt2->execute();
+}
+// Create fulltext index on distribution
+if ($table == SEARCH_DISTRIBUTION) {
+    echo "Adding FULLTEXT index to distribution...<br>";
+    $query4 = 'ALTER TABLE `' . $table . '` ADD FULLTEXT (`distribution`)';
+    $stmt2 = $pdo->prepare($query4);
+    $stmt2->execute();
+}
+echo '</p>';
 }
 
 echo '<p><b>Post-processing ' . SEARCH_ALL . ', ' . SEARCH_DISTRIBUTION . ', ' . SEARCH_SCIENTIFIC . ' and ' . TAXON_TREE . ' tables</b><br>';
@@ -307,7 +317,7 @@ $query = 'SELECT `id`, `name_element` FROM `' . SEARCH_ALL . '`';
 $stmt = $pdo->prepare($query);
 $stmt->execute();
 while ($ne = $stmt->fetch(PDO::FETCH_ASSOC)) {
-    cleanNameElements($ne, $delete_name_elements, $delete_chars);
+cleanNameElements($ne, $delete_name_elements, $delete_chars);
 }
 echo '&nbsp;&nbsp;&nbsp; Creating temporary column to mark rows that should be processed...<br>';
 $query = 'ALTER TABLE `' . SEARCH_ALL . '` ADD `delete_me` TINYINT( 1 ) NOT NULL , ADD INDEX ( `delete_me` ) ';
@@ -317,20 +327,20 @@ echo '&nbsp;&nbsp;&nbsp; Marking rows with name elements containing spaces...<br
 $query = 'UPDATE `' . SEARCH_ALL . '` SET `delete_me` = ? WHERE `name_element` LIKE "% %" and `name_element` != "not assigned"';
 $stmt = $pdo->prepare($query);
 $stmt->execute(array(
-    1
+1
 ));
 echo '&nbsp;&nbsp;&nbsp; Splitting rows...<br>';
 $query = 'SELECT * FROM `' . SEARCH_ALL . '` WHERE `delete_me` = 1';
 $stmt = $pdo->prepare($query);
 $stmt->execute();
 while ($ne = $stmt->fetch(PDO::FETCH_ASSOC)) {
-    splitAndInsertNameElements($ne);
+splitAndInsertNameElements($ne);
 }
 echo '&nbsp;&nbsp;&nbsp; Deleting original rows...<br>';
 $query = 'DELETE FROM `' . SEARCH_ALL . '` WHERE `delete_me` = ?';
 $stmt = $pdo->prepare($query);
 $stmt->execute(array(
-    1
+1
 ));
 echo '&nbsp;&nbsp;&nbsp; Dropping temporary column...<br>';
 $query = 'ALTER TABLE `' . SEARCH_ALL . '` DROP `delete_me`';
@@ -391,7 +401,7 @@ $query = 'SELECT `taxon_id` FROM `' . TAXON_TREE . '`
 $stmt = $pdo->prepare($query);
 $stmt->execute();
 while ($id = $stmt->fetchColumn()) {
-    updateTaxonTreeName($id);
+updateTaxonTreeName($id);
 }
 
 echo '</p><p><b>Converting taxonomic coverage column to database table</b><br>';
@@ -400,52 +410,52 @@ $pdo->query('TRUNCATE TABLE `taxonomic_coverage`');
 $stmt = $pdo->prepare('SELECT `id`, `taxonomic_coverage` FROM `source_database`');
 $stmt->execute();
 while ($tc = $stmt->fetch(PDO::FETCH_ASSOC)) {
-    $sectors = explode(';', $tc['taxonomic_coverage']);
-    foreach ($sectors as $key => $sector) {
-        $sector_number = $key + 1; // Up with 1 to start with 1 rather than 0
-        $taxa = explode(' ', $sector);
-        foreach ($taxa as $taxon) {
-            $taxon = str_replace($delete_chars, '', $taxon);
-            if ($taxon_id = getIdFromSearchAll($taxon)) {
-                insertTaxonomicCoverage($tc['id'], $taxon_id, $sector_number);
-            }
+$sectors = explode(';', $tc['taxonomic_coverage']);
+foreach ($sectors as $key => $sector) {
+    $sector_number = $key + 1; // Up with 1 to start with 1 rather than 0
+    $taxa = explode(' ', $sector);
+    foreach ($taxa as $taxon) {
+        $taxon = str_replace($delete_chars, '', $taxon);
+        if ($taxon_id = getIdFromSearchAll($taxon)) {
+            insertTaxonomicCoverage($tc['id'], $taxon_id, $sector_number);
         }
     }
+}
 }
 echo 'Finding points of attachment...<br>';
 $stmt = $pdo->prepare('SELECT `source_database_id` FROM `taxonomic_coverage`');
 $stmt->execute();
 while ($source_database_id = $stmt->fetchColumn()) {
-    $tc = getTaxonomicCoverage($source_database_id);
-    $points_of_attachments = determinePointsOfAttachment($tc);
-    foreach ($points_of_attachments as $sector => $taxonomic_rank_id) {
-        updatePointsOfAttachment($source_database_id, $sector, $taxonomic_rank_id);
-    }
+$tc = getTaxonomicCoverage($source_database_id);
+$points_of_attachments = determinePointsOfAttachment($tc);
+foreach ($points_of_attachments as $sector => $taxonomic_rank_id) {
+    updatePointsOfAttachment($source_database_id, $sector, $taxonomic_rank_id);
+}
 }
 
 echo 'Updating ' . SPECIES_DETAILS . ' with points of attachments...<br>';
 $stmt = $pdo->prepare('SELECT `id`, `abbreviated_name` FROM `source_database` ORDER BY `abbreviated_name`');
 $stmt->execute();
 while ($row = $stmt->fetch(PDO::FETCH_NUM)) {
-    echo '&nbsp;&nbsp;&nbsp; Processing ' . $row[1] . ' source database...<br>';
-    $points_of_attachments = getPointsOfAttachment($row[0]);
-    foreach ($points_of_attachments as $taxon_id) {
-        setPointsOfAttachment($row[0], $taxon_id);
-    }
+echo '&nbsp;&nbsp;&nbsp; Processing ' . $row[1] . ' source database...<br>';
+$points_of_attachments = getPointsOfAttachment($row[0]);
+foreach ($points_of_attachments as $taxon_id) {
+    setPointsOfAttachment($row[0], $taxon_id);
+}
 }
 echo 'Deleting temporary indices from ' . SPECIES_DETAILS . '...<br>';
 foreach (array(
-    'kingdom_id', 
-    'phylum_id', 
-    'class_id', 
-    'order_id', 
-    'superfamily_id', 
-    'family_id', 
-    'genus_id', 
-    'source_database_id'
+'kingdom_id', 
+'phylum_id', 
+'class_id', 
+'order_id', 
+'superfamily_id', 
+'family_id', 
+'genus_id', 
+'source_database_id'
 ) as $index) {
-    $stmt = $pdo->prepare('ALTER TABLE ' . SPECIES_DETAILS . ' DROP INDEX ' . $index);
-    $stmt->execute();
+$stmt = $pdo->prepare('ALTER TABLE ' . SPECIES_DETAILS . ' DROP INDEX ' . $index);
+$stmt->execute();
 }
 
 echo '</p><p><b>New 1.7 functionality</b><br>
@@ -466,10 +476,10 @@ $stmt = $pdo->prepare($query);
 $stmt->execute();
 $indicator->init($stmt->rowCount(), 150, 500);
 while ($tt = $stmt->fetch(PDO::FETCH_ASSOC)) {
-    $source_database_ids = getSourceDatabaseIds($tt);
-    $species_count = countSpecies($tt);
-    updateTaxonTree($tt, $source_database_ids, $species_count);
-    $indicator->iterate();
+$source_database_ids = getSourceDatabaseIds($tt);
+$species_count = countSpecies($tt);
+updateTaxonTree($tt, $source_database_ids, $species_count);
+$indicator->iterate();
 }
 
 echo '</p><p>Importing species estimates from the ' . IMPORT_SPECIES_ESTIMATE . ' table...<br>';
@@ -482,14 +492,15 @@ $stmt = $pdo->prepare($query);
 $stmt->execute();
 $result = $stmt->fetchAll(PDO::FETCH_NUM);
 foreach ($result as $est) {
-    $update = 'UPDATE ' . TAXON_TREE . ' SET 
+$update = 'UPDATE ' . TAXON_TREE . ' SET 
                `total_species_estimation` = ?, 
                `estimate_source` = ? 
                WHERE `name` = ? 
                AND `rank` = ?';
-    $stmt = $pdo->prepare($update);
-    $stmt->execute($est);
+$stmt = $pdo->prepare($update);
+$stmt->execute($est);
 }
+/*
 echo 'Importing qualifiers from the ' . IMPORT_SOURCE_DATABASE_QUALIFIERS . ' table...<br>';
 $clean = 'UPDATE ' . SOURCE_DATABASE_DETAILS . ' SET `coverage` = "", `completeness` = 0, `confidence` = 0;';
 $stmt = $pdo->prepare($clean);
@@ -500,36 +511,36 @@ $stmt = $pdo->prepare($query);
 $stmt->execute();
 $result = $stmt->fetchAll(PDO::FETCH_NUM);
 foreach ($result as $sdd) {
-    $update = 'UPDATE ' . SOURCE_DATABASE_DETAILS . ' SET 
+$update = 'UPDATE ' . SOURCE_DATABASE_DETAILS . ' SET 
                `coverage` = ?, 
                `completeness` = ?,
                `confidence` = ?  
                WHERE `short_name` = ?';
-    $stmt = $pdo->prepare($update);
-    $stmt->execute($sdd);
+$stmt = $pdo->prepare($update);
+$stmt->execute($sdd);
 }
-
-
+*/
 echo '</p><p><b>Shrinking columns of post-processed tables</b><br>';
 foreach ($postponed_tables as $table => $columns) {
-    foreach ($columns as $cl => $type) {
-        echo 'Shrinking column ' . $cl . ' in table ' . $table . '...<br>';
-        if ($type == 'varchar') {
-            shrinkVarChar($table, array(
-                'Field' => $cl
-            ));
-        } else {
-            shrinkInt($table, array(
-                'Field' => $cl
-            ));
-        }
+foreach ($columns as $cl => $type) {
+    echo 'Shrinking column ' . $cl . ' in table ' . $table . '...<br>';
+    if ($type == 'varchar') {
+        shrinkVarChar($table, array(
+            'Field' => $cl
+        ));
     }
+    else {
+        shrinkInt($table, array(
+            'Field' => $cl
+        ));
+    }
+}
 }
 
 echo '</p><p><b>Analyzing denormalized tables</b><br>';
 foreach ($tables as $table => $indices) {
-    echo "Analyzing table $table...<br>";
-    $pdo->query('ANALYZE TABLE `' . $table . '`');
+echo "Analyzing table $table...<br>";
+$pdo->query('ANALYZE TABLE `' . $table . '`');
 }
 
 echo '</p><p>Ready!</p>';

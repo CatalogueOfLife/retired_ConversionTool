@@ -124,7 +124,7 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
     protected function _setTaxonDistribution(Model $taxon)
     {
         $stmt = $this->_dbh->prepare(
-            'SELECT `distribution` AS freeText FROM `distribution` '.
+            'SELECT DISTINCT `distribution` AS freeText FROM `distribution` '.
             'WHERE `name_code` = ?'
         );
         $stmt->execute(array($taxon->originalId));

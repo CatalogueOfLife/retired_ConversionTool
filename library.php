@@ -564,14 +564,11 @@ function updateTaxonTree ($tt, $source_database_ids, $species_count = 0)
     }
 }
 
-function check17ImportTables ($dbName)
+function checkImportTables ($dbName, $tables)
 {
     $pdo = DbHandler::getInstance('target');
     $empty = array();
-    foreach (array(
-        IMPORT_SPECIES_ESTIMATE, 
-        IMPORT_SOURCE_DATABASE_QUALIFIERS
-    ) as $table) {
+    foreach ($tables as $table) {
         $stmt = $pdo->query(
             'SELECT COUNT(1) FROM `information_schema`.`tables` 
                              WHERE `table_schema` = "' . $dbName . '" 
