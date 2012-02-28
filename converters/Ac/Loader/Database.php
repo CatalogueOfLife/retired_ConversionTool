@@ -34,17 +34,19 @@ class Ac_Loader_Database extends Ac_Loader_Abstract
     public function load($offset, $limit)
     {
         $stmt = $this->_dbh->prepare(
-            'SELECT record_id as id, '.
-            'database_name_displayed AS name, '.
-            'database_name AS abbreviatedName, '.
-            'contact_person AS contactPerson, '.
-            'taxa AS groupNameInEnglish, '.
-            'authors_editors AS authorsAndEditors, '.
-            'release_date AS releaseDate, '.
-            'organization AS organisation, '.
-            'abstract, ' .
-            'web_site AS uri,' .
-            'taxonomic_coverage AS taxonomicCoverage, ' .
+            'SELECT `record_id` AS id, '.
+            '`database_name_displayed` AS name, '.
+            '`database_name` AS abbreviatedName, '.
+            '`contact_person` AS contactPerson, '.
+            '`taxa` AS groupNameInEnglish, '.
+            '`authors_editors` AS authorsAndEditors, '.
+            '`release_date` AS releaseDate, '.
+            '`organization` AS organisation, '.
+            '`abstract`, ' .
+            '`web_site` AS uri,' .
+            '`taxonomic_coverage` AS taxonomicCoverage, ' .
+            '`is_new` AS isNew, ' .
+            '`coverage`, `completeness`, `confidence`, ' .
             'version FROM `databases`'
         );
         $stmt->execute();

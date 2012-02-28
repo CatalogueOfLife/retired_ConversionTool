@@ -6,7 +6,7 @@ require_once 'converters/Bs/Storer/Uri.php';
 /**
  * HigherTaxon storer
  * 
- * @author Nœria Torrescasana Aloy, Ruud Altenburg
+ * @author Nï¿½ria Torrescasana Aloy, Ruud Altenburg
  */
 class Bs_Storer_HigherTaxon extends Bs_Storer_TaxonAbstract implements Bs_Storer_Interface
 {
@@ -26,7 +26,8 @@ class Bs_Storer_HigherTaxon extends Bs_Storer_TaxonAbstract implements Bs_Storer
     protected function _setTaxon (Model $taxon)
     {
         $stmt = $this->_dbh->prepare(
-            'INSERT INTO `taxon` (`id`, `taxonomic_rank_id`, `source_database_id`, `original_id`) VALUES (?, ?, ?, ?)');
+            'INSERT INTO `taxon` (`id`, `taxonomic_rank_id`, `source_database_id`, `original_id`)' .
+            'VALUES (?, ?, ?, ?)');
         $stmt->execute(
             array(
                 $taxon->id, 
@@ -47,7 +48,7 @@ class Bs_Storer_HigherTaxon extends Bs_Storer_TaxonAbstract implements Bs_Storer
             ));
         if (!$nameElementId) {
             $stmt = $this->_dbh->prepare(
-                'INSERT INTO `scientific_name_element` ' . '(`name_element`) VALUE (?)');
+                'INSERT INTO `scientific_name_element` (`name_element`) VALUE (?)');
             $stmt->execute(array(
                 $name
             ));

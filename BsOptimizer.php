@@ -154,18 +154,18 @@ $postponed_tables = array(
         'point_of_attachment_id' => 'varchar'
     ), 
     TAXON_TREE => array(
-        'name' => 'varchar',
-        'total_species_estimation' => 'int',
-        'total_species' => 'int',
+        'name' => 'varchar', 
+        'total_species_estimation' => 'int', 
+        'total_species' => 'int', 
         'estimate_source' => 'varchar'
-    ),
+    ), 
     SOURCE_DATABASE_TO_TAXON_TREE_BRANCH => array(
-        'source_database_id' => 'int',
+        'source_database_id' => 'int', 
         'taxon_tree_id' => 'int'
     ), 
     SOURCE_DATABASE_DETAILS => array(
-        'coverage' => 'varchar',
-        'completeness' => 'int',
+        'coverage' => 'varchar', 
+        'completeness' => 'int', 
         'confidence' => 'int'
     )
 );
@@ -194,11 +194,11 @@ $delete_chars = array(
     PHP_EOL
 );
 
-if(isset($argv) && isset($argv[1])) {
-	$config = parse_ini_file($argv[1], true);
+if (isset($argv) && isset($argv[1])) {
+    $config = parse_ini_file($argv[1], true);
 }
 else {
-	$config = parse_ini_file('config/AcToBs.ini', true);
+    $config = parse_ini_file('config/AcToBs.ini', true);
 }
 
 foreach ($config as $k => $v) {
@@ -215,17 +215,22 @@ foreach ($config as $k => $v) {
 $pdo = DbHandler::getInstance('target');
 $indicator = new Indicator();
 
-// For 1.7: First test if import tables for species estimates and database qualifiers have been filled; if not, abort.
-$empty = check17ImportTables($config['target']['dbname']);
+// For 1.7+: First test if import tables for species estimates and database qualifiers have been filled; if not, abort.
+$empty = checkImportTables($config['target']['dbname'], 
+    array(
+        IMPORT_SPECIES_ESTIMATE,
+        IMPORT_SOURCE_DATABASE_QUALIFIERS
+    ));
 if (!empty($empty)) {
     count($empty) == 1 ? $table = $empty[0] . ' is' : $table = 'these tables are';
     echo '<p>Currently the species estimate per higher taxon and database qualifiers are taken 
-    from the tables<br>' . IMPORT_SPECIES_ESTIMATE . ' and ' . IMPORT_SOURCE_DATABASE_QUALIFIERS . '.</p>
+    from the tables<br>' . IMPORT_SPECIES_ESTIMATE . ' and ' .
+         IMPORT_SOURCE_DATABASE_QUALIFIERS . '.</p>
     <p style="color: red; font-weight: bold;">This script can only proceed if ' . $table . ' present and not empty.</p>
     <p>If you are importing into a v1.6 database, you first should upgrade to the v1.7 structure.<br>
     The upgrade script is found at <b>docs_and_dumps/dumps/base_scheme/ac/upgrade_1-6_to_1-7.sql</b><br>
     SQL dumps to fill the import tables are found at <b>docs_and_dumps/dumps/base_scheme/ac/import_data_1-7</b>.</p>';
-    exit('</body></html>');
+exit('</body></html>');
 }
 
 echo '<p>First denormalized tables are created, filled and reduced to minimum size. Next indices are created.<br>
@@ -263,9 +268,8 @@ foreach ($tables as $table => $indices) {
     while ($cl = $stmt->fetch(PDO::FETCH_ASSOC)) {
         if (isVarCharField($cl['Type']) || isIntField($cl['Type'])) {
             // Postpone shrinking of a few columns until table creation is complete
-            if (array_key_exists(
-                $table, $postponed_tables) && in_array($cl['Field'], 
-                $postponed_tables[$table])) {
+            if (array_key_exists($table, $postponed_tables) && in_array(
+                $cl['Field'], $postponed_tables[$table])) {
                 continue;
             }
             echo 'Shrinking column ' . $cl['Field'] . '...<br>';
@@ -274,36 +278,36 @@ foreach ($tables as $table => $indices) {
             }
             else {
                 shrinkInt($table, $cl);
-            }
         }
     }
-    // Create indices
-    foreach ($indices as $index) {
-        echo "Adding index to $index...<br>";
-        // Combined index
-        if (strpos($index, ',') !== false) {
-            $query2 = 'ALTER TABLE `' . $table . '` ADD INDEX (';
-            $indexParts = explode(',', $index);
-            for ($i = 0; $i < count($indexParts); $i++) {
-                $query2 .= '`' . $indexParts[$i] . '`,';
-            }
-            $query2 = substr($query2, 0, -1) . ')';
+}
+// Create indices
+foreach ($indices as $index) {
+    echo "Adding index to $index...<br>";
+    // Combined index
+    if (strpos($index, ',') !== false) {
+        $query2 = 'ALTER TABLE `' . $table . '` ADD INDEX (';
+        $indexParts = explode(',', $index);
+        for ($i = 0; $i < count($indexParts); $i++) {
+            $query2 .= '`' . $indexParts[$i] . '`,';
         }
-        // Single index
-        else {
-            $query2 = 'ALTER TABLE `' . $table . '` ADD INDEX (`' . $index . '`)';
-        }
-        $stmt2 = $pdo->prepare($query2);
-        $stmt2->execute();
+        $query2 = substr($query2, 0, -1) . ')';
     }
-    // Create fulltext index on distribution
-    if ($table == SEARCH_DISTRIBUTION) {
-        echo "Adding FULLTEXT index to distribution...<br>";
-        $query4 = 'ALTER TABLE `' . $table . '` ADD FULLTEXT (`distribution`)';
-        $stmt2 = $pdo->prepare($query4);
-        $stmt2->execute();
+    // Single index
+    else {
+        $query2 = 'ALTER TABLE `' . $table . '` ADD INDEX (`' . $index . '`)';
     }
-    echo '</p>';
+    $stmt2 = $pdo->prepare($query2);
+    $stmt2->execute();
+}
+// Create fulltext index on distribution
+if ($table == SEARCH_DISTRIBUTION) {
+    echo "Adding FULLTEXT index to distribution...<br>";
+    $query4 = 'ALTER TABLE `' . $table . '` ADD FULLTEXT (`distribution`)';
+    $stmt2 = $pdo->prepare($query4);
+    $stmt2->execute();
+}
+echo '</p>';
 }
 
 echo '<p><b>Post-processing ' . SEARCH_ALL . ', ' . SEARCH_DISTRIBUTION . ', ' . SEARCH_SCIENTIFIC . ' and ' . TAXON_TREE . ' tables</b><br>';
@@ -325,7 +329,7 @@ $stmt = $pdo->prepare($query);
 $stmt->execute(array(
     1
 ));
-echo '&nbsp;&nbsp;&nbsp; Splitting rows...<br>';
+echo '&nbsp;&nbsp;&nbsp; Splitting ' . $stmt->rowCount() . 'rows...<br>';
 $query = 'SELECT * FROM `' . SEARCH_ALL . '` WHERE `delete_me` = 1';
 $stmt = $pdo->prepare($query);
 $stmt->execute();
@@ -449,7 +453,7 @@ foreach (array(
     'family_id', 
     'genus_id', 
     'source_database_id'
-) as $index) {
+    ) as $index) {
     $stmt = $pdo->prepare('ALTER TABLE ' . SPECIES_DETAILS . ' DROP INDEX ' . $index);
     $stmt->execute();
 }
@@ -489,13 +493,14 @@ $stmt->execute();
 $result = $stmt->fetchAll(PDO::FETCH_NUM);
 foreach ($result as $est) {
     $update = 'UPDATE ' . TAXON_TREE . ' SET 
-               `total_species_estimation` = ?, 
-               `estimate_source` = ? 
-               WHERE `name` = ? 
-               AND `rank` = ?';
+                   `total_species_estimation` = ?, 
+                   `estimate_source` = ? 
+                   WHERE `name` = ? 
+                   AND `rank` = ?';
     $stmt = $pdo->prepare($update);
     $stmt->execute($est);
 }
+
 echo 'Importing qualifiers from the ' . IMPORT_SOURCE_DATABASE_QUALIFIERS . ' table...<br>';
 $clean = 'UPDATE ' . SOURCE_DATABASE_DETAILS . ' SET `coverage` = "", `completeness` = 0, `confidence` = 0;';
 $stmt = $pdo->prepare($clean);
@@ -507,29 +512,29 @@ $stmt->execute();
 $result = $stmt->fetchAll(PDO::FETCH_NUM);
 foreach ($result as $sdd) {
     $update = 'UPDATE ' . SOURCE_DATABASE_DETAILS . ' SET 
-               `coverage` = ?, 
-               `completeness` = ?,
-               `confidence` = ?  
-               WHERE `short_name` = ?';
+                   `coverage` = ?, 
+                   `completeness` = ?,
+                   `confidence` = ?  
+                   WHERE `short_name` = ?';
     $stmt = $pdo->prepare($update);
     $stmt->execute($sdd);
 }
 
-
 echo '</p><p><b>Shrinking columns of post-processed tables</b><br>';
 foreach ($postponed_tables as $table => $columns) {
-    foreach ($columns as $cl => $type) {
-        echo 'Shrinking column ' . $cl . ' in table ' . $table . '...<br>';
-        if ($type == 'varchar') {
-            shrinkVarChar($table, array(
-                'Field' => $cl
-            ));
-        } else {
-            shrinkInt($table, array(
-                'Field' => $cl
-            ));
-        }
+foreach ($columns as $cl => $type) {
+    echo 'Shrinking column ' . $cl . ' in table ' . $table . '...<br>';
+    if ($type == 'varchar') {
+        shrinkVarChar($table, array(
+            'Field' => $cl
+        ));
     }
+    else {
+        shrinkInt($table, array(
+            'Field' => $cl
+        ));
+    }
+}
 }
 
 echo '</p><p><b>Analyzing denormalized tables</b><br>';

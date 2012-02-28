@@ -8,7 +8,7 @@ require_once 'model/AcToBs/CommonName.php';
  * database but are derived and used to store data needed specifically for
  * the AcToBs storer
  * 
- * @author Nœria Torrescasana Aloy, Ruud Altenburg
+ * @author Nï¿½ria Torrescasana Aloy, Ruud Altenburg
  */
 class Bs_Model_AcToBs_CommonName extends CommonName
 {
@@ -21,4 +21,5 @@ class Bs_Model_AcToBs_CommonName extends CommonName
     public $referenceAuthors;
     public $referenceYear;
     public $referenceText;
+    public $regionFreeTextId;
 }

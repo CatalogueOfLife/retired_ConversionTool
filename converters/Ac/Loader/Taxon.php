@@ -4,6 +4,7 @@ require_once 'Abstract.php';
 require_once 'converters/Ac/Model/AcToBs/Taxon.php';
 require_once 'model/AcToBs/Reference.php';
 require_once 'model/AcToBs/Distribution.php';
+require_once 'converters/Ac/Model/AcToBs/Lifezone.php';
 require_once 'converters/Ac/Model/AcToBs/Distribution.php';
 require_once 'converters/Ac/Model/AcToBs/CommonName.php';
 require_once 'converters/Ac/Model/AcToBs/Synonym.php';
@@ -27,7 +28,7 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
             'SELECT COUNT(1) FROM `taxa` t1, `scientific_names` t2 '.
             'WHERE t1.`is_accepted_name` = 1 '.
             'AND t1.`parent_id` != 0 '.
-            'AND t1.`taxon` LIKE "%species" '.
+            'AND (t1.`taxon` = "species" OR  t1.`taxon` = "infraspecies") '.
             'AND t1.`name_code` = t2.`name_code` '
         );
         $stmt->execute();
@@ -57,11 +58,13 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
             't1.`sp2000_status_id` AS scientificNameStatusId,'.
             't2.`web_site` AS uri, t2.`comment` AS additionalData, '.
             't2.`scrutiny_date` AS scrutinyDate, '.
-            't2.`specialist_id` AS specialistId '.
+            't2.`specialist_id` AS specialistId, '.
+            't2.`GSDTaxonGUID` AS taxonGuid, '.
+            't2.`GSDNameGUID` AS nameGuid '.
             'FROM `taxa` t1, `scientific_names` t2 '.
             'WHERE t1.`is_accepted_name` = 1 '.
             'AND t1.`parent_id` != 0 '.
-            'AND t1.`taxon` LIKE "%species" '.
+            'AND (t1.`taxon` = "species" OR  t1.`taxon` = "infraspecies") '.
             'AND t1.`name_code` = t2.`name_code` '.
             'LIMIT :offset, :limit '
         );
@@ -77,6 +80,7 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
             $this->_setTaxonDistribution($taxon);
             $this->_setTaxonCommonNames($taxon);
             $this->_setTaxonSynonyms($taxon);
+            $this->_setTaxonLifezones($taxon);
             $taxa[] = $taxon;
         }
         unset($stmt);
@@ -110,7 +114,8 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
     protected function _setTaxonReferences(Model $taxon)
     {
         $stmt = $this->_dbh->prepare(
-			'SELECT `author` AS authors, `year`, `title`, `source` AS text '.
+            'SELECT t1.`author` AS authors, t1.`year`, t1.`title`, '.
+            't1.`source` AS text, t2.`reference_type` AS type '.
             'FROM `references` t1, `scientific_name_references` t2 '.
             'WHERE t2.`name_code` = ? AND t1.`record_id` = t2.`reference_id` '.
             'AND t2.`reference_type` != "ComNameRef"'
@@ -123,13 +128,29 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
 
     protected function _setTaxonDistribution(Model $taxon)
     {
+        // Order by distributions which have been assigned a status/
+        // Duplicates are removed at the storage stage; distributions with a status
+        // get precedence.
         $stmt = $this->_dbh->prepare(
-            'SELECT `distribution` AS freeText FROM `distribution` '.
-            'WHERE `name_code` = ?'
+            'SELECT `distribution` AS freeText, `DistributionStatus` AS status '.
+            'FROM `distribution` WHERE `name_code` = ? '.
+            'ORDER BY IF (status = "" OR status IS NULL, 1, 0), status'
         );
         $stmt->execute(array($taxon->originalId));
         $taxon->distribution = $stmt->fetchAll(PDO::FETCH_CLASS, 
             'Bs_Model_AcToBs_Distribution');
+        unset($stmt);
+        return $taxon;
+    }
+
+    protected function _setTaxonLifezones(Model $taxon)
+    {
+        $stmt = $this->_dbh->prepare(
+            'SELECT `lifezone` FROM `lifezone` WHERE `name_code` = ?'
+        );
+        $stmt->execute(array($taxon->originalId));
+        $taxon->lifezones = $stmt->fetchAll(PDO::FETCH_CLASS, 
+            'Bs_Model_AcToBs_Lifezone');
         unset($stmt);
         return $taxon;
     }
@@ -140,7 +161,8 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
 			'SELECT t1.`common_name` AS commonNameElement, t1.`language`, '.
 		    't1.`country`, t2.`author` as referenceAuthors, '.
 		    't2.`year` AS referenceYear, t2.`title` AS referenceTitle, '.
-		    't2.`source` AS referenceText FROM `common_names` t1 '.
+		    't2.`source` AS referenceText, t1.`transliteration`, t1.`area` AS region '.
+		    'FROM `common_names` t1 '.
 		    'LEFT JOIN `references` t2 ON t1.`reference_id` = t2.`record_id` '.
 		    'WHERE t1.`name_code` = ?'
 		);

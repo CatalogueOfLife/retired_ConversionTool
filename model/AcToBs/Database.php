@@ -15,4 +15,8 @@ class Database implements Model
     public $releaseDate;
     public $uri;
     public $taxonomicCoverage;
+    public $isNew;
+    public $coverage;
+    public $completeness;
+    public $confidence;
 }

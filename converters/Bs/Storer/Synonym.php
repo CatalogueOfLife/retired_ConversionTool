@@ -14,6 +14,9 @@ class Bs_Storer_Synonym extends Bs_Storer_TaxonAbstract implements Bs_Storer_Int
 
     public function store (Model $synonym)
     {
+        if (empty($synonym->id)) {
+            return $synonym;
+        }
         // Exit if id already exists; test needed because error occurred 
         // during import.
         if ($this->_recordExists(
@@ -119,16 +122,17 @@ class Bs_Storer_Synonym extends Bs_Storer_TaxonAbstract implements Bs_Storer_Int
             $storer->store($reference);
             if (!in_array($reference->id, $referenceIds)) {
                 $referenceIds[] = $reference->id;
+                $stmt = $this->_dbh->prepare(
+                    'INSERT INTO `reference_to_synonym` (`reference_id`, `synonym_id`, '.
+                    '`reference_type_id`) VALUES (?, ?, ?)');
+                $stmt->execute(
+                    array(
+                        $reference->id, 
+                        $synonym->id,
+                        $reference->typeId
+                    )
+                );
             }
-        }
-        foreach ($referenceIds as $referenceId) {
-            $stmt = $this->_dbh->prepare(
-                'INSERT INTO `reference_to_synonym` (`reference_id`, ' . '`synonym_id`) VALUES (?, ?)');
-            $stmt->execute(
-                array(
-                    $referenceId, 
-                    $synonym->id
-                ));
         }
         unset($storer);
         return $synonym;

@@ -5,4 +5,5 @@ class Distribution implements Model
 {
     public $id;
     public $freeText;
+    public $status;
 }

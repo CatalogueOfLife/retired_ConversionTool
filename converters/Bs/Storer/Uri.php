@@ -5,14 +5,17 @@ require_once 'Abstract.php';
 /**
  * Uri storer
  * 
- * @author Nœria Torrescasana Aloy, Ruud Altenburg
+ * @author Nï¿½ria Torrescasana Aloy, Ruud Altenburg
  */
 class Bs_Storer_Uri extends Bs_Storer_Abstract
     implements Bs_Storer_Interface
 {
     public function store(Model $uri)
     {
-    	if ($uri->uriSchemeId == '') {
+        if (empty($uri->resourceIdentifier)) {
+            return $uri;
+        }
+        if ($uri->uriSchemeId == '') {
     	    $uri->uriSchemeId = $this->_getUriSchemeId(
     	        $uri->resourceIdentifier
     	    );

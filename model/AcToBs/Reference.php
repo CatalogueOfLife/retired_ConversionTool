@@ -8,4 +8,6 @@ class Reference implements Model
     public $authors;
     public $year;
     public $text;
+    public $type;
+    public $typeId;
 }

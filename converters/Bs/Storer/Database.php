@@ -15,13 +15,14 @@ class Bs_Storer_Database extends Bs_Storer_Abstract
     public function store(Model $db)
     {
         $stmt = $this->_dbh->prepare(
-            'INSERT INTO `source_database` (id, name, abbreviated_name, ' .
-            'group_name_in_english, authors_and_editors, organisation, ' .
-            'contact_person, abstract, version, release_date, taxonomic_coverage' .
-            ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO `source_database` (`id`, `name`, `abbreviated_name`, ' .
+            '`group_name_in_english`, `authors_and_editors`, `organisation`, ' .
+            '`contact_person`, `abstract`, `version`, `release_date`, `taxonomic_coverage`,' .
+            '`is_new`, `coverage`, `completeness`, `confidence`) ' .
+            'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
-        
-         $stmt->execute(array(
+
+        $stmt->execute(array(
             $db->id,
             $db->name,
             $db->abbreviatedName,
@@ -32,7 +33,11 @@ class Bs_Storer_Database extends Bs_Storer_Abstract
             $db->abstract,
             $db->version,
             $db->releaseDate,
-            $db->taxonomicCoverage)
+            $db->taxonomicCoverage,
+            $db->isNew,
+            $db->coverage,
+            $db->completeness,
+            $db->confidence)
         );
         
         if ($db->uri != "") {

@@ -7,7 +7,7 @@ require_once 'Loader/Interface.php';
  * Dynamically loads the appropriate class. In the script that runs the 
  * conversion, only Class has to be given rather than Ac_Loader_Class
  * 
- * @author Nœria Torrescasana Aloy
+ * @author Nï¿½ria Torrescasana Aloy
  */
 class Ac_Loader
 {
@@ -33,7 +33,7 @@ class Ac_Loader
     private function _getLoader($name)
     {
         $class = 'Ac_Loader_' . $name;
-        if(!@include_once('Loader/' . $name . '.php')) {
+        if(!include_once('Loader/' . $name . '.php')) {
             throw new Exception('Loader class file not found');
         }
         if(!class_exists($class)) {

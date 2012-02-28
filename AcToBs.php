@@ -48,7 +48,7 @@ foreach ($config as $k => $v) {
 }
 $loader = new Ac_Loader(DbHandler::getInstance('source'), $logger);
 $storer = new Bs_Storer(DbHandler::getInstance('target'), $logger, $ind);
-
+/*
 echo '<p>Clearing old data...<br>';
 $storer->clearDb();
 echo 'Done!</p>';
@@ -93,7 +93,7 @@ for ($limit = 10000, $offset = 0; $offset < $total; $offset += $limit) {
     }
 }
 echo '<br>Done!</p>';
-
+*/
 // Taxa
 // Needs about 350MB memory for 3000 records per loop, 
 // decrease if less is available!

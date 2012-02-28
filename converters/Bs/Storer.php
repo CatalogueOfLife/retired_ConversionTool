@@ -7,7 +7,7 @@ require_once 'Storer/Interface.php';
  * Dynamically loads the appropriate class. In the script that runs the 
  * conversion, only Class has to be given rather than Ac_Storer_Class
  * 
- * @author Nœria Torrescasana Aloy, Ruud Altenburg
+ * @author Nï¿½ria Torrescasana Aloy, Ruud Altenburg
  */
 class Bs_Storer
 {
@@ -15,40 +15,36 @@ class Bs_Storer
     protected $_logger;
     protected $_indicator;
     
-    /**
-     * Tables cannot be cleared one-by-one as with Spicecache database. 
-     * Order of truncation in clearDb() method is determined by order 
-     * in $dbTables array below.
-     */
     private static $dbTables = array(
-        'distribution', 
-        'distribution_free_text', 
-        'region_free_text', 
-        'taxon_detail', 
-        'scrutiny', 
-        'specialist', 
-        'reference_to_synonym', 
-        'synonym_name_element', 
-        'synonym', 
         'author_string', 
-        'taxon_name_element', 
-        'scientific_name_element', 
-        'uri_to_taxon', 
-        'reference_to_taxon', 
-        'reference_to_common_name', 
         'common_name', 
         'common_name_element', 
+        'distribution', 
+        'distribution_free_text', 
+        'lifezone_to_taxon_detail',
         'reference', 
-        'uri_to_source_database', 
-        'uri_to_taxon', 
-        'uri', 
+        'reference_to_common_name', 
+        'reference_to_synonym', 
+        'reference_to_taxon', 
+        'region_free_text', 
+        'scientific_name_element', 
+        'scrutiny', 
+        'source_database',
+        'specialist', 
+        'synonym', 
+        'synonym_name_element', 
         'taxon', 
-        'source_database'
+        'taxon_detail', 
+        'taxon_name_element', 
+        'uri', 
+        'uri_to_source_database', 
+        'uri_to_taxon'
     );
     
     private static $dbDenormalizedTables = array(
         '_conversion_errors', 
         '_new_search_name_elements', 
+        '_image_resource',
         '_search_all', 
         '_search_all_new', 
         '_search_distribution', 
@@ -153,12 +149,14 @@ class Bs_Storer
     public function clearDb ()
     {
         // Empty tables and reset auto-increment values
+        $this->_dbh->query('SET FOREIGN_KEY_CHECKS = 0');
         foreach (self::$dbTables as $table) {
             $stmt = $this->_dbh->prepare('TRUNCATE `' . $table . '`');
             $stmt->execute();
             $stmt = $this->_dbh->prepare('ALTER TABLE `' . $table . '` AUTO_INCREMENT = 1');
             $stmt->execute();
         }
+        $this->_dbh->query('SET FOREIGN_KEY_CHECKS = 1');
         // Delete denormalized tables
         foreach (self::$dbDenormalizedTables as $table) {
             $stmt = $this->_dbh->prepare('DROP TABLE IF EXISTS `' . $table . '`');

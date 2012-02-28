@@ -7,4 +7,6 @@ class CommonName implements Model
     public $commonNameElement;
     public $language;
     public $country;
+    public $transliteration;
+    public $region;
 }

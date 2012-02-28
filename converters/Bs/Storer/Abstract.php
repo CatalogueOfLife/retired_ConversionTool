@@ -2,7 +2,7 @@
 /**
  * Abstract storer
  * 
- * @author Nœria Torrescasana Aloy, Ruud Altenburg
+ * @author Nï¿½ria Torrescasana Aloy, Ruud Altenburg
  */
 abstract class Bs_Storer_Abstract
 {

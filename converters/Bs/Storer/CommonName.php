@@ -7,7 +7,7 @@ require_once 'converters/Bs/Storer/Reference.php';
 /**
  * CommonName storer
  * 
- * @author Nœria Torrescasana Aloy, Ruud Altenburg
+ * @author Nï¿½ria Torrescasana Aloy, Ruud Altenburg
  */
 class Bs_Storer_CommonName extends Bs_Storer_Abstract
     implements Bs_Storer_Interface
@@ -57,6 +57,9 @@ class Bs_Storer_CommonName extends Bs_Storer_Abstract
     
     public function store(Model $commonName)
     {
+        if (empty($commonName->commonNameElement)) {
+            return $commonName;
+        }
         // First decode HTML entries to UTF8
         $commonName->commonNameElement = 
             $this->convertHtmlToUtf($commonName->commonNameElement);
@@ -69,9 +72,34 @@ class Bs_Storer_CommonName extends Bs_Storer_Abstract
             $commonName->country = self::$countryMap[$commonName->country];
         }
         $this->_getCountryIso($commonName);
+        $this->_getRegionFreeTextId($commonName);
+        
         $this->_setCommonNameElement($commonName);
         $this->_setCommonName($commonName);
         $this->_setCommonNameReference($commonName);
+        return $commonName;
+    }
+
+    
+    private function _getRegionFreeTextId(Model $commonName)
+    {
+        if (empty($commonName->region)) {
+            return $commonName;
+        }
+        $id = $this->_recordExists('id', 'region_free_text', 
+            array(
+                'free_text' => $commonName->region
+            )
+        );
+        if ($id) {
+            $commonName->regionFreeTextId = $id;
+        } else {
+            $stmt = $this->_dbh->prepare(
+                'INSERT INTO `region_free_text` (`free_text`) VALUE (?)'
+            );
+            $stmt->execute(array($commonName->region));
+            $commonName->regionFreeTextId = $this->_dbh->lastInsertId();
+        }
         return $commonName;
     }
     
@@ -158,13 +186,15 @@ class Bs_Storer_CommonName extends Bs_Storer_Abstract
         } else {
             $stmt = $this->_dbh->prepare(
                 'INSERT INTO `common_name` (`taxon_id`, `common_name_element_id`, '.
-                '`language_iso`, `country_iso`) VALUES (?, ?, ?, ?)'
+                '`language_iso`, `country_iso`, `region_free_text_id`) '.
+                'VALUES (?, ?, ?, ?, ?)'
             );
             $stmt->execute(array(
                 $commonName->taxonId,
                 $commonName->commonNameElementId,
                 $commonName->languageIso,
-                $commonName->countryIso)
+                $commonName->countryIso,
+                $commonName->regionFreeTextId)
             );
             $commonName->id = $this->_dbh->lastInsertId();
         }

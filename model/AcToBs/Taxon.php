@@ -20,4 +20,6 @@ class Taxon implements Model
     public $additionalData;
     public $scrutinyDate;
     public $specialistId;
+    public $taxonGuid;
+    public $nameGuid;
 }
