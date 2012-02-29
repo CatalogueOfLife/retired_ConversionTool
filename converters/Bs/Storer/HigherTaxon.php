@@ -62,7 +62,7 @@ class Bs_Storer_HigherTaxon extends Bs_Storer_TaxonAbstract implements Bs_Storer
     {
         // Top level(s)
         if ($taxon->parentId == '' || $taxon->parentId == 0) {
-            $taxon->parentId = NULL;
+            $taxon->parentId = null;
         }
         // Verify for infraspecies if parent is present and matches 
         // record in the checklist; if not abort

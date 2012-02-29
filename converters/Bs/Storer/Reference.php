@@ -17,9 +17,9 @@ class Bs_Storer_Reference extends Bs_Storer_Abstract implements Bs_Storer_Interf
         }
         $referenceId = $this->_recordExists('id', 'reference', 
             array(
-                'title' => $reference->title, 
                 'authors' => $reference->authors, 
                 'year' => $reference->year, 
+                'title' => $reference->title, 
                 'text' => $reference->text
             ));
         if ($referenceId) {

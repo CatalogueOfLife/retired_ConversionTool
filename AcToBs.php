@@ -95,13 +95,11 @@ for ($limit = 10000, $offset = 0; $offset < $total; $offset += $limit) {
 echo '<br>Done!</p>';
 
 // Taxa
-// Needs about 350MB memory for 3000 records per loop, 
-// decrease if less is available!
 echo '<p>Preparing species and infraspecies...<br>';
 $total = $loader->count('Taxon');
-$ind->init($total, 100, 30);
+$ind->init($total, 100, 100);
 echo "Transferring $total taxa<br>";
-for ($limit = 3000, $offset = 0; $offset < $total; $offset += $limit) {
+for ($limit = 1000, $offset = 0; $offset < $total; $offset += $limit) {
     try {
         $taxa = $loader->load('Taxon', $offset, $limit);
         //echo showMemoryUse().' memory used<br>';
