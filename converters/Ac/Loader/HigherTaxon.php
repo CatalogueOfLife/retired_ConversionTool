@@ -6,7 +6,7 @@ require_once 'converters/Ac/Model/AcToBs/HigherTaxon.php';
 /**
  * HigherTaxon loader
  * 
- * @author Nœria Torrescasana Aloy, Ruud Altenburg
+ * @author Nï¿½ria Torrescasana Aloy, Ruud Altenburg
  *
  */
 class Ac_Loader_HigherTaxon extends Ac_Loader_Abstract
@@ -21,8 +21,8 @@ class Ac_Loader_HigherTaxon extends Ac_Loader_Abstract
     public function count()
     {
         $stmt = $this->_dbh->prepare(
-            'SELECT COUNT(1) FROM `taxa` WHERE `taxon` NOT LIKE "%species" '.
-            'AND `is_accepted_name` = 1'
+            'SELECT COUNT(1) FROM `taxa` WHERE `taxon` != "species" AND '.
+            '`taxon` != "infraspecies" AND `is_accepted_name` = 1'
         );
         $stmt->execute();
         $res = $stmt->fetchColumn(0);
@@ -44,7 +44,8 @@ class Ac_Loader_HigherTaxon extends Ac_Loader_Abstract
         $stmt = $this->_dbh->prepare(
             'SELECT `record_id` as id, LOWER(`taxon`) as taxonomicRank, `name`, '.
             '`lsid`, `parent_id` as parentId FROM `taxa` WHERE '.
-            '`taxon` NOT LIKE "%species" AND `is_accepted_name` = 1 '.
+            '`taxon` != "species" AND `taxon` != "infraspecies" AND '.
+            '`is_accepted_name` = 1 '.
             'ORDER BY `record_id` LIMIT :offset, :limit'
         );
         $stmt->bindParam('offset', $offset, PDO::PARAM_INT);

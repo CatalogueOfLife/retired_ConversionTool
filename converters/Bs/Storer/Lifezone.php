@@ -45,14 +45,14 @@ class Bs_Storer_Lifezone extends Bs_Storer_Abstract
     
     private function _cleanLifezone($str)
     {
-        $find = array(
-            'fresh',
-            'terrestial'
+        $str = trim($str);
+        $replacements = array(
+            'fresh' => 'freshwater',
+            'terrestial' => 'terrestrial'
         );
-        $replace = array(
-            'freshwater',
-            'terrestrial'
-        );
-        return trim(str_replace($find, $replace, $str));
+        if (array_key_exists($str, $replacements)) {
+            return $replacements[$str];
+        }
+        return $str;
     }
 }

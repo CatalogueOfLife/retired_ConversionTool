@@ -25,11 +25,10 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
     public function count()
     {
         $stmt = $this->_dbh->prepare(
-            'SELECT COUNT(1) FROM `taxa` t1, `scientific_names` t2 '.
-            'WHERE t1.`is_accepted_name` = 1 '.
-            'AND t1.`parent_id` != 0 '.
-            'AND (t1.`taxon` = "species" OR  t1.`taxon` = "infraspecies") '.
-            'AND t1.`name_code` = t2.`name_code` '
+            'SELECT COUNT(1) FROM `taxa`  '.
+            'WHERE `is_accepted_name` = 1 '.
+            'AND `parent_id` != 0 '.
+            'AND (`taxon` = "species" OR `taxon` = "infraspecies") '
         );
         $stmt->execute();
         $res = $stmt->fetchColumn(0);
@@ -49,23 +48,15 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
     public function load($offset, $limit)
     {
         $stmt = $this->_dbh->prepare(
-            'SELECT t1.`record_id` AS id, t1.`taxon` AS taxonomicRank, '.
-            't1.`name`, t2.`genus`, t2.`species`, t2.`infraspecies`, '.
-            't2.`infraspecies_marker` AS infraSpecificMarker, t1.`lsid`, '.
-            't1.`parent_id` AS parentId, '.
-            't1.`database_id` AS sourceDatabaseId, '.
-            't1.`name_code` AS originalId, t2.`author` AS authorString, '.
-            't1.`sp2000_status_id` AS scientificNameStatusId,'.
-            't2.`web_site` AS uri, t2.`comment` AS additionalData, '.
-            't2.`scrutiny_date` AS scrutinyDate, '.
-            't2.`specialist_id` AS specialistId, '.
-            't2.`GSDTaxonGUID` AS taxonGuid, '.
-            't2.`GSDNameGUID` AS nameGuid '.
-            'FROM `taxa` t1, `scientific_names` t2 '.
-            'WHERE t1.`is_accepted_name` = 1 '.
-            'AND t1.`parent_id` != 0 '.
-            'AND (t1.`taxon` = "species" OR  t1.`taxon` = "infraspecies") '.
-            'AND t1.`name_code` = t2.`name_code` '.
+            'SELECT `record_id` AS id, `taxon` AS taxonomicRank, '.
+            '`name`, `lsid`, `parent_id` AS parentId, '.
+            '`database_id` AS sourceDatabaseId, '.
+            '`name_code` AS originalId,  '.
+            '`sp2000_status_id` AS scientificNameStatusId '.
+            'FROM `taxa` '.
+            'WHERE `is_accepted_name` = 1 '.
+            'AND `parent_id` != 0 '.
+            'AND (`taxon` = "species" OR  `taxon` = "infraspecies") '.
             'LIMIT :offset, :limit '
         );
         $stmt->bindParam('offset', $offset, PDO::PARAM_INT);
@@ -74,8 +65,9 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
 
         $taxa = array();
         while($taxon = $stmt->fetchObject('Bs_Model_AcToBs_Taxon')) {
-        	$this->_setTaxonScientificNameStatus($taxon);
-        	$this->_setTaxonSpecialistName($taxon);
+            $this->_setTaxonDetails($taxon);
+            $this->_setTaxonScientificNameStatus($taxon);
+            $this->_setTaxonSpecialistName($taxon);
         	$this->_setTaxonReferences($taxon);
             $this->_setTaxonDistribution($taxon);
             $this->_setTaxonCommonNames($taxon);
@@ -85,6 +77,27 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
         }
         unset($stmt);
         return $taxa;
+    }
+    
+    protected function _setTaxonDetails(Model $taxon) 
+    {
+        $stmt = $this->_dbh->prepare(
+            'SELECT `genus`, `species`, `infraspecies`, '.
+            '`infraspecies_marker` AS infraSpecificMarker,  '.
+            '`author` AS authorString, '.
+            '`web_site` AS uri, `comment` AS additionalData, '.
+            '`scrutiny_date` AS scrutinyDate, '.
+            '`specialist_id` AS specialistId, '.
+            '`GSDTaxonGUID` AS taxonGuid, '.
+            '`GSDNameGUID` AS nameGuid '.
+            'FROM `scientific_names` '.
+            'WHERE `record_id` = ? '
+        );
+        $stmt->setFetchMode(PDO::FETCH_INTO, $taxon);
+        $stmt->execute(array($taxon->id));
+        $stmt->fetch();
+        unset($stmt);
+        return $taxon;
     }
     
     protected function _setTaxonScientificNameStatus(Model $taxon)

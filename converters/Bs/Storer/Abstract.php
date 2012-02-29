@@ -107,7 +107,7 @@ abstract class Bs_Storer_Abstract
             $dateToTimestamp = strtotime($date);
             return date('Y-m-d', $dateToTimestamp);
         }
-        return NULL;
+        return null;
     }
 
     public function writeToErrorTable ($taxon_id, $name, $message)
@@ -119,5 +119,11 @@ abstract class Bs_Storer_Abstract
             $name, 
             $message
         ));
+    }
+
+    public function unaccent ($str)
+    {
+        return preg_replace('~&([a-z]{1,2})(acute|cedil|circ|grave|lig|orn|ring|slash|th|tilde|uml);~i', 
+            '$1', htmlentities($str, ENT_QUOTES, 'UTF-8'));
     }
 }

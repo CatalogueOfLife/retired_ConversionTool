@@ -207,10 +207,11 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon implements Bs_Storer_Interfa
         // these at storage stage, obviates DISTINCT query
         $storedDistributions = array();
         foreach ($taxon->distribution as $distribution) {
-            if (!in_array($distribution->freeText, $storedDistributions)) {
+            $check = $this->unaccent($distribution->freeText);
+            if (!in_array($check, $storedDistributions)) {
                 $distribution->taxonId = $taxon->id;
                 $storer->store($distribution);
-                $storedDistributions[] = $distribution->freeText;
+                $storedDistributions[] = $check;
             }
         }
         unset($storer, $storedDistributions);
