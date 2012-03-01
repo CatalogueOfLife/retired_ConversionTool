@@ -90,7 +90,6 @@
   // Denormalized tables and their indices
   $tables = array(
       SEARCH_ALL => array(
-          'id', 
           'name_element', 
           'name', 
           'rank', 
@@ -278,36 +277,36 @@
               }
               else {
                   shrinkInt($table, $cl);
-          }
-      }
-  }
-  // Create indices
-  foreach ($indices as $index) {
-      echo "Adding index to $index...<br>";
-      // Combined index
-      if (strpos($index, ',') !== false) {
-          $query2 = 'ALTER TABLE `' . $table . '` ADD INDEX (';
-          $indexParts = explode(',', $index);
-          for ($i = 0; $i < count($indexParts); $i++) {
-              $query2 .= '`' . $indexParts[$i] . '`,';
-          }
-          $query2 = substr($query2, 0, -1) . ')';
-      }
-      // Single index
-      else {
-          $query2 = 'ALTER TABLE `' . $table . '` ADD INDEX (`' . $index . '`)';
-      }
-      $stmt2 = $pdo->prepare($query2);
-      $stmt2->execute();
-  }
-  // Create fulltext index on distribution
-  if ($table == SEARCH_DISTRIBUTION) {
-      echo "Adding FULLTEXT index to distribution...<br>";
-      $query4 = 'ALTER TABLE `' . $table . '` ADD FULLTEXT (`distribution`)';
-      $stmt2 = $pdo->prepare($query4);
-      $stmt2->execute();
-  }
-  echo '</p>';
+	          }
+	      }
+	  }
+	  // Create indices
+	  foreach ($indices as $index) {
+	      echo "Adding index to $index...<br>";
+	      // Combined index
+	      if (strpos($index, ',') !== false) {
+	          $query2 = 'ALTER TABLE `' . $table . '` ADD INDEX (';
+	          $indexParts = explode(',', $index);
+	          for ($i = 0; $i < count($indexParts); $i++) {
+	              $query2 .= '`' . $indexParts[$i] . '`,';
+	          }
+	          $query2 = substr($query2, 0, -1) . ')';
+	      }
+	      // Single index
+	      else {
+	          $query2 = 'ALTER TABLE `' . $table . '` ADD INDEX (`' . $index . '`)';
+	      }
+	      $stmt2 = $pdo->prepare($query2);
+	      $stmt2->execute();
+	  }
+	  // Create fulltext index on distribution
+	  if ($table == SEARCH_DISTRIBUTION) {
+	      echo "Adding FULLTEXT index to distribution...<br>";
+	      $query4 = 'ALTER TABLE `' . $table . '` ADD FULLTEXT (`distribution`)';
+	      $stmt2 = $pdo->prepare($query4);
+	      $stmt2->execute();
+	  }
+	  echo '</p>';
   }
 
   echo '<p><b>Post-processing ' . SEARCH_ALL . ', ' . SEARCH_DISTRIBUTION . ', ' . SEARCH_SCIENTIFIC . ' and ' . TAXON_TREE . ' tables</b><br>';
