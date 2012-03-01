@@ -16,8 +16,15 @@ abstract class Ac_Loader_Abstract
         $this->_logger = $logger;
     }
     
-    public static function memoryUsePercentage ()
+    public static function memoryUse ()
     {
         return (memory_get_usage() / (ini_get('memory_limit') * 1048576)) * 100;
+    }
+
+    public function printObject ($object)
+    {
+        echo '<pre>';
+        print_r($object);
+        echo '</pre>';
     }
 }

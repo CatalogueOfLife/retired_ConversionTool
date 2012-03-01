@@ -79,7 +79,7 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
             $taxa[] = $taxon;
             
             $memLimit++;
-            if (self::memoryUsePercentage() > $this->_maxMemoryUse) {
+            if (self::memoryUse() > $this->_maxMemoryUse) {
                 return array($taxa, $memLimit);
             }
         }
@@ -101,9 +101,12 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
             'FROM `scientific_names` '.
             'WHERE `record_id` = ? '
         );
-        $stmt->setFetchMode(PDO::FETCH_INTO, $taxon);
+        $stmt->setFetchMode(PDO::FETCH_INTO);
         $stmt->execute(array($taxon->id));
-        $stmt->fetch();
+        $data = $stmt->fetch(PDO::FETCH_ASSOC);
+        foreach ($data as $propName => $propValue) {
+            $taxon->{$propName} = $propValue;
+        }
         unset($stmt);
         return $taxon;
     }

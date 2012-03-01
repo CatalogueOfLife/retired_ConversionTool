@@ -103,7 +103,7 @@ for ($limit = 5000, $offset = 0; $offset < $total; $offset += $memLimit) {
         list($taxa, $memLimit) = $loader->load('Taxon', $offset, $limit);
         // Start debug
         if ($memLimit < $limit) {
-            echo '<br><br>Memory use '.round(Ac_Loader_Taxon::memoryUsePercentage()).
+            echo '<br><br>Memory use '.round(Ac_Loader_Taxon::memoryUse()).
                 '%, limit capped at '.$memLimit.'<br><br>';
         }
         // End debug

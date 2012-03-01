@@ -59,7 +59,7 @@ class Ac_Loader_HigherTaxon extends Ac_Loader_Abstract
         while($taxon = $stmt->fetchObject('Bs_Model_AcToBs_HigherTaxon')) {
             $taxa[] = $taxon;
             $memLimit++;
-        	if (self::memoryUsePercentage() > $this->_maxMemoryUse) {
+        	if (self::memoryUse() > $this->_maxMemoryUse) {
         	    return array($taxa, $memLimit);
         	}
         }
