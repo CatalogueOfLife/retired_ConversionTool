@@ -71,9 +71,9 @@ echo '<p>Preparing higher taxa...<br>';
 $total = $loader->count('HigherTaxon');
 $ind->init($total, 100, 100);
 echo "Transferring $total higher taxa<br>";
-for ($limit = 10000, $offset = 0; $offset < $total; $offset += $limit) {
+for ($limit = 50000, $offset = 0; $offset < $total; $offset += $memLimit) {
     try {
-        $taxa = $loader->load('HigherTaxon', $offset, $limit);
+        list($taxa, $memLimit) = $loader->load('HigherTaxon', $offset, $limit);
         foreach ($taxa as $taxon) {
             try{
                 $storer->store($taxon);
@@ -86,7 +86,6 @@ for ($limit = 10000, $offset = 0; $offset < $total; $offset += $limit) {
             }
         }
         unset($taxa);
-        //        Dictionary::dumpAll();
     }
     catch (PDOException $e) {
         echo 'Load error: '.formatException($e);
@@ -99,10 +98,15 @@ echo '<p>Preparing species and infraspecies...<br>';
 $total = $loader->count('Taxon');
 $ind->init($total, 100, 100);
 echo "Transferring $total taxa<br>";
-for ($limit = 1000, $offset = 0; $offset < $total; $offset += $limit) {
+for ($limit = 5000, $offset = 0; $offset < $total; $offset += $memLimit) {
     try {
-        $taxa = $loader->load('Taxon', $offset, $limit);
-        //echo showMemoryUse().' memory used<br>';
+        list($taxa, $memLimit) = $loader->load('Taxon', $offset, $limit);
+        // Start debug
+        if ($memLimit < $limit) {
+            echo '<br><br>Memory use '.round(Ac_Loader_Taxon::memoryUsePercentage()).
+                '%, limit capped at '.$memLimit.'<br><br>';
+        }
+        // End debug
         foreach ($taxa as $taxon) {
             try {
                 $storer->store($taxon);

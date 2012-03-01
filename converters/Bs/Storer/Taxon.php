@@ -196,7 +196,7 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon implements Bs_Storer_Interfa
                 );
             }
         }
-        unset($storer);
+        unset($storer, $referenceIds);
         return $taxon;
     }
 

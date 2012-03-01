@@ -13,6 +13,7 @@ class Ac_Loader
 {
     protected $_dbh;
     protected $_logger;
+    protected $_loaders = array();
     
     public function __construct(PDO $dbh, Zend_Log $logger)
     {
@@ -39,10 +40,15 @@ class Ac_Loader
         if(!class_exists($class)) {
             throw new Exception('Loader class undefined');
         }
-        $loader = new $class($this->_dbh, $this->_logger);
-        if(!$loader instanceof Ac_Loader_Interface) {
-            unset($loader);
-            throw new Exception('Invalid loader instance');
+        if (isset($this->_loaders[$class])) {
+            $loader = $this->_loaders[$class];
+        } else {
+            $loader = new $class($this->_dbh, $this->_logger);
+            if(!$loader instanceof Ac_Loader_Interface) {
+                unset($loader);
+                throw new Exception('Invalid loader instance');
+            }
+            $this->_loaders[$class] = $loader;
         }
         return $loader;
     }

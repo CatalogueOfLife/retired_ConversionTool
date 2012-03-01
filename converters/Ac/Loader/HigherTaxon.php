@@ -38,6 +38,8 @@ class Ac_Loader_HigherTaxon extends Ac_Loader_Abstract
      * @param int $offset offset value for LIMIT in query
      * @param int $limit number of rows to be returned in query
      * @return array $taxa array of HigherTaxon objects
+     * 
+     * Memory may not exceed xx percentage of total memory (defined in $this->_maxMemoryUse)
      */
     public function load($offset, $limit)
     {
@@ -53,10 +55,15 @@ class Ac_Loader_HigherTaxon extends Ac_Loader_Abstract
         $stmt->execute();
 
         $taxa = array();
+        $memLimit = 0;
         while($taxon = $stmt->fetchObject('Bs_Model_AcToBs_HigherTaxon')) {
-        	$taxa[] = $taxon;
+            $taxa[] = $taxon;
+            $memLimit++;
+        	if (self::memoryUsePercentage() > $this->_maxMemoryUse) {
+        	    return array($taxa, $memLimit);
+        	}
         }
         unset($stmt);
-        return $taxa;
+        return array($taxa, $limit);
     }
 }

@@ -13,6 +13,7 @@ class Bs_Storer
 {
     protected $_dbh;
     protected $_logger;
+    protected $_storers = array();
     protected $_indicator;
     
     private static $dbTables = array(
@@ -89,10 +90,14 @@ class Bs_Storer
         if (!class_exists($class)) {
             throw new Exception('Storer class undefined');
         }
-        $storer = new $class($this->_dbh, $this->_logger);
-        if (!$storer instanceof Bs_Storer_Interface) {
-            unset($storer);
-            throw new Exception('Invalid storer instance');
+        if (isset($this->_storers[$class])) {
+            $storer = $this->_storers[$class];
+        } else {
+            $storer = new $class($this->_dbh, $this->_logger);
+            if (!$storer instanceof Bs_Storer_Interface) {
+                unset($storer);
+                throw new Exception('Invalid storer instance');
+            }
         }
         return $storer;
     }
