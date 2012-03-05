@@ -552,7 +552,8 @@ function updateTaxonTree ($tt, $source_database_ids, $species_count = 0)
             echo $e->getMessage();
         }
     }
-    try {
+    //Inserting the total_species is now done while filling the _taxon_tree
+/*    try {
         $stmt = $pdo->prepare('UPDATE ' . TAXON_TREE . ' SET `total_species` = ? WHERE `taxon_id` = ?');
         $stmt->execute(array(
             $species_count, 
@@ -561,7 +562,7 @@ function updateTaxonTree ($tt, $source_database_ids, $species_count = 0)
     }
     catch (Exception $e) {
         echo $e->getMessage();
-    }
+    }*/
 }
 
 function checkImportTables ($dbName, $tables)

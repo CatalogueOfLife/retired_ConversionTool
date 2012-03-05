@@ -476,7 +476,7 @@
   $indicator->init($stmt->rowCount(), 150, 500);
   while ($tt = $stmt->fetch(PDO::FETCH_ASSOC)) {
       $source_database_ids = getSourceDatabaseIds($tt);
-      $species_count = countSpecies($tt);
+      $species_count = null;//countSpecies($tt);
       updateTaxonTree($tt, $source_database_ids, $species_count);
       $indicator->iterate();
   }
