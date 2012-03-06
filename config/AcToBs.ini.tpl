@@ -18,6 +18,11 @@ driver = mysql
 ; separate options by comma
 options = "PDO::MYSQL_ATTR_INIT_COMMAND=set names utf8"
 
+[checks]
+fk_constraints = 1
+taxon_ids = 1
+synonym_ids = 1
+
 [settings]
 version = @VERSION@
 revision = @REVISION@
