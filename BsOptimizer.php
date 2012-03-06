@@ -37,7 +37,6 @@
   define('SPECIES_DETAILS', '_species_details');
   define('TAXON_TREE', '_taxon_tree');
   define('TOTALS', '_totals');
-  define('IMPORT_SOURCE_DATABASE_QUALIFIERS', '__import_source_database_qualifiers');
   define('IMPORT_SPECIES_ESTIMATE', '__import_species_estimate');
   $files = array(
       array(
@@ -84,6 +83,11 @@
           'path' => PATH . DENORMALIZED_TABLES_PATH, 
           'dumpFile' => TOTALS, 
           'message' => 'Filling ' . TOTALS . ' table'
+      ), 
+      array(
+          'path' => PATH . DENORMALIZED_TABLES_PATH, 
+          'dumpFile' => IMPORT_SPECIES_ESTIMATE, 
+          'message' => 'Importing species estimates'
       )
   );
 
