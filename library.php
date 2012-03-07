@@ -461,10 +461,10 @@ function getSourceDatabaseIds ($tt)
     // Higher taxon
     if ($nr_elements == 1 || $tt['name'] == 'Not assigned') {
         // Top level
-        $query = 'SELECT DISTINCT `source_database_id` 
+        $query = 'SELECT `source_database_id` 
                   FROM ' . SEARCH_SCIENTIFIC . ' 
                   WHERE `' . strtolower($tt['rank']) . '` = ? 
-                  AND `source_database_id` != 0 ';
+                  AND `source_database_id` != 0';
         $params = array(
             $tt['name']
         );
@@ -476,12 +476,13 @@ function getSourceDatabaseIds ($tt)
     }
     // Species
     else if ($nr_elements == 2) {
-        $query = 'SELECT DISTINCT `source_database_id` 
+        $query = 'SELECT `source_database_id` 
                   FROM ' . SEARCH_SCIENTIFIC . ' 
                   WHERE `genus` = ? 
                   AND `species` = ?
                   AND `infraspecies` = "" 
-                  AND `source_database_id` != 0 ';
+                  AND `source_database_id` != 0
+                  AND `status` IN (1,4)';
         $params = array(
             $name_elements[0], 
             $name_elements[1]
@@ -489,10 +490,11 @@ function getSourceDatabaseIds ($tt)
     }
     // Infraspecies; query _search_all for this
     else {
-        $query = 'SELECT DISTINCT `source_database_id` 
+        $query = 'SELECT `source_database_id` 
                   FROM ' . SEARCH_ALL . ' 
                   WHERE `name` = ? 
-                  AND `rank` = ? ';
+                  AND `rank` = ?
+                  AND `status` IN (1,4)';
         $params = array(
             $tt['name'], 
             $tt['rank']
@@ -501,7 +503,7 @@ function getSourceDatabaseIds ($tt)
     $stmt = $pdo->prepare($query);
     $stmt->execute($params);
     $result = $stmt->fetchAll(PDO::FETCH_NUM);
-    return $result ? $result : array();
+    return $result ? array_unique($result) : array();
 }
 
 function countSpecies ($tt)
