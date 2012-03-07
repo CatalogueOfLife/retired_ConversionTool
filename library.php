@@ -76,7 +76,7 @@ function logInvalidRecords ()
         array(
             'query' => 'SELECT t1.`record_id`, t1.`name`  
                         FROM `taxa`AS t1 
-                        LEFT JOIN `taxa` AS t2 ON  t1.`parent_id` = t2.`record_id`
+                        LEFT JOIN `taxa` AS t2 ON t1.`parent_id` = t2.`record_id`
                         WHERE t1.`taxon` = "Infraspecies" AND 
                         t2.`taxon` != "Species" AND 
                         t1.`is_accepted_name` = 1', 

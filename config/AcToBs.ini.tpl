@@ -22,6 +22,7 @@ options = "PDO::MYSQL_ATTR_INIT_COMMAND=set names utf8"
 fk_constraints = 1
 taxon_ids = 1
 synonym_ids = 1
+infraspecies_parent_ids = 1
 
 [settings]
 version = @VERSION@

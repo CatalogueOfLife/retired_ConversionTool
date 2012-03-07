@@ -66,14 +66,18 @@ class Bs_Storer_HigherTaxon extends Bs_Storer_TaxonAbstract implements Bs_Storer
         }
         // Verify for infraspecies if parent is present and matches 
         // record in the checklist; if not abort
-        if (isset(
-            $taxon->infraspecies) && $taxon->infraspecies != '') {
-            $parentRankId = $this->_recordExists('taxonomic_rank_id', 'taxon', 
-                array(
-                    'id' => $taxon->parentId
-                ));
-            if ($parentRankId != $this->_getTaxonomicRankId('species')) {
-                return false;
+        $config = parse_ini_file('config/AcToBs.ini', true);
+        if (isset($config['checks']['infraspecies_parent_ids']) && 
+            $config['checks']['infraspecies_parent_ids'] == 1) {
+            if (isset(
+                $taxon->infraspecies) && $taxon->infraspecies != '') {
+                $parentRankId = $this->_recordExists('taxonomic_rank_id', 'taxon', 
+                    array(
+                        'id' => $taxon->parentId
+                    ));
+                if ($parentRankId != $this->_getTaxonomicRankId('species')) {
+                    return false;
+                }
             }
         }
         $stmt = $this->_dbh->prepare(

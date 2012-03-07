@@ -22,7 +22,7 @@ class Bs_Storer
         'common_name_element', 
         'distribution', 
         'distribution_free_text', 
-        'lifezone_to_taxon_detail',
+        'lifezone_to_taxon_detail', 
         'reference', 
         'reference_to_common_name', 
         'reference_to_synonym', 
@@ -30,7 +30,7 @@ class Bs_Storer
         'region_free_text', 
         'scientific_name_element', 
         'scrutiny', 
-        'source_database',
+        'source_database', 
         'specialist', 
         'synonym', 
         'synonym_name_element', 
@@ -45,7 +45,7 @@ class Bs_Storer
     private static $dbDenormalizedTables = array(
         '_conversion_errors', 
         '_new_search_name_elements', 
-        '_image_resource',
+        '_image_resource', 
         '_search_all', 
         '_search_all_new', 
         '_search_distribution', 
@@ -92,7 +92,8 @@ class Bs_Storer
         }
         if (isset($this->_storers[$class])) {
             $storer = $this->_storers[$class];
-        } else {
+        }
+        else {
             $storer = new $class($this->_dbh, $this->_logger);
             if (!$storer instanceof Bs_Storer_Interface) {
                 unset($storer);
@@ -161,7 +162,11 @@ class Bs_Storer
             $stmt = $this->_dbh->prepare('ALTER TABLE `' . $table . '` AUTO_INCREMENT = 1');
             $stmt->execute();
         }
-        $this->_dbh->query('SET FOREIGN_KEY_CHECKS = 1');
+        // Re-enable checks only if set as such in config
+        $config = parse_ini_file('config/AcToBs.ini', true);
+        if (isset($config['checks']['fk_constraints']) && $config['checks']['fk_constraints'] == 1) {
+            $this->_dbh->query('SET FOREIGN_KEY_CHECKS = 1');
+        }
         // Delete denormalized tables
         foreach (self::$dbDenormalizedTables as $table) {
             $stmt = $this->_dbh->prepare('DROP TABLE IF EXISTS `' . $table . '`');

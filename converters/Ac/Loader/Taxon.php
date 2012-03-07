@@ -138,11 +138,12 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
     protected function _setTaxonReferences(Model $taxon)
     {
         $stmt = $this->_dbh->prepare(
-            'SELECT t1.`author` AS authors, t1.`year`, t1.`title`, '.
-            't1.`source` AS text, t2.`reference_type` AS type '.
-            'FROM `references` t1, `scientific_name_references` t2 '.
-            'WHERE t2.`name_code` = ? AND t1.`record_id` = t2.`reference_id` '.
-            'AND t2.`reference_type` != "ComNameRef"'
+            'SELECT t1.`author` AS authors, t1.`year`, t1.`title`, 
+            t1.`source` AS text, t2.`reference_type` AS type 
+            FROM `references` t1 
+            LEFT JOIN `scientific_name_references` AS t2 ON t1.`record_id` = t2.`reference_id` 
+            WHERE t2.`name_code` = ? AND 
+            (t2.`reference_type` != "ComNameRef" OR t2.`reference_type` IS NULL)'
 		);
 		$stmt->execute(array($taxon->originalId));
 		$taxon->references = $stmt->fetchAll(PDO::FETCH_CLASS, 'Reference');

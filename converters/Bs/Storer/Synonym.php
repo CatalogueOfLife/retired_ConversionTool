@@ -19,14 +19,17 @@ class Bs_Storer_Synonym extends Bs_Storer_TaxonAbstract implements Bs_Storer_Int
         }
         // Exit if id already exists; test needed because error occurred 
         // during import.
-        if ($this->_recordExists(
-            'id', 'synonym', array(
-                'id' => $synonym->id
-            ))) {
-            $name = trim(
-                $synonym->genus . ' ' . $synonym->species . ' ' . $synonym->infraspecies);
-            $this->writeToErrorTable($synonym->id, $name, 'Synonym already exists');
-            return $synonym;
+        $config = parse_ini_file('config/AcToBs.ini', true);
+        if (isset($config['checks']['synonym_ids']) && $config['checks']['synonym_ids'] == 1) {
+            if ($this->_recordExists(
+                'id', 'synonym', array(
+                    'id' => $synonym->id
+                ))) {
+                $name = trim(
+                    $synonym->genus . ' ' . $synonym->species . ' ' . $synonym->infraspecies);
+                $this->writeToErrorTable($synonym->id, $name, 'Synonym already exists');
+                return $synonym;
+            }
         }
         if (strtolower($synonym->taxonomicRank) == 'infraspecies') {
             $this->_setInfraSpecificMarkerId($synonym);

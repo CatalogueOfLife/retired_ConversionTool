@@ -154,24 +154,57 @@ class Bs_Storer_CommonName extends Bs_Storer_Abstract
         return $commonName;
     }
     
-    
+ /*   
     private function _setCommonNameElement(Model $commonName) 
     {
         $commonNameElementId = $this->_recordExists('id', 'common_name_element', 
-            array('name' => $commonName->commonNameElement)
+            array(
+                'name' => $commonName->commonNameElement,
+                'transliteration' => $commonName->transliteration
+            )
         );
         if ($commonNameElementId) {
             $commonName->commonNameElementId = $commonNameElementId;
         } else {
             $stmt = $this->_dbh->prepare(
-                'INSERT INTO `common_name_element` (`name`) VALUE (?)'
+                'INSERT INTO `common_name_element` (`name`, `transliteration`) VALUE (?, ?)'
             );
-            $stmt->execute(array($commonName->commonNameElement));
+            $stmt->execute(array(
+                'name' => $commonName->commonNameElement,
+                'transliteration' => $commonName->transliteration
+            ));
             $commonName->commonNameElementId = $this->_dbh->lastInsertId();
         }
         return $commonName;
     }
-
+*/
+    
+    private function _setCommonNameElement(Model $commonName) 
+    {
+        $commonNameElementId = $this->_recordExists('id', 'common_name_element', 
+            array(
+                'name' => $commonName->commonNameElement,
+                'transliteration' => $commonName->transliteration
+            )
+        );
+        if ($commonNameElementId) {
+            $commonName->commonNameElementId = $commonNameElementId;
+        } else {
+            $params[] = $commonName->commonNameElement;
+            $query = 'INSERT INTO `common_name_element` (`name`';
+            if (!empty($commonName->transliteration)) {
+                $query .= ', `transliteration`) VALUES (?, ?)';
+                $params[] = $commonName->transliteration;
+            } else {
+                $query .= ') VALUE (?)';
+            }
+            $stmt = $this->_dbh->prepare($query);
+            $stmt->execute($params);
+            $commonName->commonNameElementId = $this->_dbh->lastInsertId();
+        }
+        return $commonName;
+    }
+     
     private function _setCommonName(Model $commonName) 
     {
         $commonNameId = $this->_recordExists('id', 'common_name', 

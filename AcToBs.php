@@ -71,7 +71,7 @@ echo '<p>Preparing higher taxa...<br>';
 $total = $loader->count('HigherTaxon');
 $ind->init($total, 100, 100);
 echo "Transferring $total higher taxa<br>";
-for ($limit = 50000, $offset = 0; $offset < $total; $offset += $memLimit) {
+for ($limit = 100000, $offset = 0; $offset < $total; $offset += $memLimit) {
     try {
         list($taxa, $memLimit) = $loader->load('HigherTaxon', $offset, $limit);
         foreach ($taxa as $taxon) {
@@ -98,7 +98,7 @@ echo '<p>Preparing species and infraspecies...<br>';
 $total = $loader->count('Taxon');
 $ind->init($total, 100, 100);
 echo "Transferring $total taxa<br>";
-for ($limit = 5000, $offset = 0; $offset < $total; $offset += $memLimit) {
+for ($limit = 10000, $offset = 0; $offset < $total; $offset += $memLimit) {
     try {
         list($taxa, $memLimit) = $loader->load('Taxon', $offset, $limit);
         // Start debug

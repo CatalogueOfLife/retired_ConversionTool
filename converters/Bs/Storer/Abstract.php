@@ -30,7 +30,7 @@ abstract class Bs_Storer_Abstract
         $query = 'SELECT `' . $return_column . '` FROM `' . $table . '` WHERE ';
         foreach ($where as $column => $value) {
             $query .= ' (`' . $column . '` = :' . $column;
-            if ($value == NULL) {
+            if ($value == null) {
                 $query .= ' OR `' . $column . '` IS NULL';
             }
             $query .= ') AND ';
@@ -119,11 +119,5 @@ abstract class Bs_Storer_Abstract
             $name, 
             $message
         ));
-    }
-
-    public function unaccent ($str)
-    {
-        return preg_replace('~&([a-z]{1,2})(acute|cedil|circ|grave|lig|orn|ring|slash|th|tilde|uml);~i', 
-            '$1', htmlentities($str, ENT_QUOTES, 'UTF-8'));
     }
 }

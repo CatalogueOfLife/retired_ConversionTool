@@ -14,12 +14,6 @@
   alwaysFlush();
 
   // Path to sql files
-  /*define('PATH', 
-         realpath('.').PATH_SEPARATOR.
-         'docs_and_dumps'.PATH_SEPARATOR.
-         'dumps'.PATH_SEPARATOR.
-         'base_scheme'.PATH_SEPARATOR.
-         'ac'.PATH_SEPARATOR); Doesn't work; PATH_SEPARATOR returns : on Mac OS X */
   define('PATH', realpath('.') . '/docs_and_dumps/dumps/base_scheme/ac/');
   define('DENORMALIZED_TABLES_PATH', 'denormalized_tables/');
 
@@ -137,7 +131,7 @@
       ), 
       TOTALS => array()
   );
-
+/*
   // Some columns are not shrunken immediately because some post-processing needs to take place first
   $postponed_tables = array(
       SEARCH_ALL => array(
@@ -172,7 +166,7 @@
           'confidence' => 'int'
       )
   );
-
+*/
   // Name elements in _search_all table to be discarded
   $delete_name_elements = array(
       'sp.', 
@@ -218,7 +212,7 @@
   $pdo = DbHandler::getInstance('target');
   $indicator = new Indicator();
 
-  echo '<p>First denormalized tables are created, filled and reduced to minimum size. Next indices are created.<br>
+  echo '<p>First denormalized tables are created and filled. Next indices are created.<br>
         Finally taxonomic coverage is processed from free text field to true database table to determine 
         points of attachment for each GSD sector.</p>';
 
@@ -242,12 +236,12 @@
   $runningTime = round(microtime(true) - $start);
   echo "Script took $runningTime seconds to complete<br></p>";
 
-  echo '<p><br>Optimizing denormalized tables. Table columns are trimmed to 
-          the minimum size and indices are created.</p>';
+  echo '<p><br>Indices are created for denormalized tables.</p>';
 
   foreach ($tables as $table => $indices) {
       echo "<p><b>Processing table $table...</b><br>";
-      $stmt = $pdo->prepare('SHOW COLUMNS FROM `' . $table . '`');
+/*   
+     $stmt = $pdo->prepare('SHOW COLUMNS FROM `' . $table . '`');
       $stmt->execute();
       // Trim all varchar and int fields to minimum size
       while ($cl = $stmt->fetch(PDO::FETCH_ASSOC)) {
@@ -266,6 +260,7 @@
 	          }
 	      }
 	  }
+*/
 	  // Create indices
 	  foreach ($indices as $index) {
 	      echo "Adding index to $index...<br>";
@@ -295,7 +290,8 @@
 	  echo '</p>';
   }
 
-  echo '<p><b>Post-processing ' . SEARCH_ALL . ', ' . SEARCH_DISTRIBUTION . ', ' . SEARCH_SCIENTIFIC . ' and ' . TAXON_TREE . ' tables</b><br>';
+  echo '<p><b>Post-processing ' . SEARCH_ALL . ', ' . SEARCH_DISTRIBUTION . ', ' .
+      SEARCH_SCIENTIFIC . ' and ' . TAXON_TREE . ' tables</b><br>';
   echo 'Updating ' . SEARCH_ALL . '...<br>';
   echo '&nbsp;&nbsp;&nbsp; Cleaning name elements...<br>';
   $query = 'SELECT `id`, `name_element` FROM `' . SEARCH_ALL . '`';
@@ -333,7 +329,8 @@
   $stmt->execute();
 
   echo 'Updating ' . SEARCH_DISTRIBUTION . '...<br>';
-  $query = 'UPDATE `' . SEARCH_DISTRIBUTION . '` AS sd, `' . SEARCH_ALL . '` AS sa SET sd.`name` = sa.`name`, sd.`kingdom` = sa.`group` WHERE sd.`accepted_species_id` = sa.`id`';
+  $query = 'UPDATE `' . SEARCH_DISTRIBUTION . '` AS sd, `' . SEARCH_ALL . '` AS sa 
+    SET sd.`name` = sa.`name`, sd.`kingdom` = sa.`group` WHERE sd.`accepted_species_id` = sa.`id`';
   $stmt = $pdo->prepare($query);
   $stmt->execute();
 
@@ -443,8 +440,7 @@
       $stmt->execute();
   }
 
-  echo '</p><p><b>New 1.7 functionality</b><br>
-        Adding species count and source databases to ' . TAXON_TREE . '...<br>';
+  echo '</p><p>Adding species count and source databases to ' . TAXON_TREE . '...<br>';
   $clean = 'UPDATE ' . TAXON_TREE . ' SET `total_species` = 0, `total_species_estimation` = 0, `estimate_source` = ""; 
             TRUNCATE TABLE `' . SOURCE_DATABASE_TO_TAXON_TREE_BRANCH . '`;';
   $stmt = $pdo->prepare($clean);
@@ -485,7 +481,7 @@
       $stmt = $pdo->prepare($update);
       $stmt->execute($est);
   }
-
+/*
   echo 'Importing qualifiers from the ' . IMPORT_SOURCE_DATABASE_QUALIFIERS . ' table...<br>';
   $clean = 'UPDATE ' . SOURCE_DATABASE_DETAILS . ' SET `coverage` = "", `completeness` = 0, `confidence` = 0;';
   $stmt = $pdo->prepare($clean);
@@ -521,7 +517,7 @@
           }
       }
   }
-
+*/
   echo '</p><p><b>Analyzing denormalized tables</b><br>';
   foreach ($tables as $table => $indices) {
       echo "Analyzing table $table...<br>";
