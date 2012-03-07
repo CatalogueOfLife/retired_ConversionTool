@@ -212,7 +212,9 @@
   $pdo = DbHandler::getInstance('target');
   $indicator = new Indicator();
 
-  echo '<p>First denormalized tables are created and filled. Next indices are created.<br>
+  $scriptStart = microtime(true);
+  
+   echo '<p>First denormalized tables are created and filled. Next indices are created.<br>
         Finally taxonomic coverage is processed from free text field to true database table to determine 
         points of attachment for each GSD sector.</p>';
 
@@ -524,7 +526,8 @@
       $pdo->query('ANALYZE TABLE `' . $table . '`');
   }
 
-  echo '</p><p>Ready!</p>';
+  $totalTime = round(microtime(true) - $scriptStart);
+  echo '</p><p>Ready! Optimalization took ' . $totalTime . ' seconds in total.</p>';
 
   ?>
 </body>
