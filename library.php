@@ -140,6 +140,41 @@ function writeSql ($path, $dumpFile, $message)
     }
 }
 
+function getOptimizedIndex ($table, $column)
+{
+    $pdo = DbHandler::getInstance('target');
+    $indices = array();
+    $stmt = $pdo->prepare('SHOW COLUMNS FROM `' . $table . "` WHERE `Field` = '$column'");
+    $stmt->execute();
+    $r = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (strpos($column, ',') !== false) {
+        $indexParts = explode(',', $column);
+        for ($i = 0; $i < count($indexParts); $i++) {
+            $indices[$indexParts[$i]] = getMaxLengthVarChar($table, $indexParts[$i]);
+        }
+    } else {
+        if (isVarCharField($r['Type'])) {
+            $indices[$column] = getMaxLengthVarChar($table, $column);
+        }
+    }
+    return $indices;
+}
+
+function getMaxLengthVarChar ($table, $column)
+{
+    $pdo = DbHandler::getInstance('target');
+    $stmt = $pdo->prepare('SELECT MAX(LENGTH(`' . $column . '`)) FROM `' . $table . '`');
+    $stmt->execute();
+    $r = $stmt->fetch(PDO::FETCH_NUM);
+    $maxLength = $r[0];
+    if ($maxLength == '' || $maxLength == 0) {
+        $maxLength = 1;
+    }
+    return $maxLength;
+}
+
+
+
 /**
  * Tests if string contains 'varchar'
  */
@@ -438,15 +473,15 @@ function setPointsOfAttachment ($source_database_id, $taxon_id)
 {
     $pdo = DbHandler::getInstance('target');
     $update = 'UPDATE ' . SPECIES_DETAILS . ' 
-    SET `point_of_attachment_id` = ' . $taxon_id . ' 
-    WHERE `source_database_id` = ?
-    AND (`kingdom_id` = ' . $taxon_id . ' 
-    OR `phylum_id` = ' . $taxon_id . ' 
-    OR `class_id` = ' . $taxon_id . ' 
-    OR `order_id` = ' . $taxon_id . ' 
-    OR `superfamily_id` = ' . $taxon_id . ' 
-    OR `family_id` = ' . $taxon_id . ' 
-    OR `genus_id` = ' . $taxon_id . ')';
+                SET `point_of_attachment_id` = ' . $taxon_id . ' 
+                WHERE `source_database_id` = ?
+                AND (`kingdom_id` = ' . $taxon_id . ' 
+                OR `phylum_id` = ' . $taxon_id . ' 
+                OR `class_id` = ' . $taxon_id . ' 
+                OR `order_id` = ' . $taxon_id . ' 
+                OR `superfamily_id` = ' . $taxon_id . ' 
+                OR `family_id` = ' . $taxon_id . ' 
+                OR `genus_id` = ' . $taxon_id . ')';
     $stmt = $pdo->prepare($update);
     $stmt->execute(array(
         $source_database_id

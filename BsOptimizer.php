@@ -6,7 +6,7 @@
   <title>Base Scheme Optimizer</title>
 </head>
 
-<body style="font: 12px verdana;">
+<body style="font: 12px verdana; width: 700px;">
   <h3>Base Scheme Optimizer</h3><?php
   require_once 'library.php';
   require_once 'DbHandler.php';
@@ -108,7 +108,6 @@
           'genus,species,infraspecies', 
           'accepted_species_id'
       ), 
-      SEARCH_FAMILY => array(), 
       SOURCE_DATABASE_DETAILS => array(
           'id'
       ), 
@@ -129,7 +128,6 @@
           'name', 
           'rank'
       ), 
-      TOTALS => array()
   );
 /*
   // Some columns are not shrunken immediately because some post-processing needs to take place first
@@ -214,9 +212,10 @@
 
   $scriptStart = microtime(true);
   
-   echo '<p>First denormalized tables are created and filled. Next indices are created.<br>
-        Finally taxonomic coverage is processed from free text field to true database table to determine 
-        points of attachment for each GSD sector.</p>';
+   echo '<p>First denormalized tables are created and indices are created for the denormalized tables. 
+        Taxonomic coverage is processed from free text field to true database table to determine 
+        points of attachment for each GSD sector. Finally species estimates, species count and source databases 
+        are linked to the tree.</p>';
 
   foreach ($files as $file) {
       $start = microtime(true);
@@ -263,30 +262,38 @@
 	      }
 	  }
 */
-	  // Create indices
+      // Create indices
 	  foreach ($indices as $index) {
-	      echo "Adding index to $index...<br>";
-	      // Combined index
-	      if (strpos($index, ',') !== false) {
-	          $query2 = 'ALTER TABLE `' . $table . '` ADD INDEX (';
-	          $indexParts = explode(',', $index);
-	          for ($i = 0; $i < count($indexParts); $i++) {
-	              $query2 .= '`' . $indexParts[$i] . '`,';
-	          }
-	          $query2 = substr($query2, 0, -1) . ')';
-	      }
-	      // Single index
-	      else {
-	          $query2 = 'ALTER TABLE `' . $table . '` ADD INDEX (`' . $index . '`)';
-	      }
-	      $stmt2 = $pdo->prepare($query2);
+	      $indexParameters = getOptimizedIndex($table, $index);
+          $query = 'ALTER TABLE `' . $table . '` ADD INDEX (';
+          // Index on int column
+          if (empty($indexParameters)) {
+              $indexType = 'int';
+              $query .= '`' . $index . '`';
+          // Index on single varchar column
+          } else if (count($indexParameters) == 1) {
+              $indexType = 'varchar (' . $indexParameters[$index] . ')';
+              $query .= '`' . $index . '` (' . $indexParameters[$index] . ')';
+          // Index on combined varchar column
+          } else {
+              $indexType = 'varchar (';
+              foreach ($indexParameters as $column => $size) {
+                  $query .= '`' . $column . '` (' . $size . '), ';
+                  $indexType .= $size . ', ';
+              }
+              $query = substr($query, 0, -2);
+              $indexType = substr($indexType, 0, -2).')';
+          }
+          $query .= ')';
+          echo 'Adding ' . $indexType ." index to $index...<br>";
+          $stmt2 = $pdo->prepare($query);
 	      $stmt2->execute();
 	  }
 	  // Create fulltext index on distribution
 	  if ($table == SEARCH_DISTRIBUTION) {
-	      echo "Adding FULLTEXT index to distribution...<br>";
-	      $query4 = 'ALTER TABLE `' . $table . '` ADD FULLTEXT (`distribution`)';
-	      $stmt2 = $pdo->prepare($query4);
+	      echo "Adding fulltext index to distribution...<br>";
+	      $query = 'ALTER TABLE `' . $table . '` ADD FULLTEXT (`distribution`)';
+	      $stmt2 = $pdo->prepare($query);
 	      $stmt2->execute();
 	  }
 	  echo '</p>';
@@ -312,7 +319,7 @@
   $stmt->execute(array(
       1
   ));
-  echo '&nbsp;&nbsp;&nbsp; Splitting ' . $stmt->rowCount() . 'rows...<br>';
+  echo '&nbsp;&nbsp;&nbsp; Splitting ' . $stmt->rowCount() . ' rows...<br>';
   $query = 'SELECT * FROM `' . SEARCH_ALL . '` WHERE `delete_me` = 1';
   $stmt = $pdo->prepare($query);
   $stmt->execute();
@@ -457,7 +464,7 @@
             LEFT JOIN `' . TAXON_TREE . '` AS t2 ON (t1.`parent_id` = t2.`taxon_id`)';
   $stmt = $pdo->prepare($query);
   $stmt->execute();
-  $indicator->init($stmt->rowCount(), 150, 500);
+  $indicator->init($stmt->rowCount(), 75, 500);
   while ($tt = $stmt->fetch(PDO::FETCH_ASSOC)) {
       $source_database_ids = getSourceDatabaseIds($tt);
       $species_count = null;//countSpecies($tt);
@@ -527,7 +534,7 @@
   }
 
   $totalTime = round(microtime(true) - $scriptStart);
-  echo '</p><p>Ready! Optimalization took ' . $totalTime . ' seconds in total.</p>';
+  echo '</p><p>Ready! Optimalization took ' . $indicator->formatTime($totalTime) . '.</p>';
 
   ?>
 </body>

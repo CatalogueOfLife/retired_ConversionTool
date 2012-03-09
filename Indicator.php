@@ -6,7 +6,7 @@
  * done. Optionally (by default) also displays current running time and estimated
  * remaining time.
  * 
- * @author Nœria Torrescasana Aloy, Ruud Altenburg
+ * @author Nï¿½ria Torrescasana Aloy, Ruud Altenburg
  */
 class Indicator
 {
