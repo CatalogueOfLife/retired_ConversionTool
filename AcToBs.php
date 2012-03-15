@@ -4,7 +4,7 @@
 <meta http-equiv="content-type" content="text/html; charset=utf-8">
 <title>Annual Checklist to Base Scheme</title>
 </head>
-<body style="font: 12px verdana;">
+<body style="font: 11px verdana;">
 <h3>Annual Checklist to Base Scheme</h3>
 
 <?php
@@ -101,12 +101,12 @@ echo "Transferring $total taxa<br>";
 for ($limit = 10000, $offset = 0; $offset < $total; $offset += $memLimit) {
     try {
         list($taxa, $memLimit) = $loader->load('Taxon', $offset, $limit);
-        // Start debug
+        /*// Start debug
         if ($memLimit < $limit) {
             echo '<br><br>Memory use '.round(Ac_Loader_Taxon::memoryUse()).
                 '%, limit capped at '.$memLimit.'<br><br>';
         }
-        // End debug
+        // End debug */
         foreach ($taxa as $taxon) {
             try {
                 $storer->store($taxon);
