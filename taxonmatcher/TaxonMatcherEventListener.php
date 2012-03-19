@@ -2,11 +2,11 @@
 
 interface TaxonMatcherEventListener {
 
-	const MESSAGE_TYPE_ERROR = 0;
-	const MESSAGE_TYPE_WARNING = 1;
-	const MESSAGE_TYPE_INFO = 2;
-	const MESSAGE_TYPE_OUTPUT = 3;
-	const MESSAGE_TYPE_DEBUG = 4;
+	const MSG_ERROR = 2;
+	const MSG_WARNING = 4;
+	const MSG_INFO = 8;
+	const MSG_OUTPUT = 16;
+	const MSG_DEBUG = 32;
 	
 	public function onMessage($messageType, $message, Exception $exception = null);
 

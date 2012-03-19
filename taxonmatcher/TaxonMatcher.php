@@ -1,6 +1,7 @@
 <?php
 
 include 'TaxonMatcherException.php';
+include 'InvalidInputException.php';
 include 'TaxonMatcherEventListener.php';
 
 class TaxonMatcher {
@@ -18,9 +19,12 @@ class TaxonMatcher {
 	private $_dbHost = 'localhost';
 	private $_dbUser;
 	private $_dbPassword;
-	private $_dbNameCTL;
-	private $_currentDbName;
-	private $_nextDbName;
+	// The staging area database. Formerly called the "Cumulative Taxon List".
+	private $_dbNameStage;
+	// The name of the database containing the data for the current CoL.
+	private $_dbNameCurrent;
+	// The name of the database containing the data for the upcoming CoL.
+	private $_dbNameNext;
 
 	/**
 	 * An array of TaxonMatcherEventListener objects.
@@ -59,8 +63,10 @@ class TaxonMatcher {
 	{
 		$this->_validateInput();
 		$this->_setup();
-		$this->_importAC($this->_currentDbName);
-		$this->_importAC($this->_nextDbName);
+		$this->_importAC($this->_dbNameCurrent);
+		$this->_importAC($this->_dbNameNext);
+		$this->_compareEditions();
+		$this->_addLSIDs();
 	}
 
 
@@ -117,9 +123,9 @@ class TaxonMatcher {
 	 * Set name of the "Cumulative Taxon List" database. Required.
 	 * @param string $dbName
 	 */
-	public function setDbNameCTL($dbName)
+	public function setDbNameStage($dbName)
 	{
-		$this->_dbNameCTL = $dbName;
+		$this->_dbNameStage = $dbName;
 	}
 
 
@@ -127,18 +133,18 @@ class TaxonMatcher {
 	 * Set name of the database containing the data for current edition of the CoL. Required.
 	 * @param string $dbName
 	 */
-	public function setCurrentDbName($dbName)
+	public function setDbNameCurrent($dbName)
 	{
-		$this->_currentDbName = $dbName;
+		$this->_dbNameCurrent = $dbName;
 	}
 
 	/**
 	 * Set name of the database containing the data for next edition of the CoL. Required.
 	 * @param string $dbName
 	 */
-	public function setNextDbName($dbName)
+	public function setDbNameNext($dbName)
 	{
-		$this->_nextDbName = $dbName;
+		$this->_dbNameNext = $dbName;
 	}
 
 	/**
@@ -182,6 +188,7 @@ class TaxonMatcher {
 		}
 	}
 
+
 	public function addEventListener(TaxonMatcherEventListener $listener)
 	{
 		$this->_eventListeners[] = $listener;
@@ -192,19 +199,22 @@ class TaxonMatcher {
 	private function _validateInput()
 	{
 		if($this->_dbHost === null) {
-			throw new InvalidInputException('Missing database host');
+			$this->_throwException(new InvalidInputException('Not set: database host'));
 		}
 		if($this->_dbUser === null) {
-			throw new InvalidInputException('Missing database user');
+			$this->_throwException(new InvalidInputException('Not set: database user'));
 		}
-		if($this->_dbNameCTL === null) {
-			throw new InvalidInputException('Missing database name for Cumulative Taxon List');
+		if($this->_dbPassword === null) {
+			$this->_warning('Not set: database password');
 		}
-		if($this->_currentDbName === null) {
-			throw new InvalidInputException('Missing database name for current edition');
+		if($this->_dbNameStage === null) {
+			$this->_throwException(new InvalidInputException('Not set: database name of staging area'));
+		}
+		if($this->_dbNameCurrent === null) {
+			$this->_throwException(new InvalidInputException('Not set: database name of current edition of CoL'));
 		}
 		if($this->_dbNameImport2 === null) {
-			throw new InvalidInputException('Missing database name for new edition');
+			$this->_throwException(new InvalidInputException('Not set: database name of upcoming edition of CoL'));
 		}
 	}
 
@@ -214,7 +224,7 @@ class TaxonMatcher {
 	private function _setup()
 	{
 		$this->_pdo = $this->_connect();
-		$this->_createCTLDatabase();
+		$this->_createStagingArea();
 	}
 
 
@@ -307,7 +317,7 @@ SQL;
 		$whereClause = $this->_taxonNameFilter === null ? "" : "WHERE genus LIKE '{$this->_taxonNameFilter}'";
 		$this->_disableKeys('Taxon');
 		$sql = <<<SQL
-			INSERT INTO `{$this->_dbNameCTL}`.Taxon(
+			INSERT INTO `{$this->_dbNameStage}`.Taxon(
 							edition,
 							edRecordId,
 							databaseId,
@@ -351,9 +361,9 @@ SQL;
 	private function _importCommonNames($dbName)
 	{
 		$edition = $this->_getEdition($dbName);
-		$this->_exec("DROP TABLE IF EXISTS `{$this->_dbNameCTL}`.CommonName");
+		$this->_exec("DROP TABLE IF EXISTS `{$this->_dbNameStage}`.CommonName");
 		$sql = <<<SQL
-			CREATE TABLE `{$this->_dbNameCTL}`CommonName(
+			CREATE TABLE `{$this->_dbNameStage}`CommonName(
 						edition     VARCHAR(15) NOT NULL DEFAULT '',
 						code        VARCHAR(137) NOT NULL DEFAULT '',
 						commonNames TEXT,
@@ -369,7 +379,7 @@ SQL;
              {$this->_readLimitClause}
 SQL;
              $this->_exec($sql);
-             $this->_exec("DROP TABLE `{$this->_dbNameCTL}`.CommonName");
+             $this->_exec("DROP TABLE `{$this->_dbNameStage}`.CommonName");
 	}
 
 
@@ -377,8 +387,8 @@ SQL;
 	{
 		$edition = $this->_getEdition($dbName);
 		$sql = <<<SQL
-			UPDATE `{$this->_dbNameCTL}`.Taxon T
-			     , `{$this->_dbNameCTL}`.CommonName C
+			UPDATE `{$this->_dbNameStage}`.Taxon T
+			     , `{$this->_dbNameStage}`.CommonName C
 			   SET T.commonNames = C.commonNames
 			 WHERE T.code = C.code AND T.edition = '$edition'
 SQL;
@@ -390,7 +400,7 @@ SQL;
 	{
 		$edition = $this->_getEdition($dbName);
 		$sql = <<<SQL
-			UPDATE `{$this->_dbNameCTL}`.Taxon T,
+			UPDATE `{$this->_dbNameStage}`.Taxon T,
 			     , `{$dbName}`.distribution D
 			   SET T.distribution = D.distribution
 			 WHERE T.code = D.name_code AND T.edition = '$edition'
@@ -404,7 +414,7 @@ SQL;
 		$edition = $this->_getEdition($dbName);
 		$whereClause = $this->_taxonNameFilter === null? "" : "AND AC.name LIKE '{$this->_taxonNameFilter}'";
 		$sql = <<<SQL
-			INSERT INTO `{$this->_dbNameCTL}`.Taxon (
+			INSERT INTO `{$this->_dbNameStage}`.Taxon (
 							edition,
 							edRecordId,
 							databaseId,
@@ -443,7 +453,7 @@ SQL;
 		$edition = $this->_getEdition($dbName);
 		$whereClause = $this->_taxonNameFilter === null? "" : "AND family LIKE '{$this->_taxonNameFilter}'";
 		$sql = <<<SQL
-			INSERT INTO `{$this->_dbNameCTL}`.Taxon (
+			INSERT INTO `{$this->_dbNameStage}`.Taxon (
 							edition,
 							edRecordId,
 							databaseId,
@@ -482,7 +492,7 @@ SQL;
 		$edition = $this->_getEdition($dbName);
 		$whereClause = $this->_taxonNameFilter === null? "" : "AND superfamily LIKE '{$this->_taxonNameFilter}'";
 		$sql = <<<SQL
-			INSERT INTO `{$this->_dbNameCTL}`.Taxon (
+			INSERT INTO `{$this->_dbNameStage}`.Taxon (
 							edition,
 							edRecordId,
 							databaseId,
@@ -650,7 +660,7 @@ SQL;
 	private function _concatenateIdentifierComponents()
 	{
 		$sql = <<<SQL
-				UPDATE `{$this->_dbNameCTL}`.Taxon
+				UPDATE `{$this->_dbNameStage}`.Taxon
 				   SET allData = IFNULL(REPLACE(
 				   							CONCAT_WS('; ', TRIM(sciNames), TRIM(commonNames), TRIM(distribution), TRIM(otherData)),
 											'  ',
@@ -684,39 +694,39 @@ SQL;
 
 	private function _addLSIDs()
 	{
-		
-		$this->_useDatabase($this->_dbNameCTL);
-		
+
+		$this->_useDatabase($this->_dbNameStage);
+
 		$sql = <<<SQL
-			UPDATE `{$this->_nextDbName}`.taxa A, Taxon T
+			UPDATE `{$this->_dbNameNext}`.taxa A, Taxon T
 			   SET A.lsid = T.lsid
 			 WHERE T.edition = '{$this->_nextEdition}' AND A.is_accepted_name = 1
-			   AND T.code = A.name_code		
+			   AND T.code = A.name_code
 SQL;
 		$this->_exec($sql);
 
-		
+
 		$sql = <<<SQL
-			UPDATE `{$this->_nextDbName}`.taxa A, Taxon T
+			UPDATE `{$this->_dbNameNext}`.taxa A, Taxon T
 			   SET A.lsid = T.lsid
 			 WHERE T.edition = '{$this->_nextEdition}' AND A.is_accepted_name = 1
 			   AND T.edRecordId = A.record_id
 SQL;
 		$this->_exec($sql);
-		
+
 
 		$prefix = self::$PREFIX_LSID;
 		$sql = <<<SQL
-			UPDATE `{$this->_nextDbName}`.taxa
+			UPDATE `{$this->_dbNameNext}`.taxa
 			   SET lsid = CONCAT('$prefix', lsid, ':{$this->_nextEdition}')
 			 WHERE is_accepted_name = 1
 SQL;
-		$this->_exec($sql);		
-		
+		$this->_exec($sql);
+
 	}
 
 	/**
-	 * @param string $dbName Must be either $this->_currentDbName or $this->_dbNameImport2
+	 * @param string $dbName Must be either $this->_dbNameCurrent or $this->_dbNameImport2
 	 * @return boolean
 	 */
 	private function _hasLSIDs($dbName)
@@ -726,7 +736,7 @@ SQL;
 
 	private function _getEdition($dbName)
 	{
-		return $dbName === $this->_currentDbName ? $this->_currentEdition : $this->_nextEdition;
+		return $dbName === $this->_dbNameCurrent ? $this->_currentEdition : $this->_nextEdition;
 	}
 
 
@@ -743,9 +753,9 @@ SQL;
 	}
 
 
-	private function _emptyCTL()
+	private function _emptyStagingArea()
 	{
-		$this->_exec("DROP TABLE IF EXISTS `{$this->_dbNameCTL}`.Taxon");
+		$this->_exec("DROP TABLE IF EXISTS `{$this->_dbNameStage}`.Taxon");
 	}
 
 
@@ -775,6 +785,10 @@ SQL;
 	}
 
 
+	/**
+	 * Fetches the 1st column from the 1st row in the result set.
+	 * @param string $sql
+	 */
 	private function _fetchOne($sql)
 	{
 		return $this->_query($sql)->fetchColumn();
@@ -804,9 +818,9 @@ SQL;
 	/**
 	 * @throws TaxonMatcherException
 	 */
-	private function _createCTLDatabase()
+	private function _createStagingArea()
 	{
-		$this->_exec("CREATE DATABASE IF NOT EXISTS `{$this->_dbNameCTL}`");
+		$this->_exec("CREATE DATABASE IF NOT EXISTS `{$this->_dbNameStage}`");
 	}
 
 
@@ -889,7 +903,7 @@ SQL;
 	private function _error($message, Exception $exception = null)
 	{
 		foreach($this->_eventListeners as $listener) {
-			$listener->onMessage(TaxonMatcherEventListener::MESSAGE_TYPE_ERROR, $message, $exception);
+			$listener->onMessage(TaxonMatcherEventListener::MSG_ERROR, $message, $exception);
 		}
 	}
 
@@ -897,7 +911,7 @@ SQL;
 	private function _warning($message)
 	{
 		foreach($this->_eventListeners as $listener) {
-			$listener->onMessage(TaxonMatcherEventListener::MESSAGE_TYPE_WARNING, $message);
+			$listener->onMessage(TaxonMatcherEventListener::MSG_WARNING, $message);
 		}
 	}
 
@@ -905,25 +919,25 @@ SQL;
 	private function _info($message)
 	{
 		foreach($this->_eventListeners as $listener) {
-			$listener->onMessage(TaxonMatcherEventListener::MESSAGE_TYPE_INFO, $message);
+			$listener->onMessage(TaxonMatcherEventListener::MSG_INFO, $message);
 		}
 	}
-	
-	
+
+
 	private function _output($message)
 	{
 		foreach($this->_eventListeners as $listener) {
-			$listener->onMessage(TaxonMatcherEventListener::MESSAGE_TYPE_OUTPUT, $message);
+			$listener->onMessage(TaxonMatcherEventListener::MSG_OUTPUT, $message);
 		}
 	}
-	
-	
+
+
 	private function _debug($message)
 	{
 		foreach($this->_eventListeners as $listener) {
-			$listener->onMessage(TaxonMatcherEventListener::MESSAGE_TYPE_DEBUG, $message);
+			$listener->onMessage(TaxonMatcherEventListener::MSG_DEBUG, $message);
 		}
 	}
-	
+
 
 }
