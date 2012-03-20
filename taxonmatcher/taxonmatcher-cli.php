@@ -35,6 +35,7 @@ if($config === false) {
 
 $taxonMatcher = new TaxonMatcher();
 
+// Configure the TaxonMatcher.
 $taxonMatcher->setDbHost($config['dbHost']);
 $taxonMatcher->setDbUser($config['dbUser']);
 $taxonMatcher->setDbPassword($config['dbPassword']);
@@ -43,17 +44,25 @@ $taxonMatcher->setDbNameNext($config['dbNameNext']);
 $taxonMatcher->setDbNameStage($config['dbNameStage']);
 $taxonMatcher->setReadLimit($config['readLimit']);
 
+
+// Let's be interested in what the TaxonMatcher does.
+
+function isTrue($val) { return in_array(strtolower($val), array('1','true','on','yes')); }
+
 $listener = new EchoEventListener();
 
-if(in_array(strtolower($config['debug']), array('1','true','on','yes'))) {
+// Configure the listener.
+if(isTrue($config['debug'])) {
 	$listener->enableMessages(TaxonMatcherEventListener::MSG_DEBUG);
 }
-if(in_array(strtolower($config['showStackTrace']), array('1','true','on','yes'))) {
+if(isTrue($config['showStackTrace'])) {
 	$listener->showStackTrace();
 }
 
 $taxonMatcher->addEventListener($listener);
 
+
+// Go ...
 try {
 	$taxonMatcher->run();
 }

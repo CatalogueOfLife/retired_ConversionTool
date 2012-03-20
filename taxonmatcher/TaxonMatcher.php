@@ -358,14 +358,13 @@ SQL;
 						T.edition,
 						T.code,
 		                GROUP_CONCAT(CONCAT_WS('/', common_name, `language`, country) ORDER BY common_name, `language`, country SEPARATOR ', ') AS commonNames
-              FROM `{$dbName}`.Taxon T, `{$dbName}`.common_names C
+              FROM `{$this->_dbNameStage}`.Taxon T, `{$dbName}`.common_names C
              WHERE T.edition = '{$edition}'
                AND T.code = C.name_code
              GROUP BY C.name_code
              {$this->_readLimitClause}
 SQL;
              $this->_exec($sql);
-             $this->_exec("DROP TABLE `{$this->_dbNameStage}`.CommonName");
 	}
 
 
@@ -388,10 +387,11 @@ SQL;
 		$this->_info('Importing distribution data');
 		$edition = $this->_getEdition($dbName);
 		$sql = <<<SQL
-			UPDATE `{$this->_dbNameStage}`.Taxon T,
+			UPDATE `{$this->_dbNameStage}`.Taxon T
 			     , `{$dbName}`.distribution D
 			   SET T.distribution = D.distribution
-			 WHERE T.code = D.name_code AND T.edition = '$edition'
+			 WHERE T.code = D.name_code
+			   AND T.edition = '$edition'
 SQL;
 		$this->_exec($sql);
 	}
@@ -749,32 +749,6 @@ SQL;
 	private function _countTaxaWithLsids()
 	{
 		return $this->_fetchOne('SELECT COUNT(*) FROM Taxon WHERE LENGTH(lsid) = 36');
-	}
-
-
-	private function _showResult(PDOStatement $statement, $colWidth=15)
-	{
-		$rowNum = 0;
-		while(($row = $statement->fetch()) !== false) {
-			$line = self::_showRow($row, ++$rowNum, $colWidth);
-			$this->_output($line);
-		}
-	}
-
-
-	private static function _showRow(array $row, $rowNum, $colWidth)
-	{
-		$line = array();
-		$line[] = str_pad($rowNum, 5, '0', STR_PAD_LEFT);
-		foreach($row as $column) {
-			if(strlen($column) >= $colWidth) {
-				$line[] = substr($column, 0, ($colWidth - 4)) . '****';
-			}
-			else {
-				$line[] = str_pad($column, $colWidth);
-			}
-		}
-		return implode(' | ', $line);
 	}
 
 
