@@ -1,46 +1,67 @@
 <?php
 /**
- * 
  * Simple (but probably useful) implementation of TaxonMatcherEventListener.
  * Basically just echoes any message coming out of the TaxonMatcher, prefixing
- * it with a timestamp. You can choose whether to make up the message as
- * HTML, using <p> tags. The <p> tag will then get a css class of
- * "taxon-matcher-message-type-{$messageType}". Example:
+ * it with a timestamp. You have two configuration options:
+ * 
+ * [1] You can choose to make up the message as HTML, embedding it <p> tags.
+ * The <p> tag will then get a css class of "taxon-matcher-msg-{$messageType}".
+ * 
+ * [2] You can choose to display Exception stack traces in case an exception
+ * was passed to the onMessage() method. (N.B. Even if you enable DEBUG
+ * messages using AbstractTaxonMatcherEventListener::enableMessages(), The
+ * EchoEventListener will still not display stack traces unless you call
+ * its showStackTrace() method.)
+ * 
+ * 
+ * Example that runs the taxon matcher in full debug mode:
  * 
  * $listener = new EchoEventListener();
- * $listener->setContentTypeHTML(true);
+ * $listener->enableMessages(TaxonMatcherEventListener::MSG_DEBUG);
+ * $listener->showStackTrace();
+ * 
  * $matcher = new TaxonMatcher();
  * $matcher->addEventListener($listener);
  * // ....
  * $matcher->run();
  * 
  */
+
 class EchoEventListener extends AbstractTaxonMatcherEventListener {
 
 	private $_isPlainText = true;
+	private $_showStackTrace = false;
 
 
-	public function setContentTypeHTML($isHTML=true)
+	public function setContentTypeHTML()
 	{
-		$this->_isPlainText = ! $isHTML;
+		$this->_isPlainText = false;
+	}
+	
+	public function showStackTrace()
+	{
+		$this->_showStackTrace = true;
 	}
 
 	public function onMessage($messageType, $message, Exception $exception = null) {
 		if($this->_isMessageEnabled($messageType)) {
 			if($this->_isPlainText) {
-				echo "\n" . date('Y-m-d H:i:s') . "\t" . $message;
-				if($exception !== null) {
+				$date = date('Y-m-d H:i:s');
+				$type = self::_getMessageTypeAsString($messageType);
+				printf("\n%s\t%s: %s", $date, $type, $message);
+				if($this->_showStackTrace && ($exception !== null)) {
 					echo "\n" . $exception->getTraceAsString();
 				}
 			}
 			else {
-				echo "<p class='taxon-matcher-message-type-{$messageType}'>";
+				echo "<p class='taxon-matcher-msg-{$messageType}'>";
 				echo htmlentities($message);
-				if($exception !== null) {
+				if($this->_showStackTrace && ($exception !== null)) {
 					echo '<pre>' . $exception->getTraceAsString() . '</pre>';
 				}
 				echo "</p>";
 			}
 		}
 	}
+	
 }

@@ -1,8 +1,24 @@
 <?php
-
-include 'TaxonMatcherException.php';
-include 'InvalidInputException.php';
-include 'TaxonMatcherEventListener.php';
+/**
+ * <p>
+ * The central class in the PHP taxon matcher module. Its most important method is the
+ * run() method, which matches taxa between current and upcoming CoL editions,
+ * copies LSIDs from the current edition to the upcoming edition for matching taxa,
+ * and assigns new LSIDs to apparently new taxa in the upcoming edition.
+ * </p>
+ * 
+ * <p>
+ * Before you can run the TaxonMatcher, you must configure it using a series of
+ * setters, some of which are optional (see the setXXX methods). If you want to
+ * receive any output from your TaxonMatcher instance, you must attach a
+ * {@link TaxonMatcherEventListener} to it.
+ * </p>
+ * 
+ * <p>
+ * The taxonmatcher-cli.php script provides a concrete example of how to instantiate,
+ * configure and run a TaxonMatcher.
+ * </p>
+ */
 
 class TaxonMatcher {
 
@@ -30,7 +46,7 @@ class TaxonMatcher {
 	 * An array of TaxonMatcherEventListener objects.
 	 * @var array
 	 */
-	private $_eventListeners = array();
+	private $_listeners = array();
 
 	/**
 	 * @var PDO
@@ -59,10 +75,12 @@ class TaxonMatcher {
 		// ...
 	}
 
+
 	public function run()
 	{
 		$this->_validateInput();
-		$this->_setup();
+		$this->_connect();
+		$this->_initializeStagingArea();
 		$this->_importAC($this->_dbNameCurrent);
 		$this->_importAC($this->_dbNameNext);
 		$this->_compareEditions();
@@ -119,6 +137,7 @@ class TaxonMatcher {
 		$this->_nextEdition = $edition;
 	}
 
+
 	/**
 	 * Set name of the "Cumulative Taxon List" database. Required.
 	 * @param string $dbName
@@ -138,6 +157,7 @@ class TaxonMatcher {
 		$this->_dbNameCurrent = $dbName;
 	}
 
+
 	/**
 	 * Set name of the database containing the data for next edition of the CoL. Required.
 	 * @param string $dbName
@@ -146,6 +166,7 @@ class TaxonMatcher {
 	{
 		$this->_dbNameNext = $dbName;
 	}
+
 
 	/**
 	 * Results in a WHERE clause that puts a constraint on the taxon name. Optional.
@@ -164,11 +185,11 @@ class TaxonMatcher {
 	 */
 	public function setShowLimit($i)
 	{
-		if($i === null || $i < 1) {
-			$this->_showLimitClause = '';
+		if((int) $i > 0) {
+			$this->_showLimitClause = ' LIMIT ' . $i;
 		}
 		else {
-			$this->_showLimitClause = ' LIMIT ' . $i;
+			$this->_showLimitClause = '';
 		}
 	}
 
@@ -180,20 +201,19 @@ class TaxonMatcher {
 	 */
 	public function setReadLimit($i)
 	{
-		if($i === null || $i < 1) {
-			$this->_readLimitClause = '';
+		if((int) $i > 0) {
+			$this->_readLimitClause = ' LIMIT ' . $i;
 		}
 		else {
-			$this->_readLimitClause = ' LIMIT ' . $i;
+			$this->_readLimitClause = '';
 		}
 	}
 
 
 	public function addEventListener(TaxonMatcherEventListener $listener)
 	{
-		$this->_eventListeners[] = $listener;
+		$this->_listeners[] = $listener;
 	}
-
 
 
 	private function _validateInput()
@@ -213,25 +233,16 @@ class TaxonMatcher {
 		if($this->_dbNameCurrent === null) {
 			$this->_throwException(new InvalidInputException('Not set: database name of current edition of CoL'));
 		}
-		if($this->_dbNameImport2 === null) {
+		if($this->_dbNameNext === null) {
 			$this->_throwException(new InvalidInputException('Not set: database name of upcoming edition of CoL'));
 		}
-	}
-
-	/**
-	 * @throws PDOException
-	 */
-	private function _setup()
-	{
-		$this->_pdo = $this->_connect();
-		$this->_createStagingArea();
 	}
 
 
 	private function _importAC($dbName)
 	{
 
-		if(self::_hasLSIDs($dbName)) {
+		if($this->_hasLSIDs($dbName)) {
 			$sqlExpression = sprintf('SUBSTRING(AC.lsid,%s,%s)', self::$UUID_START_POS, self::$UUID_LENGTH);
 		}
 		else {
@@ -282,37 +293,10 @@ SQL;
 		 	$this->_showResult($statement);
 	}
 
-	/**
-	 * @throws TaxonMatcherException
-	 */
-	private function _createTaxonTable()
-	{
-		$sql = <<<SQL
-			CREATE TABLE IF NOT EXISTS Taxon(
-				edition      VARCHAR(15) NOT NULL DEFAULT '',
-                edRecordId   INT(10) UNSIGNED NOT NULL,
-		 		databaseId   INT(10) UNSIGNED,
-		 		code         VARCHAR(137) NOT NULL DEFAULT '',
-		 		lsid         VARCHAR(36),
-		 		rank         VARCHAR(12),
-				nameCodes    TEXT,
-		 		sciNames     TEXT,
-		 		commonNames  TEXT,
-		 		distribution TEXT,
-		 		otherData    TEXT,
-		 		allData      TEXT, /* was NOT NULL in v.1.04, was DEFAULT '' in v.1.03 */
-		 		INDEX        (edition),
-		 		INDEX        (edRecordId),
-		 		INDEX        (code),
-		 		INDEX        (lsid)
-			)
-SQL;
-		self::_exec($this->_pdo, $sql);
-	}
-
 
 	private function _importSpecies($dbName)
 	{
+		$this->_info('Importing species and lower taxa');
 		$edition = $this->_getEdition($dbName);
 		$whereClause = $this->_taxonNameFilter === null ? "" : "WHERE genus LIKE '{$this->_taxonNameFilter}'";
 		$this->_disableKeys('Taxon');
@@ -349,8 +333,9 @@ SQL;
 
 	private function _importLSIDsForSpecies($dbName, $sqlExpression)
 	{
+		$this->_info('Importing LSIDs for species and lower taxa');
 		$sql = <<<SQL
-			UPDATE Taxon T, {$dbName}.taxa AC
+			UPDATE `{$this->_dbNameStage}`.Taxon T, {$dbName}.taxa AC
 			   SET T.lsid = {$sqlExpression}
 			 WHERE T.code = AC.name_code
 SQL;
@@ -360,10 +345,11 @@ SQL;
 
 	private function _importCommonNames($dbName)
 	{
+		$this->_info('Importing common names');
 		$edition = $this->_getEdition($dbName);
 		$this->_exec("DROP TABLE IF EXISTS `{$this->_dbNameStage}`.CommonName");
 		$sql = <<<SQL
-			CREATE TABLE `{$this->_dbNameStage}`CommonName(
+			CREATE TABLE `{$this->_dbNameStage}`.CommonName(
 						edition     VARCHAR(15) NOT NULL DEFAULT '',
 						code        VARCHAR(137) NOT NULL DEFAULT '',
 						commonNames TEXT,
@@ -372,7 +358,7 @@ SQL;
 						T.edition,
 						T.code,
 		                GROUP_CONCAT(CONCAT_WS('/', common_name, `language`, country) ORDER BY common_name, `language`, country SEPARATOR ', ') AS commonNames
-              FROM Taxon T, `{$dbName}`.common_names C
+              FROM `{$dbName}`.Taxon T, `{$dbName}`.common_names C
              WHERE T.edition = '{$edition}'
                AND T.code = C.name_code
              GROUP BY C.name_code
@@ -385,6 +371,7 @@ SQL;
 
 	private function _copyCommonNamesToTaxonTable($dbName)
 	{
+		$this->_info('Copying common names to Taxon table');
 		$edition = $this->_getEdition($dbName);
 		$sql = <<<SQL
 			UPDATE `{$this->_dbNameStage}`.Taxon T
@@ -398,6 +385,7 @@ SQL;
 
 	private function _importDistributionData($dbName)
 	{
+		$this->_info('Importing distribution data');
 		$edition = $this->_getEdition($dbName);
 		$sql = <<<SQL
 			UPDATE `{$this->_dbNameStage}`.Taxon T,
@@ -411,6 +399,7 @@ SQL;
 
 	private function _importGenera($dbName,$sqlExpression)
 	{
+		$this->_info('Importing genera');
 		$edition = $this->_getEdition($dbName);
 		$whereClause = $this->_taxonNameFilter === null? "" : "AND AC.name LIKE '{$this->_taxonNameFilter}'";
 		$sql = <<<SQL
@@ -448,8 +437,10 @@ SQL;
 					    $this->_exec($sql);
 	}
 
+
 	private function _importFamilies($dbName, $sqlExpression)
 	{
+		$this->_info('Importing families');
 		$edition = $this->_getEdition($dbName);
 		$whereClause = $this->_taxonNameFilter === null? "" : "AND family LIKE '{$this->_taxonNameFilter}'";
 		$sql = <<<SQL
@@ -489,6 +480,7 @@ SQL;
 
 	private function _importSuperFamilies($dbName, $sqlExpression)
 	{
+		$this->_info('Importing super families');
 		$edition = $this->_getEdition($dbName);
 		$whereClause = $this->_taxonNameFilter === null? "" : "AND superfamily LIKE '{$this->_taxonNameFilter}'";
 		$sql = <<<SQL
@@ -523,6 +515,7 @@ SQL;
 
 	private function _importOrders($dbName, $sqlExpression)
 	{
+		$this->_info('Importing orders');
 		$edition = $this->_getEdition($dbName);
 		$whereClause = $this->_taxonNameFilter === null? "" : "AND `order` LIKE '{$this->_taxonNameFilter}'";
 		$sql = <<<SQL
@@ -557,6 +550,7 @@ SQL;
 
 	private function _importClasses($dbName, $sqlExpression)
 	{
+		$this->_info('Importing classes');
 		$edition = $this->_getEdition($dbName);
 		$whereClause = $this->_taxonNameFilter === null? "" : "AND `class` LIKE '{$this->_taxonNameFilter}'";
 		$sql = <<<SQL
@@ -591,6 +585,7 @@ SQL;
 
 	private function _importPhyla($dbName, $sqlExpression)
 	{
+		$this->_info('Importing phyla');
 		$edition = $this->_getEdition($dbName);
 		$whereClause = $this->_taxonNameFilter === null? "" : "AND `class` LIKE '{$this->_taxonNameFilter}'";
 		$sql = <<<SQL
@@ -625,6 +620,7 @@ SQL;
 
 	private function _importKingdoms($dbName, $sqlExpression)
 	{
+		$this->_info('Importing kingdoms');
 		$edition = $this->_getEdition($dbName);
 		$whereClause = $this->_taxonNameFilter === null? "" : "AND `class` LIKE '{$this->_taxonNameFilter}'";
 		$sql = <<<SQL
@@ -657,8 +653,9 @@ SQL;
 	}
 
 
-	private function _concatenateIdentifierComponents()
+	private function _generateLogicalKey()
 	{
+		$this->_info('Generating logical key');
 		$sql = <<<SQL
 				UPDATE `{$this->_dbNameStage}`.Taxon
 				   SET allData = IFNULL(REPLACE(
@@ -673,18 +670,21 @@ SQL;
 
 	private function _compareEditions()
 	{
-		$this->_exec("ALTER TABLE Taxon ADD INDEX (allData(100))");
-		$this->_exec("ALTER TABLE Taxon ENABLE KEYS");
-		$this->_exec("OPTIMIZE TABLE Taxon");
+		
+		$this->_info('Copying LSIDs for matching records in staging area');
+		
+		$this->_exec("ALTER `{$this->_dbNameStage}`.TABLE Taxon ADD INDEX (allData(100))");
+		$this->_exec("ALTER `{$this->_dbNameStage}`.TABLE Taxon ENABLE KEYS");
+		$this->_exec("OPTIMIZE `{$this->_dbNameStage}`.TABLE Taxon");
 		$this->_exec("
-				UPDATE Taxon T1, Taxon T2
+				UPDATE `{$this->_dbNameStage}`.Taxon T1, `{$this->_dbNameStage}`.Taxon T2
 				SET T2.lsid = T1.lsid
 				WHERE T1.allData = T2.allData
 				AND T1.edition = '{$this->_currentEdition}'
 				AND T2.edition = '{$this->_nextEdition}'
 				");
 		$this->_exec("
-				UPDATE Taxon
+				UPDATE `{$this->_dbNameStage}`.Taxon
 				SET lsid = UUID()
 				WHERE edition = '{$this->_nextEdition}'
 				AND lsid IS NULL
@@ -694,11 +694,11 @@ SQL;
 
 	private function _addLSIDs()
 	{
-
-		$this->_useDatabase($this->_dbNameStage);
-
+		
+		$this->_info('Copying LSIDs from staging area to next CoL edition');
+		
 		$sql = <<<SQL
-			UPDATE `{$this->_dbNameNext}`.taxa A, Taxon T
+			UPDATE `{$this->_dbNameNext}`.taxa A, `{$this->_dbNameStage}`.Taxon T
 			   SET A.lsid = T.lsid
 			 WHERE T.edition = '{$this->_nextEdition}' AND A.is_accepted_name = 1
 			   AND T.code = A.name_code
@@ -707,7 +707,7 @@ SQL;
 
 
 		$sql = <<<SQL
-			UPDATE `{$this->_dbNameNext}`.taxa A, Taxon T
+			UPDATE `{$this->_dbNameNext}`.taxa A, `{$this->_dbNameStage}`.Taxon T
 			   SET A.lsid = T.lsid
 			 WHERE T.edition = '{$this->_nextEdition}' AND A.is_accepted_name = 1
 			   AND T.edRecordId = A.record_id
@@ -722,8 +722,8 @@ SQL;
 			 WHERE is_accepted_name = 1
 SQL;
 		$this->_exec($sql);
-
 	}
+
 
 	/**
 	 * @param string $dbName Must be either $this->_dbNameCurrent or $this->_dbNameImport2
@@ -731,31 +731,24 @@ SQL;
 	 */
 	private function _hasLSIDs($dbName)
 	{
-		return (0 != $this->_fetchOne("SELECT COUNT(*) FROM `{$dbName}`.Taxon"));
+		return (0 != $this->_fetchOne("SELECT COUNT(*) FROM `{$dbName}`.Taxa"));
 	}
 
+
+	/**
+	 * Get the name of the edition based on the name of the database.
+	 * @param string $dbName
+	 * @return string
+	 */
 	private function _getEdition($dbName)
 	{
 		return $dbName === $this->_dbNameCurrent ? $this->_currentEdition : $this->_nextEdition;
 	}
 
 
-	private function _countTaxa()
-	{
-		$count =  $this->_fetchOne('SELECT COUNT(*) FROM Taxon');
-		$this->_printAndLogEntry('Number of records in Taxon table: ' . $count);
-	}
-
-
 	private function _countTaxaWithLsids()
 	{
 		return $this->_fetchOne('SELECT COUNT(*) FROM Taxon WHERE LENGTH(lsid) = 36');
-	}
-
-
-	private function _emptyStagingArea()
-	{
-		$this->_exec("DROP TABLE IF EXISTS `{$this->_dbNameStage}`.Taxon");
 	}
 
 
@@ -801,7 +794,8 @@ SQL;
 	 */
 	private function _disableKeys($table)
 	{
-		$this->_exec('ALTER TABLE ' . $table . ' DISABLE KEYS');
+		$this->_debug('Disabling keys on table ' . $table);
+		$this->_exec("ALTER TABLE `{$this->_dbNameStage}`.$table DISABLE KEYS");
 	}
 
 
@@ -811,16 +805,49 @@ SQL;
 	 */
 	private function _enableKeys($table)
 	{
-		$this->_exec('ALTER TABLE ' . $table . ' ENABLE KEYS');
+		$this->_debug('Enabling keys on table ' . $table);
+		$this->_exec("ALTER TABLE `{$this->_dbNameStage}`.$table ENABLE KEYS");
 	}
 
 
 	/**
 	 * @throws TaxonMatcherException
 	 */
-	private function _createStagingArea()
+	private function _initializeStagingArea()
 	{
+		$this->_info('Initializing staging area');
 		$this->_exec("CREATE DATABASE IF NOT EXISTS `{$this->_dbNameStage}`");
+		$this->_createTaxonTable();
+		$this->_exec("TRUNCATE TABLE `{$this->_dbNameStage}`.Taxon");
+	}
+
+
+	/**
+	 * @throws TaxonMatcherException
+	 */
+	private function _createTaxonTable()
+	{
+		$sql = <<<SQL
+			CREATE TABLE IF NOT EXISTS `{$this->_dbNameStage}`.Taxon(
+				edition      VARCHAR(15) NOT NULL DEFAULT '',
+				edRecordId   INT(10) UNSIGNED NOT NULL,
+		 		databaseId   INT(10) UNSIGNED,
+		 		code         VARCHAR(137) NOT NULL DEFAULT '',
+		 		lsid         VARCHAR(36),
+		 		rank         VARCHAR(12),
+				nameCodes    TEXT,
+		 		sciNames     TEXT,
+		 		commonNames  TEXT,
+		 		distribution TEXT,
+		 		otherData    TEXT,
+		 		allData      TEXT,
+		 		INDEX        (edition),
+		 		INDEX        (edRecordId),
+		 		INDEX        (code),
+		 		INDEX        (lsid)
+			)
+SQL;
+		$this->_exec($sql);
 	}
 
 
@@ -829,6 +856,7 @@ SQL;
 	 */
 	private function _useDatabase($dbName)
 	{
+		$this->_debug('Changing to database ' . $dbName);
 		$this->_exec('USE DATABASE `' . $dbName . '`');
 	}
 
@@ -842,7 +870,7 @@ SQL;
 	 */
 	private function _query($sql)
 	{
-		$this->_debug(__METHOD__ . ' Executing SQL: ' . $sql);
+		$this->_debug('Executing SQL (query): ' . $sql);
 		$statement = $this->_pdo->query($sql);
 		if($statement === false) {
 			$error = $this->_pdo->errorInfo();
@@ -860,7 +888,7 @@ SQL;
 	 * @return number
 	 */
 	private function _exec($sql) {
-		$this->_debug(__METHOD__ . ' Executing SQL: ' . $sql);
+		$this->_debug('Executing SQL (exec): ' . $sql);
 		$i = $this->_pdo->exec($sql);
 		if($i === false) {
 			$error = $this->_pdo->errorInfo();
@@ -875,19 +903,19 @@ SQL;
 	 * working with (Cumulative Taxon List, current CoL, next CoL).
 	 *
 	 * @throws PDOException
-	 * @return PDO
 	 */
-	private function _getPDO()
+	private function _connect()
 	{
+		$this->_info('Connecting to database server');
+		$dsn = 'mysql:host=' . $this->_dbHost;
 		try {
-			$dsn = 'mysql:host=' . $this->_dbHost;
-			$options = array();
-			$options[PDO::MYSQL_ATTR_INIT_COMMAND] = 'SET NAMES \'UTF8\'';
-			return new PDO($dsn, $this->_dbUser, $this->_dbPassword);
+			$this->_pdo = new PDO($dsn, $this->_dbUser, $this->_dbPassword);
 		}
 		catch(PDOException $e) {
 			$this->_throwException($e, 'Cannot connect to database server using the specified connection parameters');
 		}
+		$this->_exec("SET NAMES UTF8");
+		$this->_exec("SET GROUP_CONCAT_MAX_LEN = 15000");
 	}
 
 
@@ -902,7 +930,7 @@ SQL;
 
 	private function _error($message, Exception $exception = null)
 	{
-		foreach($this->_eventListeners as $listener) {
+		foreach($this->_listeners as $listener) {
 			$listener->onMessage(TaxonMatcherEventListener::MSG_ERROR, $message, $exception);
 		}
 	}
@@ -910,7 +938,7 @@ SQL;
 
 	private function _warning($message)
 	{
-		foreach($this->_eventListeners as $listener) {
+		foreach($this->_listeners as $listener) {
 			$listener->onMessage(TaxonMatcherEventListener::MSG_WARNING, $message);
 		}
 	}
@@ -918,7 +946,7 @@ SQL;
 
 	private function _info($message)
 	{
-		foreach($this->_eventListeners as $listener) {
+		foreach($this->_listeners as $listener) {
 			$listener->onMessage(TaxonMatcherEventListener::MSG_INFO, $message);
 		}
 	}
@@ -926,7 +954,7 @@ SQL;
 
 	private function _output($message)
 	{
-		foreach($this->_eventListeners as $listener) {
+		foreach($this->_listeners as $listener) {
 			$listener->onMessage(TaxonMatcherEventListener::MSG_OUTPUT, $message);
 		}
 	}
@@ -934,7 +962,7 @@ SQL;
 
 	private function _debug($message)
 	{
-		foreach($this->_eventListeners as $listener) {
+		foreach($this->_listeners as $listener) {
 			$listener->onMessage(TaxonMatcherEventListener::MSG_DEBUG, $message);
 		}
 	}
