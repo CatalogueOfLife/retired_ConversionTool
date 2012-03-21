@@ -42,6 +42,8 @@ $taxonMatcher->setDbPassword($config['dbPassword']);
 $taxonMatcher->setDbNameCurrent($config['dbNameCurrent']);
 $taxonMatcher->setDbNameNext($config['dbNameNext']);
 $taxonMatcher->setDbNameStage($config['dbNameStage']);
+$taxonMatcher->setCurrentEdition($config['currentEdition']);
+$taxonMatcher->setNextEdition($config['nextEdition']);
 $taxonMatcher->setReadLimit($config['readLimit']);
 
 
@@ -68,8 +70,7 @@ try {
 }
 catch(TaxonMatcherException $e) {
 	// No need to print it out, because that will already
-	// have been done by the TaxonMatcherEventListener
-	// instance (an EchoEventListener in this case).
+	// have been done by the EchoEventListener.
 	die();
 }
 catch(Exception $e) {
