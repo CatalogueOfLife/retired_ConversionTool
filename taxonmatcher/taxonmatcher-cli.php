@@ -45,8 +45,7 @@ $taxonMatcher->setDbPassword($config['dbPassword']);
 $taxonMatcher->setDbNameCurrent($config['dbNameCurrent']);
 $taxonMatcher->setDbNameNext($config['dbNameNext']);
 $taxonMatcher->setDbNameStage($config['dbNameStage']);
-$taxonMatcher->setCurrentEdition($config['currentEdition']);
-$taxonMatcher->setNextEdition($config['nextEdition']);
+$taxonMatcher->setLSIDSuffix($config['lsidSuffix']);
 $taxonMatcher->setReadLimit($config['readLimit']);
 
 
@@ -71,11 +70,7 @@ $taxonMatcher->addEventListener($listener);
 try {
 	$taxonMatcher->run();
 }
-catch(TaxonMatcherException $e) {
+catch(Exception $e) {
 	// No need to print it out, because that will already
 	// have been done by the EchoEventListener.
-	die();
-}
-catch(Exception $e) {
-	echo "\n" . $e->getTraceAsString();
 }

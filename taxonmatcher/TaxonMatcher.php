@@ -1,9 +1,9 @@
 <?php
 /**
- * 
+ *
  * @author Ayco Holleman, ETI BioInformatics
  * @author Richard White (original PERL implementation), Cardiff University
- * 
+ *
  * <p>
  * The central class in the PHP taxon matcher module. Its most important method is the
  * run() method, which matches taxa between current and upcoming CoL editions,
@@ -30,10 +30,8 @@ class TaxonMatcher {
 	private static $UUID_START_POS = 36;
 	private static $UUID_LENGTH = 36;
 
-	// e.g. "2011"
-	private $_currentEdition;
-	// e.g. "2012"
-	private $_nextEdition;
+	// The suffix for LSIDs in the new Col Edition (everything after the last colon).
+	private $_lsidSuffix;
 
 	// db connection params
 	private $_dbHost = 'localhost';
@@ -81,17 +79,22 @@ class TaxonMatcher {
 
 	public function run()
 	{
-		$start = time();
-		$this->_validateInput();
-		$this->_connect();
-		$this->_initializeStagingArea();
-		$this->_importAC($this->_dbNameCurrent);
-		$this->_importAC($this->_dbNameNext);
-		$this->_generateLogicalKey();
-		$this->_compareEditions();
-		$this->_addLSIDs();
-		$timer = self::_getTimer(time() - $start);
-		$this->_info(sprintf("Total duration: %02d:%02d:%02d", $timer['H'], $timer['i'], $timer['s']));
+		try {
+			$start = time();
+			$this->_validateInput();
+			$this->_connect();
+			$this->_initializeStagingArea();
+			$this->_importAC($this->_dbNameCurrent);
+			$this->_importAC($this->_dbNameNext);
+			$this->_generateLogicalKey();
+			$this->_compareEditions();
+			$this->_addLSIDs();
+			$timer = self::_getTimer(time() - $start);
+			$this->_info(sprintf("Total duration: %02d:%02d:%02d", $timer['H'], $timer['i'], $timer['s']));
+		}
+		catch(Exception $e) {
+			$this->_error($e->getMessage(), $e);
+		}
 	}
 
 
@@ -126,27 +129,17 @@ class TaxonMatcher {
 
 
 	/**
-	 * Set the identifier of the current edition of the CoL (e.g. "2011"). Required.
+	 * Set the suffix for LSIDs in the new Col Edition (everything after the last colon). Required.
 	 * @param string $edition
 	 */
-	public function setCurrentEdition($edition)
+	public function setLSIDSuffix($suffix)
 	{
-		$this->_currentEdition = $edition;
+		$this->_lsidSuffix = $suffix;
 	}
 
 
 	/**
-	 * Set the identifier of the next edition of the CoL (e.g. "2012"). Required.
-	 * @param string $edition
-	 */
-	public function setNextEdition($edition)
-	{
-		$this->_nextEdition = $edition;
-	}
-
-
-	/**
-	 * Set name of the "Cumulative Taxon List" database. Required.
+	 * Set name of the staging area database, formerly called the "Cumulative Taxon List". Required.
 	 * @param string $dbName
 	 */
 	public function setDbNameStage($dbName)
@@ -210,22 +203,22 @@ class TaxonMatcher {
 	private function _validateInput()
 	{
 		if($this->_dbHost === null) {
-			$this->_throwException(new InvalidInputException('Not set: database host'));
+			throw new InvalidInputException('Not set: database host');
 		}
 		if($this->_dbUser === null) {
-			$this->_throwException(new InvalidInputException('Not set: database user'));
+			throw new InvalidInputException('Not set: database user');
 		}
 		if($this->_dbPassword === null) {
 			$this->_warning('Not set: database password');
 		}
 		if($this->_dbNameStage === null) {
-			$this->_throwException(new InvalidInputException('Not set: database name of staging area'));
+			throw new InvalidInputException('Not set: database name of staging area');
 		}
 		if($this->_dbNameCurrent === null) {
-			$this->_throwException(new InvalidInputException('Not set: database name of current edition of CoL'));
+			throw new InvalidInputException('Not set: database name of current edition of CoL');
 		}
 		if($this->_dbNameNext === null) {
-			$this->_throwException(new InvalidInputException('Not set: database name of upcoming edition of CoL'));
+			throw new InvalidInputException('Not set: database name of upcoming edition of CoL');
 		}
 	}
 
@@ -235,8 +228,8 @@ class TaxonMatcher {
 
 		$edition = $this->_getEdition($dbName);
 
-		$this->_info("Importing data from database $dbName (edition $edition)");
-		
+		$this->_info("Importing data from database $dbName");
+
 		if($this->_hasLSIDs($dbName)) {
 			$sqlExpression = sprintf('SUBSTRING(AC.lsid,%s,%s)', self::$UUID_START_POS, self::$UUID_LENGTH);
 		}
@@ -301,7 +294,7 @@ SQL;
 	private function _importLSIDsForSpecies($dbName, $sqlExpression)
 	{
 		$this->_info('Importing LSIDs for species and lower taxa');
-		
+
 
 		$sql = <<<SQL
 			UPDATE `{$this->_dbNameStage}`.Taxon T
@@ -310,14 +303,14 @@ SQL;
 			 WHERE AC.name_code IS NOT NULL
 SQL;
 
-		
-/*		
-		$sql = <<<SQL
-			UPDATE `{$this->_dbNameStage}`.Taxon T, `{$dbName}`.taxa AC
-			   SET T.lsid = {$sqlExpression}
-			 WHERE (T.code = AC.name_code)
-SQL;
-*/
+
+		/*
+		 $sql = <<<SQL
+		UPDATE `{$this->_dbNameStage}`.Taxon T, `{$dbName}`.taxa AC
+		SET T.lsid = {$sqlExpression}
+		WHERE (T.code = AC.name_code)
+		SQL;
+		*/
 		$this->_exec($sql);
 	}
 
@@ -654,28 +647,28 @@ SQL;
 		$this->_exec("OPTIMIZE TABLE `{$this->_dbNameStage}`.Taxon");
 		$this->_exec("ALTER TABLE `{$this->_dbNameStage}`.Taxon ADD INDEX (allData,edition)");
 
-		
-/*		
-		$this->_exec("
-				UPDATE `{$this->_dbNameStage}`.Taxon T1, `{$this->_dbNameStage}`.Taxon T2
-				SET T2.lsid = T1.lsid
-				WHERE T1.allData = T2.allData
-				AND T1.edition = 0
-				AND T2.edition = 1
-				", true);
-*/
-		
-		
+
+		/*
+		 $this->_exec("
+		 		UPDATE `{$this->_dbNameStage}`.Taxon T1, `{$this->_dbNameStage}`.Taxon T2
+		 		SET T2.lsid = T1.lsid
+		 		WHERE T1.allData = T2.allData
+		 		AND T1.edition = 0
+		 		AND T2.edition = 1
+		 		", true);
+		*/
+
+
 		$this->_exec("
 				UPDATE `{$this->_dbNameStage}`.Taxon T1
-				  LEFT JOIN `{$this->_dbNameStage}`.Taxon T0 ON(T1.allData = T0.allData AND T1.edition = 1 AND T0.edition = 0)
-				   SET T1.lsid = T0.lsid
-				 WHERE T1.edition = 1
-				   AND T0.allData IS NOT NULL
+				LEFT JOIN `{$this->_dbNameStage}`.Taxon T0 ON(T1.allData = T0.allData AND T1.edition = 1 AND T0.edition = 0)
+				SET T1.lsid = T0.lsid
+				WHERE T1.edition = 1
+				AND T0.allData IS NOT NULL
 				", true);
-		
-		
-		
+
+
+
 		$this->_exec("
 				UPDATE `{$this->_dbNameStage}`.Taxon
 				SET lsid = UUID()
@@ -689,7 +682,7 @@ SQL;
 	{
 
 		$this->_info('Copying LSIDs from staging area to new CoL edition');
-		
+
 		$prefix = self::$PREFIX_LSID;
 
 		$sql = <<<SQL
@@ -711,11 +704,11 @@ SQL;
 		$prefix = self::$PREFIX_LSID;
 		$sql = <<<SQL
 			UPDATE `{$this->_dbNameNext}`.taxa
-			   SET lsid = CONCAT('$prefix', lsid, ':{$this->_nextEdition}')
+			   SET lsid = CONCAT('$prefix', lsid, ':{$this->_lsidSuffix}')
 			 WHERE is_accepted_name = 1
 SQL;
-		$this->_exec($sql);	
-		
+		$this->_exec($sql);
+
 	}
 
 
@@ -736,7 +729,6 @@ SQL;
 	 */
 	private function _getEdition($dbName)
 	{
-		//return $dbName === $this->_dbNameCurrent ? $this->_currentEdition : $this->_nextEdition;
 		return $dbName === $this->_dbNameCurrent ? 0 : 1;
 	}
 
@@ -821,6 +813,7 @@ SQL;
 		$this->_exec($sql);
 	}
 
+	
 	private function _createCommonNameTable()
 	{
 		$sql = <<<SQL
@@ -830,7 +823,6 @@ SQL;
 				commonNames TEXT,
 				INDEX (code)
 		) ENGINE=MYISAM
-
 SQL;
 		$this->_exec($sql);
 	}
@@ -849,7 +841,7 @@ SQL;
 		$statement = $this->_pdo->query($sql);
 		if($statement === false) {
 			$error = $this->_pdo->errorInfo();
-			$this->_throwException(new TaxonMatcherException($error[2]));
+			throw new TaxonMatcherException($error[2]);
 		}
 		return $statement;
 	}
@@ -869,7 +861,7 @@ SQL;
 		$statement = $this->_pdo->prepare($sql, $options);
 		if($statement->execute() === false) {
 			$error = $this->_pdo->errorInfo();
-			$this->_throwException(new TaxonMatcherException($error[2]));
+			throw new TaxonMatcherException($error[2]);
 		}
 		return $statement->rowCount();
 	}
@@ -889,21 +881,12 @@ SQL;
 			$this->_pdo = new PDO($dsn, $this->_dbUser, $this->_dbPassword);
 		}
 		catch(PDOException $e) {
-			$this->_throwException($e, 'Cannot connect to database server using the specified connection parameters');
+			throw new TaxonMatcherException('Cannot connect to database server using the specified connection parameters', 0, $e);
 		}
 		$this->_exec("SET NAMES UTF8");
 		$this->_exec("SET GROUP_CONCAT_MAX_LEN = 15000");
 	}
 
-
-	private function _throwException(Exception $exception, $message = null)
-	{
-		if($message === null) {
-			$message = $exception->getMessage();
-		}
-		$this->_error($message, $exception);
-		throw $exception;
-	}
 
 	private function _error($message, Exception $exception = null)
 	{
