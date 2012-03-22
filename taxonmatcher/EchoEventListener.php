@@ -1,11 +1,16 @@
 <?php
 /**
+ * 
+ * @author Ayco Holleman, ETI BioInformatics
+ * @author Richard White (original PERL implementation), Cardiff University
+ * 
  * Simple (but probably useful) implementation of TaxonMatcherEventListener.
  * Basically just echoes any message coming out of the TaxonMatcher, prefixing
  * it with a timestamp. You have two configuration options:
  * 
- * [1] You can choose to make up the message as HTML, embedding it <p> tags.
- * The <p> tag will then get a css class of "taxon-matcher-msg-{$messageType}".
+ * [1] You can choose to have the messge marked up as HTML, in which case the
+ * EchoEventListener will embed it between <p> tags. The <p> tag will get a css
+ * class of "taxon-matcher-msg-{$messageType}". @see TaxonMatcherEventListener.
  * 
  * [2] You can choose to display Exception stack traces in case an exception
  * was passed to the onMessage() method. (N.B. Even if you enable DEBUG

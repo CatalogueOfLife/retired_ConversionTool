@@ -1,5 +1,9 @@
 <?php
 /**
+ * 
+ * @author Ayco Holleman, ETI BioInformatics
+ * @author Richard White (original PERL implementation), Cardiff University
+ * 
  * Abstract implementation of the TaxonMatcherEventListener. Subclasses won't
  * have to deal with enabling, disabling and checking message types.
  */
@@ -75,6 +79,9 @@ abstract class AbstractTaxonMatcherEventListener implements TaxonMatcherEventLis
 	}
 
 
+	
+	
+	// FUTURE use maybe:
 
 	private static $_phpErrorConstants = null;
 

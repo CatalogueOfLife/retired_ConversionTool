@@ -1,5 +1,9 @@
 <?php
 /**
+ * 
+ * @author Ayco Holleman, ETI BioInformatics
+ * @author Richard White (original PERL implementation), Cardiff University
+ * 
  * <p>
  * The central class in the PHP taxon matcher module. Its most important method is the
  * run() method, which matches taxa between current and upcoming CoL editions,

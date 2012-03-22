@@ -1,5 +1,9 @@
 <?php
 /**
+ * 
+ * @author Ayco Holleman, ETI BioInformatics
+ * @author Richard White (original PERL implementation), Cardiff University
+ * 
  * The interface for objects that are interested in messages coming out
  * from the TaxonMatcher. The taxonmatcher-cli.php script provides a
  * good example of instantiating a TaxonMatcherEventListener implementation
