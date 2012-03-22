@@ -83,6 +83,7 @@ class TaxonMatcher {
 		$this->_initializeStagingArea();
 		$this->_importAC($this->_dbNameCurrent);
 		$this->_importAC($this->_dbNameNext);
+		$this->_generateLogicalKey();
 		$this->_compareEditions();
 		$this->_addLSIDs();
 		$timer = self::_getTimer(time() - $start);
@@ -236,7 +237,7 @@ class TaxonMatcher {
 			$sqlExpression = sprintf('SUBSTRING(AC.lsid,%s,%s)', self::$UUID_START_POS, self::$UUID_LENGTH);
 		}
 		else {
-			$sqlExpression = 'NULL';
+			$sqlExpression = "''";
 		}
 
 		$this->_createTaxonTable();
@@ -252,7 +253,6 @@ class TaxonMatcher {
 		$this->_importClasses($dbName, $sqlExpression);
 		$this->_importPhyla($dbName, $sqlExpression);
 		$this->_importKingdoms($dbName, $sqlExpression);
-		$this->_generateLogicalKey();
 
 	}
 
@@ -274,7 +274,7 @@ class TaxonMatcher {
 							sciNames,
 							otherData)
 					SELECT
-							'{$edition}',
+							{$edition},
 							0,
 							S.database_id,
 							S.accepted_name_code,
@@ -297,19 +297,23 @@ SQL;
 	private function _importLSIDsForSpecies($dbName, $sqlExpression)
 	{
 		$this->_info('Importing LSIDs for species and lower taxa');
-/*
+		
+
 		$sql = <<<SQL
 			UPDATE `{$this->_dbNameStage}`.Taxon T
 			  LEFT JOIN `{$dbName}`.taxa AC ON (T.code = AC.name_code)
 			   SET T.lsid = {$sqlExpression}
 			 WHERE AC.name_code IS NOT NULL
 SQL;
-*/
+
+		
+/*		
 		$sql = <<<SQL
 			UPDATE `{$this->_dbNameStage}`.Taxon T, `{$dbName}`.taxa AC
 			   SET T.lsid = {$sqlExpression}
 			 WHERE (T.code = AC.name_code)
 SQL;
+*/
 		$this->_exec($sql);
 	}
 
@@ -328,7 +332,7 @@ SQL;
 						T.code,
 		                GROUP_CONCAT(CONCAT_WS('/', common_name, `language`, country) ORDER BY common_name, `language`, country SEPARATOR ', ') AS commonNames
               FROM `{$this->_dbNameStage}`.Taxon T, `{$dbName}`.common_names C
-             WHERE T.edition = '{$edition}'
+             WHERE T.edition = {$edition}
                AND T.code = C.name_code
              GROUP BY C.name_code
              {$this->_readLimitClause}
@@ -345,7 +349,7 @@ SQL;
 			UPDATE `{$this->_dbNameStage}`.Taxon T
 			     , `{$this->_dbNameStage}`.CommonName C
 			   SET T.commonNames = C.commonNames
-			 WHERE T.code = C.code AND T.edition = '$edition'
+			 WHERE T.code = C.code AND T.edition = $edition
 SQL;
 		$this->_exec($sql);
 	}
@@ -360,7 +364,7 @@ SQL;
 			     , `{$dbName}`.distribution D
 			   SET T.distribution = D.distribution
 			 WHERE T.code = D.name_code
-			   AND T.edition = '$edition'
+			   AND T.edition = $edition
 SQL;
 		$this->_exec($sql);
 	}
@@ -382,7 +386,7 @@ SQL;
 							nameCodes,
 							sciNames)
 					SELECT
-							'{$edition}',
+							{$edition},
 							AC.record_id,
 							AC.database_id,
 							CAST(AC.record_id AS CHAR),
@@ -424,7 +428,7 @@ SQL;
 							sciNames,
 							otherData)
 					SELECT
-						    '{$edition}',
+						    {$edition},
 						    AC.record_id,
 						    F.database_id,
 						    CONCAT_WS(': ', family, `order`, `class`, phylum, kingdom),
@@ -462,7 +466,7 @@ SQL;
 							nameCodes,
 							sciNames)
 					SELECT
-						    '{$edition}',
+						    {$edition},
 						    AC.record_id,
 						    F.database_id,
 						    CONCAT_WS(': ', superfamily, `order`, `class`, phylum, kingdom),
@@ -497,7 +501,7 @@ SQL;
 							rank,
 							nameCodes,
 							sciNames)
-					SELECT  '{$edition}',
+					SELECT  {$edition},
 							AC.record_id,
 							F.database_id,
 							CONCAT_WS(': ', `order`, `class`, phylum, kingdom),
@@ -532,7 +536,7 @@ SQL;
 							rank,
 							nameCodes,
 							sciNames)
-					SELECT  '{$edition}',
+					SELECT  {$edition},
 							AC.record_id,
 							F.database_id,
 							CONCAT_WS(': ', `class`, phylum, kingdom),
@@ -567,7 +571,7 @@ SQL;
 							rank,
 							nameCodes,
 							sciNames)
-					SELECT  '{$edition}',
+					SELECT  {$edition},
 							AC.record_id,
 							F.database_id,
 							CONCAT_WS(': ', phylum, kingdom),
@@ -602,7 +606,7 @@ SQL;
 							rank,
 							nameCodes,
 							sciNames)
-					SELECT  '{$edition}',
+					SELECT  {$edition},
 							AC.record_id,
 							F.database_id,
 							CONCAT_WS(': ', kingdom, '(top-level domain)'),
@@ -627,11 +631,11 @@ SQL;
 		$this->_info('Generating logical keys for taxa');
 		$sql = <<<SQL
 				UPDATE `{$this->_dbNameStage}`.Taxon
-				   SET allData = IFNULL(REPLACE(
-				   							CONCAT_WS('; ', TRIM(sciNames), TRIM(commonNames), TRIM(distribution), TRIM(otherData)),
+				   SET allData = UNHEX(MD5(IFNULL(REPLACE(
+				   							CONCAT_WS(';', TRIM(sciNames), TRIM(commonNames), TRIM(distribution), TRIM(otherData)),
 											'  ',
 											' '),
-										'')
+										'')))
 SQL;
 		$this->_exec($sql);
 	}
@@ -644,18 +648,35 @@ SQL;
 
 		$this->_exec("ALTER TABLE `{$this->_dbNameStage}`.Taxon ENABLE KEYS");
 		$this->_exec("OPTIMIZE TABLE `{$this->_dbNameStage}`.Taxon");
+		$this->_exec("ALTER TABLE `{$this->_dbNameStage}`.Taxon ADD INDEX (allData,edition)");
+
+		
+/*		
 		$this->_exec("
 				UPDATE `{$this->_dbNameStage}`.Taxon T1, `{$this->_dbNameStage}`.Taxon T2
 				SET T2.lsid = T1.lsid
 				WHERE T1.allData = T2.allData
-				AND T1.edition = '{$this->_currentEdition}'
-				AND T2.edition = '{$this->_nextEdition}'
+				AND T1.edition = 0
+				AND T2.edition = 1
 				", true);
+*/
+		
+		
+		$this->_exec("
+				UPDATE `{$this->_dbNameStage}`.Taxon T1
+				  LEFT JOIN `{$this->_dbNameStage}`.Taxon T0 ON(T1.allData = T0.allData AND T1.edition = 1 AND T0.edition = 0)
+				   SET T1.lsid = T0.lsid
+				 WHERE T1.edition = 1
+				   AND T0.allData IS NOT NULL
+				", true);
+		
+		
+		
 		$this->_exec("
 				UPDATE `{$this->_dbNameStage}`.Taxon
 				SET lsid = UUID()
-				WHERE edition = '{$this->_nextEdition}'
-				AND lsid IS NULL
+				WHERE edition = 1
+				AND lsid = ''
 				");
 	}
 
@@ -670,7 +691,7 @@ SQL;
 		$sql = <<<SQL
 			UPDATE `{$this->_dbNameNext}`.taxa A, `{$this->_dbNameStage}`.Taxon T
 			   SET A.lsid = T.lsid
-			 WHERE T.edition = '{$this->_nextEdition}' AND A.is_accepted_name = 1
+			 WHERE T.edition = 1 AND A.is_accepted_name = 1
 			   AND T.code = A.name_code
 SQL;
 		$this->_exec($sql);
@@ -678,7 +699,7 @@ SQL;
 		$sql = <<<SQL
 			UPDATE `{$this->_dbNameNext}`.taxa A, `{$this->_dbNameStage}`.Taxon T
 			   SET A.lsid = T.lsid
-			 WHERE T.edition = '{$this->_nextEdition}' AND A.is_accepted_name = 1
+			 WHERE T.edition = 1 AND A.is_accepted_name = 1
 			   AND T.edRecordId = A.record_id
 SQL;
 		$this->_exec($sql);
@@ -711,7 +732,8 @@ SQL;
 	 */
 	private function _getEdition($dbName)
 	{
-		return $dbName === $this->_dbNameCurrent ? $this->_currentEdition : $this->_nextEdition;
+		//return $dbName === $this->_dbNameCurrent ? $this->_currentEdition : $this->_nextEdition;
+		return $dbName === $this->_dbNameCurrent ? 0 : 1;
 	}
 
 
@@ -774,18 +796,18 @@ SQL;
 	{
 		$sql = <<<SQL
 			CREATE TABLE IF NOT EXISTS `{$this->_dbNameStage}`.Taxon(
-				edition      VARCHAR(15) NOT NULL DEFAULT '',
+				edition      TINYINT NOT NULL DEFAULT 0,
 				edRecordId   INT(10) UNSIGNED NOT NULL,
-		 		databaseId   INT(10) UNSIGNED,
+		 		databaseId   INT(10) UNSIGNED NOT NULL,
 		 		code         VARCHAR(137) NOT NULL DEFAULT '',
-		 		lsid         VARCHAR(36),
-		 		rank         VARCHAR(12),
-				nameCodes    TEXT,
-		 		sciNames     TEXT,
-		 		commonNames  TEXT,
-		 		distribution TEXT,
-		 		otherData    TEXT,
-		 		allData      TEXT,
+		 		lsid         VARCHAR(36) NOT NULL DEFAULT '',
+		 		rank         VARCHAR(12) NOT NULL DEFAULT '',
+				nameCodes    VARCHAR(1024) NOT NULL DEFAULT '',
+		 		sciNames     TEXT NOT NULL DEFAULT '',
+		 		commonNames  TEXT NOT NULL DEFAULT '',
+		 		distribution VARCHAR(2048) NOT NULL DEFAULT '',
+		 		otherData    VARCHAR(512) NOT NULL DEFAULT '',
+		 		allData      BINARY(16) NOT NULL DEFAULT '',
 		 		INDEX        (edition),
 		 		INDEX        (edRecordId,edition),
 		 		INDEX        (code,edition),
@@ -807,16 +829,6 @@ SQL;
 
 SQL;
 		$this->_exec($sql);
-	}
-
-
-	/**
-	 * @throws TaxonMatcherException
-	 */
-	private function _useDatabase($dbName)
-	{
-		$this->_debug('Changing to database ' . $dbName);
-		$this->_exec('USE DATABASE `' . $dbName . '`');
 	}
 
 
