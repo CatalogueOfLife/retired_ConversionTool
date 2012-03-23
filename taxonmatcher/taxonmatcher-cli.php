@@ -4,7 +4,7 @@
  * @author Richard White (original PERL implementation), Cardiff University
  * 
  * Stand-alone version of the taxon matcher that must be run from the
- * command line using PHP command line interpreter (CLI). There is
+ * command line using the PHP command line interpreter (CLI). There is
  * an ultra-thin wrapper for this script, go.bat, in case you are on
  * a Windows machine.
  * 

@@ -84,6 +84,7 @@ class TaxonMatcher {
 			$this->_validateInput();
 			$this->_connect();
 			$this->_initializeStagingArea();
+			$this->_resetLSIDs();
 			$this->_importAC($this->_dbNameCurrent);
 			$this->_importAC($this->_dbNameNext);
 			$this->_generateLogicalKey();
@@ -130,7 +131,7 @@ class TaxonMatcher {
 
 	/**
 	 * Set the suffix for LSIDs in the new Col Edition (everything after the last colon). Required.
-	 * @param string $edition
+	 * @param string $suffix
 	 */
 	public function setLSIDSuffix($suffix)
 	{
@@ -648,7 +649,7 @@ SQL;
 		$this->_exec("ALTER TABLE `{$this->_dbNameStage}`.Taxon ADD INDEX (allData,edition)");
 
 
-		/*
+/*		
 		 $this->_exec("
 		 		UPDATE `{$this->_dbNameStage}`.Taxon T1, `{$this->_dbNameStage}`.Taxon T2
 		 		SET T2.lsid = T1.lsid
@@ -656,7 +657,7 @@ SQL;
 		 		AND T1.edition = 0
 		 		AND T2.edition = 1
 		 		", true);
-		*/
+*/		
 
 
 		$this->_exec("
@@ -675,6 +676,13 @@ SQL;
 				WHERE edition = 1
 				AND lsid = ''
 				");
+	}
+	
+	
+	private function _resetLSIDs()
+	{
+		$this->_info('Resetting LSIDs in new CoL edition');
+		$this->_exec("UPDATE `{$this->_dbNameNext}`.taxa SET lsid = NULL WHERE lsid IS NOT NULL");
 	}
 
 
@@ -854,7 +862,7 @@ SQL;
 	 * @throws TaxonMatcherException
 	 * @return number
 	 */
-	private function _exec($sql, $buffered = true)
+	private function _exec($sql, $buffered = false)
 	{
 		$this->_debug('Executing SQL (exec): ' . $sql);
 		$options = array(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => $buffered);
