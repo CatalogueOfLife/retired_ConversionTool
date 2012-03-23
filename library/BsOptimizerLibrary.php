@@ -622,3 +622,6 @@ function checkImportTables ($dbName, $tables)
     }
     return $empty;
 }
+
+
+

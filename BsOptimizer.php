@@ -8,7 +8,7 @@
 
 <body style="font: 12px verdana; width: 700px;">
   <h3>Base Scheme Optimizer</h3><?php
-  require_once 'library.php';
+  require_once 'library/BsOptimizerLibrary.php';
   require_once 'DbHandler.php';
   require_once 'Indicator.php';
   alwaysFlush();
@@ -31,7 +31,7 @@
   define('SPECIES_DETAILS', '_species_details');
   define('TAXON_TREE', '_taxon_tree');
   define('TOTALS', '_totals');
-  define('IMPORT_SPECIES_ESTIMATE', '__import_species_estimate');
+//  define('IMPORT_SPECIES_ESTIMATE', '__import_species_estimate');
   $files = array(
       array(
           'path' => PATH, 
@@ -77,11 +77,6 @@
           'path' => PATH . DENORMALIZED_TABLES_PATH, 
           'dumpFile' => TOTALS, 
           'message' => 'Filling ' . TOTALS . ' table'
-      ), 
-      array(
-          'path' => PATH . DENORMALIZED_TABLES_PATH, 
-          'dumpFile' => IMPORT_SPECIES_ESTIMATE, 
-          'message' => 'Importing species estimates'
       )
   );
 
@@ -471,7 +466,7 @@
       updateTaxonTree($tt, $source_database_ids, $species_count);
       $indicator->iterate();
   }
-
+/*
   echo '</p><p>Importing species estimates from the ' . IMPORT_SPECIES_ESTIMATE . ' table...<br>';
   $clean = 'UPDATE ' . TAXON_TREE . ' SET `total_species_estimation` = 0, `estimate_source` = ""';
   $stmt = $pdo->prepare($clean);
@@ -490,7 +485,7 @@
       $stmt = $pdo->prepare($update);
       $stmt->execute($est);
   }
-/*
+
   echo 'Importing qualifiers from the ' . IMPORT_SOURCE_DATABASE_QUALIFIERS . ' table...<br>';
   $clean = 'UPDATE ' . SOURCE_DATABASE_DETAILS . ' SET `coverage` = "", `completeness` = 0, `confidence` = 0;';
   $stmt = $pdo->prepare($clean);

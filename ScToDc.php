@@ -1,7 +1,7 @@
 <?php
-require_once 'library.php';
+require_once 'library/BsOptimizerLibrary.php';
 alwaysFlush();
-set_include_path('library' . PATH_SEPARATOR . get_include_path());
+set_include_path('BsOptimizerLibrary' . PATH_SEPARATOR . get_include_path());
 
 require_once 'DbHandler.php';
 require_once 'Dictionary.php';

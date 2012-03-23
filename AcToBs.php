@@ -11,7 +11,7 @@
 ini_set('memory_limit', '1024M');
 set_include_path('library' . PATH_SEPARATOR . get_include_path());
 
-require_once 'library.php';
+require_once 'library/BsOptimizerLibrary.php';
 require_once 'DbHandler.php';
 require_once 'Dictionary.php';
 require_once 'converters/Ac/Loader.php';
@@ -19,7 +19,6 @@ require_once 'converters/Bs/Storer.php';
 require_once 'library/Zend/Log/Writer/Stream.php';
 require_once 'library/Zend/Log.php';
 require_once 'Indicator.php';
-
 alwaysFlush();
 
 /**
@@ -71,7 +70,7 @@ echo '<p>Preparing higher taxa...<br>';
 $total = $loader->count('HigherTaxon');
 $ind->init($total, 100, 100);
 echo "Transferring $total higher taxa<br>";
-for ($limit = 100000, $offset = 0; $offset < $total; $offset += $memLimit) {
+for ($limit = $memLimit = 100000, $offset = 0; $offset < $total; $offset += $memLimit) {
     try {
         list($taxa, $memLimit) = $loader->load('HigherTaxon', $offset, $limit);
         foreach ($taxa as $taxon) {
@@ -98,7 +97,7 @@ echo '<p>Preparing species and infraspecies...<br>';
 $total = $loader->count('Taxon');
 $ind->init($total, 100, 100);
 echo "Transferring $total taxa<br>";
-for ($limit = 10000, $offset = 0; $offset < $total; $offset += $memLimit) {
+for ($limit = $memLimit = 10000, $offset = 0; $offset < $total; $offset += $memLimit) {
     try {
         list($taxa, $memLimit) = $loader->load('Taxon', $offset, $limit);
         /*// Start debug
