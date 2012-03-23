@@ -30,14 +30,13 @@ revision = @REVISION@
 
 [taxonmatcher]
 ; database name of the old AC
-dbNameCurrent = @TAXONMATCHER.CURRENT.DBNAME@
+dbNameCurrent = assembly_previous
 ; database name staging area (will be created if not exists)
 dbNameStage = CoLTTC
 ; The LSID suffix for the new CoL
-lsidSuffix = @TAXONMATCHER.LSID.SUFFIX@
+lsidSuffix = col2012acv15
 ; maximum number of records to fetch from old and new taxa table
 ; zero or less means no limit
 readLimit = 0
-; EchoEventListener options; yes = 1, no = 0
-debug = 0 
-showStackTrace = 1
+
+
