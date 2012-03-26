@@ -101,7 +101,7 @@ class TaxonMatcher {
 			$this->_info(sprintf("Total duration: %02d:%02d:%02d", $timer['H'], $timer['i'], $timer['s']));
 		}
 		catch(Exception $e) {
-			$this->_error(TaxonMatcherEventListener::MSG_ERROR, $e->getMessage(), $e);
+			$this->_error($e->getMessage(), $e);
 		}
 	}
 
