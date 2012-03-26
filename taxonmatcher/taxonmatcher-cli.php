@@ -53,11 +53,11 @@ $taxonMatcher->setDbNameNext($config['dbNameNext']);
 $taxonMatcher->setDbNameStage($config['dbNameStage']);
 $taxonMatcher->setLSIDSuffix($config['lsidSuffix']);
 $taxonMatcher->setReadLimit($config['readLimit']);
-if(isTrue($config['resetLSIDs'])) {
-	$taxonMatcher->setResetLSIDs(true);
-}
-else {
+if(!isTrue($config['resetLSIDs'])) {
 	$taxonMatcher->setResetLSIDs(false);
+}
+if(!isTrue($config['dropStagingArea'])) {
+	$taxonMatcher->setDropStagingArea(false);
 }
 
 

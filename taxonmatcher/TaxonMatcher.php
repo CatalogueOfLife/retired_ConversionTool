@@ -49,7 +49,10 @@ class TaxonMatcher {
 	private $_dbNameNext;
 
 	private $_resetLSIDs = true;
-
+	private $_dropStagingArea = true;
+	private $_taxonNameFilter;
+	private $_readLimitClause = '';
+	
 	/**
 	 * An array of TaxonMatcherEventListener objects.
 	 * @var array
@@ -61,14 +64,7 @@ class TaxonMatcher {
 	 */
 	private $_pdo;
 
-	/**
-	 * An SQL LIKE expression (without the LIKE keyword or SQL quotes)
-	 * @var string
-	 */
-	private $_taxonNameFilter;
 
-	// debug
-	private $_readLimitClause = '';
 
 
 
@@ -98,6 +94,9 @@ class TaxonMatcher {
 			$this->_generateLogicalKey();
 			$this->_compareEditions();
 			$this->_addLSIDs();
+			if($this->_dropStagingArea) {
+				$this->_dropStagingArea();
+			}
 			$timer = self::_getTimer(time() - $start);
 			$this->_info(sprintf("Total duration: %02d:%02d:%02d", $timer['H'], $timer['i'], $timer['s']));
 		}
@@ -188,12 +187,24 @@ class TaxonMatcher {
 
 
 	/**
-	 * Whether or not to first erase all LSIDs in the new AC.
+	 * Whether or not to first erase all LSIDs in the new AC. Optional. Default
+	 * TRUE.
 	 * @param boolean $bool
 	 */
 	public function setResetLSIDs($bool)
 	{
 		$this->_resetLSIDs = $bool;
+	}
+
+
+	/**
+	 * Whether or not to drop the staging area database at the end of the process.
+	 * Optional. Default TRUE.
+	 * @param boolean $bool
+	 */
+	public function setDropStagingArea($bool)
+	{
+		$this->_dropStagingArea = $bool;
 	}
 
 
@@ -808,6 +819,12 @@ SQL;
 		$this->_createTaxonTable();
 		$this->_exec("DROP TABLE IF EXISTS `{$this->_dbNameStage}`.CommonName");
 		$this->_createCommonNameTable();
+	}
+	
+	private function _dropStagingArea()
+	{
+		$this->_info('Destroying staging area');
+		$this->_exec("DROP DATABASE IF EXISTS `{$this->_dbNameStage}`");
 	}
 
 
