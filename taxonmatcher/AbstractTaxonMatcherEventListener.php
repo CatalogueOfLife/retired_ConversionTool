@@ -8,6 +8,8 @@
  * have to deal with enabling, disabling and checking message types.
  */
 
+interface_exists('TaxonMatcherEventListener', false) || include 'TaxonMatcherEventListener.php';
+
 abstract class AbstractTaxonMatcherEventListener implements TaxonMatcherEventListener {
 
 	private $_enabledMessageTypes;

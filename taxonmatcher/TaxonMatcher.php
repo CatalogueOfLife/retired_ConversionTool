@@ -24,6 +24,10 @@
  * </p>
  */
 
+interface_exists('TaxonMatcherEventListener', false) || include 'TaxonMatcherEventListener.php';
+class_exists('TaxonMatcherException', false) || include 'TaxonMatcherException.php';
+class_exists('InvalidInputException', false) || include 'InvalidInputException.php';
+
 class TaxonMatcher {
 
 	private static $PREFIX_LSID = 'urn:lsid:catalogueoflife.org:taxon:';
@@ -43,6 +47,8 @@ class TaxonMatcher {
 	private $_dbNameCurrent;
 	// The name of the database containing the data for the upcoming CoL.
 	private $_dbNameNext;
+
+	private $_resetLSIDs = true;
 
 	/**
 	 * An array of TaxonMatcherEventListener objects.
@@ -84,7 +90,9 @@ class TaxonMatcher {
 			$this->_validateInput();
 			$this->_connect();
 			$this->_initializeStagingArea();
-			$this->_resetLSIDs();
+			if($this->_resetLSIDs) {
+				$this->_resetLSIDs();
+			}
 			$this->_importAC($this->_dbNameCurrent);
 			$this->_importAC($this->_dbNameNext);
 			$this->_generateLogicalKey();
@@ -176,6 +184,16 @@ class TaxonMatcher {
 	public function setTaxonNameFilter($filter)
 	{
 		$this->_taxonNameFilter = $filter;
+	}
+
+
+	/**
+	 * Whether or not to first erase all LSIDs in the new AC.
+	 * @param boolean $bool
+	 */
+	public function setResetLSIDs($bool)
+	{
+		$this->_resetLSIDs = $bool;
 	}
 
 
@@ -649,7 +667,7 @@ SQL;
 		$this->_exec("ALTER TABLE `{$this->_dbNameStage}`.Taxon ADD INDEX (allData,edition)");
 
 
-/*		
+		/*
 		 $this->_exec("
 		 		UPDATE `{$this->_dbNameStage}`.Taxon T1, `{$this->_dbNameStage}`.Taxon T2
 		 		SET T2.lsid = T1.lsid
@@ -657,7 +675,7 @@ SQL;
 		 		AND T1.edition = 0
 		 		AND T2.edition = 1
 		 		", true);
-*/		
+		*/
 
 
 		$this->_exec("
@@ -677,12 +695,12 @@ SQL;
 				AND lsid = ''
 				");
 	}
-	
-	
+
+
 	private function _resetLSIDs()
 	{
 		$this->_info('Resetting LSIDs in new CoL edition');
-		$this->_exec("UPDATE `{$this->_dbNameNext}`.taxa SET lsid = NULL WHERE lsid IS NOT NULL");
+		$this->_exec("UPDATE `{$this->_dbNameNext}`.taxa SET lsid = NULL");
 	}
 
 
@@ -821,7 +839,7 @@ SQL;
 		$this->_exec($sql);
 	}
 
-	
+
 	private function _createCommonNameTable()
 	{
 		$sql = <<<SQL
@@ -871,6 +889,7 @@ SQL;
 			$error = $this->_pdo->errorInfo();
 			throw new TaxonMatcherException($error[2]);
 		}
+		$this->_debug('Records inserted/updated/deleted: ' . $statement->rowCount());
 		return $statement->rowCount();
 	}
 

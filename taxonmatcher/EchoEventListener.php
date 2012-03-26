@@ -32,6 +32,8 @@
  * 
  */
 
+class_exists('AbstractTaxonMatcherEventListener', false) || include 'AbstractTaxonMatcherEventListener.php';
+
 class EchoEventListener extends AbstractTaxonMatcherEventListener {
 
 	private $_isPlainText = true;

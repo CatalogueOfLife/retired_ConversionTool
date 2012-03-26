@@ -4,6 +4,8 @@
  * the data is invalid.
  */
 
+class_exists('TaxonMatcherException', false) || include 'TaxonMatcherException.php';
+
 class InvalidInputException extends TaxonMatcherException {
 
 }
