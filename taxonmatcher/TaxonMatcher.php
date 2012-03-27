@@ -52,7 +52,7 @@ class TaxonMatcher {
 	private $_dropStagingArea = true;
 	private $_taxonNameFilter;
 	private $_readLimitClause = '';
-	
+
 	/**
 	 * An array of TaxonMatcherEventListener objects.
 	 * @var array
@@ -671,40 +671,21 @@ SQL;
 	private function _compareEditions()
 	{
 
-		$this->_info('Computing LSIDs in staging area');
+		$this->_info('Copying LSID for matching taxa');
 
 		$this->_exec("ALTER TABLE `{$this->_dbNameStage}`.Taxon ENABLE KEYS");
 		$this->_exec("OPTIMIZE TABLE `{$this->_dbNameStage}`.Taxon");
 		$this->_exec("ALTER TABLE `{$this->_dbNameStage}`.Taxon ADD INDEX (allData,edition)");
 
 
-		/*
-		 $this->_exec("
-		 		UPDATE `{$this->_dbNameStage}`.Taxon T1, `{$this->_dbNameStage}`.Taxon T2
-		 		SET T2.lsid = T1.lsid
-		 		WHERE T1.allData = T2.allData
-		 		AND T1.edition = 0
-		 		AND T2.edition = 1
-		 		", true);
-		*/
-
-
 		$this->_exec("
 				UPDATE `{$this->_dbNameStage}`.Taxon T1
-				LEFT JOIN `{$this->_dbNameStage}`.Taxon T0 ON(T1.allData = T0.allData AND T1.edition = 1 AND T0.edition = 0)
+				LEFT JOIN `{$this->_dbNameStage}`.Taxon T0 ON(T1.allData = T0.allData AND T0.edition = 0 AND T1.edition = 1)
 				SET T1.lsid = T0.lsid
-				WHERE T1.edition = 1
-				AND T0.allData IS NOT NULL
+				WHERE T0.allData IS NOT NULL
+				AND T1.edition = 1
 				", true);
 
-
-
-		$this->_exec("
-				UPDATE `{$this->_dbNameStage}`.Taxon
-				SET lsid = UUID()
-				WHERE edition = 1
-				AND lsid = ''
-				");
 	}
 
 
@@ -718,33 +699,45 @@ SQL;
 	private function _addLSIDs()
 	{
 
+
+		$prefix = self::$PREFIX_LSID;
+
+		// If the LSIDs have been reset to NULL, then LSID assignment
+		// must always take place, otherwise, only those records which
+		// do not have an LSID yet must get an LSID.
+		$whereClause = $this->_resetLSIDs? '' : 'AND A.lsid IS NULL';
+
+
 		$this->_info('Copying LSIDs from staging area to new CoL edition');
 
-		$prefix = self::$PREFIX_LSID;
+		$this->_exec("
+				UPDATE `{$this->_dbNameNext}`.taxa A, `{$this->_dbNameStage}`.Taxon T
+				SET A.lsid = CONCAT('$prefix' , T.lsid , ':{$this->_lsidSuffix}' )
+				WHERE T.code = A.name_code
+				AND A.is_accepted_name = 1
+				AND T.edition = 1
+				AND T.lsid != '' /* no match found */
+				{$whereClause}
+				");
 
-		$sql = <<<SQL
-			UPDATE `{$this->_dbNameNext}`.taxa A, `{$this->_dbNameStage}`.Taxon T
-			   SET A.lsid = T.lsid
-			 WHERE T.edition = 1 AND A.is_accepted_name = 1
-			   AND T.code = A.name_code
-SQL;
-		$this->_exec($sql);
 
-		$sql = <<<SQL
-			UPDATE `{$this->_dbNameNext}`.taxa A, `{$this->_dbNameStage}`.Taxon T
-			   SET A.lsid = T.lsid
-			 WHERE T.edition = 1 AND A.is_accepted_name = 1
-			   AND T.edRecordId = A.record_id
-SQL;
-		$this->_exec($sql);
+		$this->_exec("
+				UPDATE `{$this->_dbNameNext}`.taxa A, `{$this->_dbNameStage}`.Taxon T
+				SET A.lsid = CONCAT('$prefix' , T.lsid , ':{$this->_lsidSuffix}' )
+				WHERE T.edRecordId = A.record_id
+				AND A.is_accepted_name = 1
+				AND T.edition = 1
+				AND T.lsid != '' /* no match found */
+				{$whereClause}
+				");
 
-		$prefix = self::$PREFIX_LSID;
-		$sql = <<<SQL
-			UPDATE `{$this->_dbNameNext}`.taxa
-			   SET lsid = CONCAT('$prefix', lsid, ':{$this->_lsidSuffix}')
-			 WHERE is_accepted_name = 1
-SQL;
-		$this->_exec($sql);
+
+		$this->_info('Assigning new LSIDs to new (unmatched) taxa');
+		$this->_exec("
+				UPDATE `{$this->_dbNameNext}`.taxa
+				SET lsid = CONCAT('$prefix' , UUID() , ':{$this->_lsidSuffix}' )
+				WHERE lsid IS NULL
+				");
 
 	}
 
@@ -820,7 +813,7 @@ SQL;
 		$this->_exec("DROP TABLE IF EXISTS `{$this->_dbNameStage}`.CommonName");
 		$this->_createCommonNameTable();
 	}
-	
+
 	private function _dropStagingArea()
 	{
 		$this->_info('Destroying staging area');
