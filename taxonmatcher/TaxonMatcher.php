@@ -755,7 +755,7 @@ SQL;
 	 */
 	private function _hasLSIDs($dbName)
 	{
-		return (0 != $this->_fetchOne("SELECT COUNT(*) FROM `{$dbName}`.Taxa"));
+		return (0 != $this->_fetchOne("SELECT COUNT(*) FROM `{$dbName}`.taxa"));
 	}
 
 
