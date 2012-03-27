@@ -123,8 +123,8 @@ for ($limit = $memLimit = 10000, $offset = 0; $offset < $total; $offset += $memL
         echo 'Load error: '.formatException($e);
     }
 }
-echo '</p><p>All records imported. Next step is to <a href="BsOptimizer.php">
-    create the denormalized search tables</a>.</p>';
 ?>
-</body>
+    </p><p>All records imported. Proceed to <b>Step 3</b>: <a href="BsOptimizer.php">
+        Create the denormalized tables</a>.</p>
+    </body>
 </html>

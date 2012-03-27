@@ -1,6 +1,6 @@
 <?php
 $config = parse_ini_file('config/AcToBs.ini', true);
-$table = '<table style="margin: 15px 0;"><tr>';
+$table = '<table style="margin: 30px 0;"><tr>';
 foreach ($config as $k => $v) {
     if (!in_array($k, array(
         'source', 
@@ -38,12 +38,22 @@ if ($config['settings']['revision'] != '') {
 echo $version;
 ?></p>
 <p>Welcome to the 4D4Life Conversion Tool. This tool is used to transfer
-the Annual Checklist to a database based on the base scheme. The
-conversion is a two-step process: first all data is copied from the old
-database to the base scheme, next a set of tables is created that speed
-up searching and browsing in the interface.</p>
+the Assembly Database to a database based on the Base Scheme. It's recommended
+to start with a fresh Base Scheme database rather than re-using an older version, 
+as  additional tables or columns may be required that were not yet present in
+previous editions. A new database can be created by importing the 
+'baseschema-schema.sql' and 'baseschema-data.sql' SQL 
+dump files at docs_and_dumps/dumps/base-scheme.</p>
+<p>The conversion is a three-step process: 
+<ol>
+<li>the Assembly Database is post-processed: foreign keys are converted, 
+a denormalized table is created and LSIDs are generated</li>
+<li>the data is imported into the new database</li>
+<li>several denormalized tables are created for the new database that 
+speed up searching and browsing in the Annual Checklist interface</li>
+</ol></p>
 <p>Due to the nature of the base scheme database, the conversion is a
-lengthy process that may take over 24 hours. Please refer to INSTALL.TXT
+lengthy process that will take several hours. Please refer to INSTALL.TXT
 and README.TXT for hints to improve performance.</p>
 <p>Currently the conversion is set as follows. Changes can be applied to
 the <i>AcToBs.ini</i> file in the config directory. User name and
@@ -51,11 +61,8 @@ password are not shown for security reasons.</p>
 <?php
 echo $table;
 ?>
-<p style="margin-bottom: 30px;">Click the link to start the conversion:
-<a href="AcToBs.php">convert Annual Checklist to Base Scheme</a></p>
-<p>An experimental and unsupported conversion of the latest version of
-the SpiceCache database to the previous Annual Checklist database format
-is also available: <a href="ScToDc.php">convert SpiceCache to Dynamic
-Checklist</a></p>
+<p>Proceed to <b>Step 1</b>: <a href="AdOptimizer.php">Post-process the Assembly Database</a>.
+<p>(In case the Assembly Database has already been post-processed using the 
+old scripts, you can <a href="AcToBs.php">proceed to the import script</a>.)</p>
 </body>
 </html>

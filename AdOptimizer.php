@@ -111,6 +111,8 @@
     catch(Exception $e) {
         echo "\n" . $e->getTraceAsString();
     }    
-  ?>
+?>
+    </p><p>Post-processing ready! Proceed to <b>Step 2</b>: 
+    <a href="AcToBs.php">Import the data into the new database</a>.</p>.
 </body>
 </html>
