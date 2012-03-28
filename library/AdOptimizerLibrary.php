@@ -293,6 +293,7 @@ function createTaxaTable () {
                       KEY `parent_id` (`parent_id`),
                       KEY `database_id` (`database_id`),
                       KEY `taxon` (`taxon`),
+                      KEY `lsid` (`lsid`),
                       KEY `is_accepted_name` (`is_accepted_name`),
                       KEY `name_code` (`name_code`),
                       KEY `is_species_or_nonsynonymic_higher_taxon` (`is_species_or_nonsynonymic_higher_taxon`),

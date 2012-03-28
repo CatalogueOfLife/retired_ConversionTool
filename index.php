@@ -31,7 +31,7 @@ if ($config['settings']['revision'] != '') {
 <meta http-equiv="content-type" content="text/html; charset=utf-8">
 <title>4D4Life Conversion Tool</title>
 </head>
-<body style="font: 12px verdana; width: 600px;">
+<body style="font: 11px verdana; width: 600px;">
 <h3>4D4Life Conversion Tool</h3>
 <p style="font-size: 10px; margin-bottom: 20px;">
 <?php

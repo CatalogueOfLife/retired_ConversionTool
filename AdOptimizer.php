@@ -16,11 +16,7 @@
     require_once 'DbHandler.php';
     require_once 'Indicator.php';
     require 'taxonmatcher/TaxonMatcher.php';
-    require 'taxonmatcher/TaxonMatcherEventListener.php';
-    require 'taxonmatcher/AbstractTaxonMatcherEventListener.php';
     require 'taxonmatcher/EchoEventListener.php';
-    require 'taxonmatcher/TaxonMatcherException.php';
-    require 'taxonmatcher/InvalidInputException.php';
     alwaysFlush();
     $indicator = new Indicator();
     
@@ -112,7 +108,7 @@
         echo "\n" . $e->getTraceAsString();
     }    
 ?>
-    </p><p>Post-processing ready! Proceed to <b>Step 2</b>: 
-    <a href="AcToBs.php">Import the data into the new database</a>.</p>.
+    </p><p><br><br>Post-processing ready! Proceed to <b>Step 2</b>: 
+    <a href="AcToBs.php">Import the data into the new database</a>.</p>
 </body>
 </html>
