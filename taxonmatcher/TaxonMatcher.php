@@ -48,8 +48,8 @@ class TaxonMatcher {
 	// The name of the database containing the data for the upcoming CoL.
 	private $_dbNameNext;
 
-	private $_resetLSIDs = true;
-	private $_dropStagingArea = true;
+	private $_resetLSIDs = false;
+	private $_dropStagingArea = false;
 	private $_taxonNameFilter;
 	private $_readLimitClause = '';
 
@@ -63,10 +63,6 @@ class TaxonMatcher {
 	 * @var PDO
 	 */
 	private $_pdo;
-
-
-
-
 
 
 
@@ -210,7 +206,10 @@ class TaxonMatcher {
 
 	/**
 	 * Set maxmimum number of records to fetch (debug option). Optional.
-	 * Null or zero means no maximum.
+	 * Null or zero means no maximum. Note that setting readLimit to $i does
+	 * not mean that LSIDs will be computed for $i taxa. It just means that
+	 * a LIMIT clause will be appended to <i>every</i> SELECT statement.
+	 *
 	 * @param number $i
 	 */
 	public function setReadLimit($i)
@@ -232,23 +231,26 @@ class TaxonMatcher {
 
 	private function _validateInput()
 	{
-		if($this->_dbHost === null) {
+		if(!$this->_dbHost) {
 			throw new InvalidInputException('Not set: database host');
 		}
-		if($this->_dbUser === null) {
+		if(!$this->_dbUser) {
 			throw new InvalidInputException('Not set: database user');
 		}
-		if($this->_dbPassword === null) {
+		if(!$this->_dbPassword) {
 			$this->_warning('Not set: database password');
 		}
-		if($this->_dbNameStage === null) {
+		if(!$this->_dbNameStage) {
 			throw new InvalidInputException('Not set: database name of staging area');
 		}
-		if($this->_dbNameCurrent === null) {
+		if(!$this->_dbNameCurrent) {
 			throw new InvalidInputException('Not set: database name of current edition of CoL');
 		}
-		if($this->_dbNameNext === null) {
+		if(!$this->_dbNameNext) {
 			throw new InvalidInputException('Not set: database name of upcoming edition of CoL');
+		}
+		if(!$this->_lsidSuffix) {
+			throw new InvalidInputException('Not set: LSID suffix');
 		}
 	}
 
@@ -260,26 +262,18 @@ class TaxonMatcher {
 
 		$this->_info("Importing data from database $dbName");
 
-		if($this->_hasLSIDs($dbName)) {
-			$sqlExpression = sprintf('SUBSTRING(AC.lsid,%s,%s)', self::$UUID_START_POS, self::$UUID_LENGTH);
-		}
-		else {
-			$sqlExpression = "''";
-		}
-
-		$this->_createTaxonTable();
 		$this->_importSpecies($dbName);
-		$this->_importLSIDsForSpecies($dbName, $sqlExpression);
+		//$this->_importLSIDsForSpecies($dbName, $sqlExpression);
 		$this->_importCommonNames($dbName);
 		$this->_copyCommonNamesToTaxonTable($dbName);
 		$this->_importDistributionData($dbName);
-		$this->_importGenera($dbName, $sqlExpression);
-		$this->_importFamilies($dbName, $sqlExpression);
-		$this->_importSuperFamilies($dbName, $sqlExpression);
-		$this->_importOrders($dbName, $sqlExpression);
-		$this->_importClasses($dbName, $sqlExpression);
-		$this->_importPhyla($dbName, $sqlExpression);
-		$this->_importKingdoms($dbName, $sqlExpression);
+		$this->_importGenera($dbName);
+		$this->_importFamilies($dbName);
+		$this->_importSuperFamilies($dbName);
+		$this->_importOrders($dbName);
+		$this->_importClasses($dbName);
+		$this->_importPhyla($dbName);
+		$this->_importKingdoms($dbName);
 
 	}
 
@@ -287,9 +281,22 @@ class TaxonMatcher {
 	private function _importSpecies($dbName)
 	{
 		$this->_info('Importing species and lower taxa');
+
+		$this->_exec("ALTER TABLE `{$this->_dbNameStage}`.Taxon DISABLE KEYS");
+
 		$edition = $this->_getEdition($dbName);
-		$whereClause = $this->_taxonNameFilter === null ? "" : "WHERE genus LIKE '{$this->_taxonNameFilter}'";
-		$this->_disableKeys('Taxon');
+		
+		$whereClause = $this->_taxonNameFilter === null ? "WHERE TRUE" : "WHERE genus LIKE '{$this->_taxonNameFilter}'";
+		if($edition === 0) {
+			$sqlExpression = sprintf('SUBSTRING(T.lsid,%s,%s)', self::$UUID_START_POS, self::$UUID_LENGTH);
+		}
+		else {
+			$sqlExpression = "''";
+			if(!$this->_resetLSIDs) {
+				$whereClause .= " AND T.lsid IS NULL";
+			}
+		}
+		
 		$sql = <<<SQL
 			INSERT INTO `{$this->_dbNameStage}`.Taxon(
 							edition,
@@ -299,48 +306,44 @@ class TaxonMatcher {
 							rank,
 							nameCodes,
 							sciNames,
-							otherData)
+							otherData,
+							lsid)
 					SELECT
 							{$edition},
 							0,
 							S.database_id,
 							S.accepted_name_code,
 							'(sp/infra)',
-			                GROUP_CONCAT(S.name_code ORDER BY sp2000_status_id SEPARATOR '; '),
+			                GROUP_CONCAT(S.name_code ORDER BY S.sp2000_status_id SEPARATOR '; '),
 			                GROUP_CONCAT(CONCAT_WS(' ', genus, species, NULLIF(infraspecies_marker, ''), infraspecies, author)
-			                                       ORDER BY sp2000_status_id, genus, species, infraspecies, author
+			                                       ORDER BY S.sp2000_status_id, genus, species, infraspecies, author
 			                                       SEPARATOR ', '),
-			                S.accepted_name_code
-					 FROM {$dbName}.scientific_names S
+			                S.accepted_name_code,
+			                {$sqlExpression}
+					 FROM `{$dbName}`.scientific_names S
+					 JOIN `{$dbName}`.taxa T ON(S.accepted_name_code = T.name_code)
 					 {$whereClause}
 					GROUP BY S.accepted_name_code
 					{$this->_readLimitClause}
 SQL;
 
 					$this->_exec($sql);
-					$this->_enableKeys('Taxon');
+
+					$this->_exec("ALTER TABLE `{$this->_dbNameStage}`.Taxon ENABLE KEYS");
+
 	}
 
-	private function _importLSIDsForSpecies($dbName, $sqlExpression)
+
+	private function _importLSIDsForSpecies($dbName)
 	{
 		$this->_info('Importing LSIDs for species and lower taxa');
-
-
+		$sqlExpression = sprintf('SUBSTRING(AC.lsid,%s,%s)', self::$UUID_START_POS, self::$UUID_LENGTH);
 		$sql = <<<SQL
 			UPDATE `{$this->_dbNameStage}`.Taxon T
 			  LEFT JOIN `{$dbName}`.taxa AC ON (T.code = AC.name_code)
 			   SET T.lsid = {$sqlExpression}
 			 WHERE AC.name_code IS NOT NULL
 SQL;
-
-
-		/*
-		 $sql = <<<SQL
-		UPDATE `{$this->_dbNameStage}`.Taxon T, `{$dbName}`.taxa AC
-		SET T.lsid = {$sqlExpression}
-		WHERE (T.code = AC.name_code)
-		SQL;
-		*/
 		$this->_exec($sql);
 	}
 
@@ -397,11 +400,23 @@ SQL;
 	}
 
 
-	private function _importGenera($dbName,$sqlExpression)
+	private function _importGenera($dbName)
 	{
 		$this->_info('Importing genera');
+		
 		$edition = $this->_getEdition($dbName);
+		
 		$whereClause = $this->_taxonNameFilter === null? "" : "AND AC.name LIKE '{$this->_taxonNameFilter}'";
+		if($edition === 0) {
+			$sqlExpression = sprintf('SUBSTRING(AC.lsid,%s,%s)', self::$UUID_START_POS, self::$UUID_LENGTH);
+		}
+		else {
+			$sqlExpression = "''";
+			if(!$this->_resetLSIDs) {
+				$whereClause .= " AND AC.lsid IS NULL";
+			}
+		}
+		
 		$sql = <<<SQL
 			INSERT INTO `{$this->_dbNameStage}`.Taxon (
 							edition,
@@ -438,11 +453,23 @@ SQL;
 	}
 
 
-	private function _importFamilies($dbName, $sqlExpression)
+	private function _importFamilies($dbName)
 	{
 		$this->_info('Importing families');
+		
 		$edition = $this->_getEdition($dbName);
+		
 		$whereClause = $this->_taxonNameFilter === null? "" : "AND family LIKE '{$this->_taxonNameFilter}'";
+		if($edition === 0) {
+			$sqlExpression = sprintf('SUBSTRING(AC.lsid,%s,%s)', self::$UUID_START_POS, self::$UUID_LENGTH);
+		}
+		else {
+			$sqlExpression = "''";
+			if(!$this->_resetLSIDs) {
+				$whereClause .= " AND AC.lsid IS NULL";
+			}
+		}
+		
 		$sql = <<<SQL
 			INSERT INTO `{$this->_dbNameStage}`.Taxon (
 							edition,
@@ -478,11 +505,23 @@ SQL;
 	}
 
 
-	private function _importSuperFamilies($dbName, $sqlExpression)
+	private function _importSuperFamilies($dbName)
 	{
 		$this->_info('Importing super families');
+		
 		$edition = $this->_getEdition($dbName);
+		
 		$whereClause = $this->_taxonNameFilter === null? "" : "AND superfamily LIKE '{$this->_taxonNameFilter}'";
+		if($edition === 0) {
+			$sqlExpression = sprintf('SUBSTRING(AC.lsid,%s,%s)', self::$UUID_START_POS, self::$UUID_LENGTH);
+		}
+		else {
+			$sqlExpression = "''";
+			if(!$this->_resetLSIDs) {
+				$whereClause .= " AND AC.lsid IS NULL";
+			}
+		}
+		
 		$sql = <<<SQL
 			INSERT INTO `{$this->_dbNameStage}`.Taxon (
 							edition,
@@ -513,11 +552,23 @@ SQL;
 	}
 
 
-	private function _importOrders($dbName, $sqlExpression)
+	private function _importOrders($dbName)
 	{
 		$this->_info('Importing orders');
+		
 		$edition = $this->_getEdition($dbName);
+		
 		$whereClause = $this->_taxonNameFilter === null? "" : "AND `order` LIKE '{$this->_taxonNameFilter}'";
+		if($edition === 0) {
+			$sqlExpression = sprintf('SUBSTRING(AC.lsid,%s,%s)', self::$UUID_START_POS, self::$UUID_LENGTH);
+		}
+		else {
+			$sqlExpression = "''";
+			if(!$this->_resetLSIDs) {
+				$whereClause .= " AND AC.lsid IS NULL";
+			}
+		}
+		
 		$sql = <<<SQL
 			INSERT INTO `{$this->_dbNameStage}`.Taxon (
 							edition,
@@ -548,11 +599,26 @@ SQL;
 	}
 
 
-	private function _importClasses($dbName, $sqlExpression)
+	private function _importClasses($dbName)
 	{
 		$this->_info('Importing classes');
+		
+		$sqlExpression = sprintf('SUBSTRING(AC.lsid,%s,%s)', self::$UUID_START_POS, self::$UUID_LENGTH);
+		
 		$edition = $this->_getEdition($dbName);
+		
 		$whereClause = $this->_taxonNameFilter === null? "" : "AND `class` LIKE '{$this->_taxonNameFilter}'";
+		if($edition === 0) {
+			$sqlExpression = sprintf('SUBSTRING(AC.lsid,%s,%s)', self::$UUID_START_POS, self::$UUID_LENGTH);
+		}
+		else {
+			$sqlExpression = "''";
+			if(!$this->_resetLSIDs) {
+				$whereClause .= " AND AC.lsid IS NULL";
+			}
+		}
+		
+		
 		$sql = <<<SQL
 			INSERT INTO `{$this->_dbNameStage}`.Taxon (
 							edition,
@@ -583,11 +649,23 @@ SQL;
 	}
 
 
-	private function _importPhyla($dbName, $sqlExpression)
+	private function _importPhyla($dbName)
 	{
 		$this->_info('Importing phyla');
+		
 		$edition = $this->_getEdition($dbName);
+		
 		$whereClause = $this->_taxonNameFilter === null? "" : "AND `class` LIKE '{$this->_taxonNameFilter}'";
+		if($edition === 0) {
+			$sqlExpression = sprintf('SUBSTRING(AC.lsid,%s,%s)', self::$UUID_START_POS, self::$UUID_LENGTH);
+		}
+		else {
+			$sqlExpression = "''";
+			if(!$this->_resetLSIDs) {
+				$whereClause .= " AND AC.lsid IS NULL";
+			}
+		}
+		
 		$sql = <<<SQL
 			INSERT INTO `{$this->_dbNameStage}`.Taxon (
 							edition,
@@ -618,11 +696,23 @@ SQL;
 	}
 
 
-	private function _importKingdoms($dbName, $sqlExpression)
+	private function _importKingdoms($dbName)
 	{
 		$this->_info('Importing kingdoms');
+		
 		$edition = $this->_getEdition($dbName);
+		
 		$whereClause = $this->_taxonNameFilter === null? "" : "AND `class` LIKE '{$this->_taxonNameFilter}'";
+		if($edition === 0) {
+			$sqlExpression = sprintf('SUBSTRING(AC.lsid,%s,%s)', self::$UUID_START_POS, self::$UUID_LENGTH);
+		}
+		else {
+			$sqlExpression = "''";
+			if(!$this->_resetLSIDs) {
+				$whereClause .= " AND AC.lsid IS NULL";
+			}
+		}
+		
 		$sql = <<<SQL
 			INSERT INTO `{$this->_dbNameStage}`.Taxon (
 							edition,
@@ -671,7 +761,7 @@ SQL;
 	private function _compareEditions()
 	{
 
-		$this->_info('Copying LSID for matching taxa');
+		$this->_info('Copying LSIDs from matching taxa');
 
 		$this->_exec("ALTER TABLE `{$this->_dbNameStage}`.Taxon ENABLE KEYS");
 		$this->_exec("OPTIMIZE TABLE `{$this->_dbNameStage}`.Taxon");
@@ -717,38 +807,25 @@ SQL;
 				AND A.is_accepted_name = 1
 				AND T.edition = 1
 				AND T.lsid != '' /* no match found */
-				{$whereClause}
-				");
+				{$whereClause}");
 
 
-		$this->_exec("
-				UPDATE `{$this->_dbNameNext}`.taxa A, `{$this->_dbNameStage}`.Taxon T
-				SET A.lsid = CONCAT('$prefix' , T.lsid , ':{$this->_lsidSuffix}' )
-				WHERE T.edRecordId = A.record_id
-				AND A.is_accepted_name = 1
-				AND T.edition = 1
-				AND T.lsid != '' /* no match found */
-				{$whereClause}
-				");
+				$this->_exec("
+						UPDATE `{$this->_dbNameNext}`.taxa A, `{$this->_dbNameStage}`.Taxon T
+						SET A.lsid = CONCAT('$prefix' , T.lsid , ':{$this->_lsidSuffix}' )
+						WHERE T.edRecordId = A.record_id
+						AND A.is_accepted_name = 1
+						AND T.edition = 1
+						AND T.lsid != '' /* no match found */
+						{$whereClause}");
 
 
-		$this->_info('Assigning new LSIDs to new (unmatched) taxa');
-		$this->_exec("
-				UPDATE `{$this->_dbNameNext}`.taxa
-				SET lsid = CONCAT('$prefix' , UUID() , ':{$this->_lsidSuffix}' )
-				WHERE lsid IS NULL
-				");
+						$this->_info('Assigning new LSIDs to new (unmatched) taxa');
+						$this->_exec("
+								UPDATE `{$this->_dbNameNext}`.taxa
+								SET lsid = CONCAT('$prefix' , UUID() , ':{$this->_lsidSuffix}' )
+								WHERE lsid IS NULL");
 
-	}
-
-
-	/**
-	 * @param string $dbName Must be either $this->_dbNameCurrent or $this->_dbNameImport2
-	 * @return boolean
-	 */
-	private function _hasLSIDs($dbName)
-	{
-		return (0 != $this->_fetchOne("SELECT COUNT(*) FROM `{$dbName}`.taxa"));
 	}
 
 
@@ -760,44 +837,6 @@ SQL;
 	private function _getEdition($dbName)
 	{
 		return $dbName === $this->_dbNameCurrent ? 0 : 1;
-	}
-
-
-	private function _countTaxaWithLsids()
-	{
-		return $this->_fetchOne('SELECT COUNT(*) FROM Taxon WHERE LENGTH(lsid) = 36');
-	}
-
-
-	/**
-	 * Fetches the 1st column from the 1st row in the result set.
-	 * @param string $sql
-	 */
-	private function _fetchOne($sql)
-	{
-		return $this->_query($sql)->fetchColumn();
-	}
-
-
-	/**
-	 * @param string $table
-	 * @throws TaxonMatcherException
-	 */
-	private function _disableKeys($table)
-	{
-		$this->_debug('Disabling keys on table ' . $table);
-		$this->_exec("ALTER TABLE `{$this->_dbNameStage}`.$table DISABLE KEYS");
-	}
-
-
-	/**
-	 * @param string $table
-	 * @throws TaxonMatcherException
-	 */
-	private function _enableKeys($table)
-	{
-		$this->_debug('Enabling keys on table ' . $table);
-		$this->_exec("ALTER TABLE `{$this->_dbNameStage}`.$table ENABLE KEYS");
 	}
 
 
@@ -876,7 +915,7 @@ SQL;
 		$this->_debug('Executing SQL (query): ' . $sql);
 		$statement = $this->_pdo->query($sql);
 		if($statement === false) {
-			$error = $this->_pdo->errorInfo();
+			$error = $statement->errorInfo();
 			throw new TaxonMatcherException($error[2]);
 		}
 		return $statement;
@@ -896,7 +935,7 @@ SQL;
 		$options = array(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => $buffered);
 		$statement = $this->_pdo->prepare($sql, $options);
 		if($statement->execute() === false) {
-			$error = $this->_pdo->errorInfo();
+			$error = $statement->errorInfo();
 			throw new TaxonMatcherException($error[2]);
 		}
 		$this->_debug('Records inserted/updated/deleted: ' . $statement->rowCount());
