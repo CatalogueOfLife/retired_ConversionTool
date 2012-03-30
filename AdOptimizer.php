@@ -90,7 +90,7 @@
     $taxonMatcher->setDbNameNext($config['source']['dbname']);
     $taxonMatcher->setDbNameStage($config['taxonmatcher']['dbNameStage']);
     $taxonMatcher->setLSIDSuffix($config['taxonmatcher']['lsidSuffix']);
-    $taxonMatcher->setReadLimit($config['taxonmatcher']['readLimit']);
+    $taxonMatcher->setResetLSIDs(true);
     
     $listener = new EchoEventListener();
     $listener->setContentTypeHTML();

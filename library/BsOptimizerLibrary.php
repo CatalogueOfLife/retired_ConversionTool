@@ -497,9 +497,9 @@ function getSourceDatabaseIds ($tt)
     if ($nr_elements == 1 || $tt['name'] == 'Not assigned') {
         // Top level
         $query = 'SELECT `source_database_id` 
-                  FROM ' . SEARCH_SCIENTIFIC . ' 
+                  FROM `' . SEARCH_SCIENTIFIC . '` 
                   WHERE `' . strtolower($tt['rank']) . '` = ? 
-                  AND `source_database_id` != 0';
+                  AND `source_database_id` != 0 ';
         $params = array(
             $tt['name']
         );
@@ -512,7 +512,7 @@ function getSourceDatabaseIds ($tt)
     // Species
     else if ($nr_elements == 2) {
         $query = 'SELECT `source_database_id` 
-                  FROM ' . SEARCH_SCIENTIFIC . ' 
+                  FROM `' . SEARCH_SCIENTIFIC . '` 
                   WHERE `genus` = ? 
                   AND `species` = ?
                   AND `infraspecies` = "" 
@@ -526,19 +526,24 @@ function getSourceDatabaseIds ($tt)
     // Infraspecies; query _search_all for this
     else {
         $query = 'SELECT `source_database_id` 
-                  FROM ' . SEARCH_ALL . ' 
+                  FROM `' . SEARCH_ALL . '` 
                   WHERE `name` = ? 
-                  AND `rank` = ?
-                  AND `status` IN (1,4)';
+                  AND `rank` = ? 
+                  AND `name_status` IN (1,4)';
         $params = array(
             $tt['name'], 
             $tt['rank']
         );
     }
-    $stmt = $pdo->prepare($query);
-    $stmt->execute($params);
-    $result = $stmt->fetchAll(PDO::FETCH_NUM);
-    return $result ? array_unique($result) : array();
+    try {
+        $stmt = $pdo->prepare($query);
+        $stmt->execute($params);
+        $result = $stmt->fetchAll(PDO::FETCH_NUM);
+        return $result ? array_unique($result) : array();
+    }
+    catch (Exception $e) {
+        echo $e->getMessage() . '<br>' . $query;
+    }
 }
 
 function countSpecies ($tt)
@@ -571,7 +576,7 @@ function countSpecies ($tt)
     return 0;
 }
 
-function updateTaxonTree ($tt, $source_database_ids, $species_count = 0)
+function updateTaxonTree ($tt, $source_database_ids)
 {
     $pdo = DbHandler::getInstance('target');
     foreach ($source_database_ids as $row) {
@@ -589,17 +594,6 @@ function updateTaxonTree ($tt, $source_database_ids, $species_count = 0)
             echo $e->getMessage();
         }
     }
-    //Inserting the total_species is now done while filling the _taxon_tree
-/*    try {
-        $stmt = $pdo->prepare('UPDATE ' . TAXON_TREE . ' SET `total_species` = ? WHERE `taxon_id` = ?');
-        $stmt->execute(array(
-            $species_count, 
-            $tt['taxon_id']
-        ));
-    }
-    catch (Exception $e) {
-        echo $e->getMessage();
-    }*/
 }
 
 function checkImportTables ($dbName, $tables)

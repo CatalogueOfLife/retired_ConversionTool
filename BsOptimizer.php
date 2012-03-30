@@ -31,7 +31,6 @@
   define('SPECIES_DETAILS', '_species_details');
   define('TAXON_TREE', '_taxon_tree');
   define('TOTALS', '_totals');
-//  define('IMPORT_SPECIES_ESTIMATE', '__import_species_estimate');
   $files = array(
       array(
           'path' => PATH, 
@@ -124,42 +123,7 @@
           'rank'
       ), 
   );
-/*
-  // Some columns are not shrunken immediately because some post-processing needs to take place first
-  $postponed_tables = array(
-      SEARCH_ALL => array(
-          'name_element' => 'varchar'
-      ), 
-      SEARCH_DISTRIBUTION => array(
-          'name' => 'varchar', 
-          'kingdom' => 'varchar'
-      ), 
-      SEARCH_SCIENTIFIC => array(
-          'author' => 'varchar', 
-          'accepted_species_name' => 'varchar', 
-          'accepted_species_author' => 'varchar', 
-          'source_database_name' => 'varchar'
-      ), 
-      SPECIES_DETAILS => array(
-          'point_of_attachment_id' => 'varchar'
-      ), 
-      TAXON_TREE => array(
-          'name' => 'varchar', 
-          'total_species_estimation' => 'int', 
-          'total_species' => 'int', 
-          'estimate_source' => 'varchar'
-      ), 
-      SOURCE_DATABASE_TO_TAXON_TREE_BRANCH => array(
-          'source_database_id' => 'int', 
-          'taxon_tree_id' => 'int'
-      ), 
-      SOURCE_DATABASE_DETAILS => array(
-          'coverage' => 'varchar', 
-          'completeness' => 'int', 
-          'confidence' => 'int'
-      )
-  );
-*/
+
   // Name elements in _search_all table to be discarded
   $delete_name_elements = array(
       'sp.', 
@@ -206,9 +170,9 @@
   $indicator = new Indicator();
 
   $scriptStart = microtime(true);
-  
+ 
    echo '<p>First denormalized tables are created and indices are created for the denormalized tables. 
-        Taxonomic coverage is processed from free text field to true database table to determine 
+        Taxonomic coverage is processed from free text field to a dedicated database table to determine 
         points of attachment for each GSD sector. Finally species estimates, species count and source databases 
         are linked to the tree.</p>';
 
@@ -222,42 +186,17 @@
   $start = microtime(true);
   echo '<p>Adding common names to ' . SEARCH_ALL . ' table...<br>';
   $sql = file_get_contents(PATH . DENORMALIZED_TABLES_PATH . SEARCH_ALL_COMMON_NAMES . '.sql');
-  $pdo->query('ALTER TABLE `' . SEARCH_ALL . '` DISABLE KEYS');
   $stmt = $pdo->prepare($sql);
   $stmt->execute();
   while ($cn = $stmt->fetch(PDO::FETCH_ASSOC)) {
       insertCommonNameElements($cn);
   }
-  $pdo->query('ALTER TABLE `' . SEARCH_ALL . '` ENABLE KEYS');
   $runningTime = round(microtime(true) - $start);
   echo "Script took $runningTime seconds to complete<br></p>";
 
   echo '<p><br>Indices are created for denormalized tables.</p>';
-
   foreach ($tables as $table => $indices) {
       echo "<p><b>Processing table $table...</b><br>";
-/*   
-     $stmt = $pdo->prepare('SHOW COLUMNS FROM `' . $table . '`');
-      $stmt->execute();
-      // Trim all varchar and int fields to minimum size
-      while ($cl = $stmt->fetch(PDO::FETCH_ASSOC)) {
-          if (isVarCharField($cl['Type']) || isIntField($cl['Type'])) {
-              // Postpone shrinking of a few columns until table creation is complete
-              if (array_key_exists($table, $postponed_tables) && in_array(
-                  $cl['Field'], $postponed_tables[$table])) {
-                  continue;
-              }
-              echo 'Shrinking column ' . $cl['Field'] . '...<br>';
-              if (isVarCharField($cl['Type'])) {
-                  shrinkVarChar($table, $cl);
-              }
-              else {
-                  shrinkInt($table, $cl);
-	          }
-	      }
-	  }
-*/
-      // Create indices
 	  foreach ($indices as $index) {
 	      $indexParameters = getOptimizedIndex($table, $index);
           $query = 'ALTER TABLE `' . $table . '` ADD INDEX (';
@@ -459,69 +398,13 @@
             LEFT JOIN `' . TAXON_TREE . '` AS t2 ON (t1.`parent_id` = t2.`taxon_id`)';
   $stmt = $pdo->prepare($query);
   $stmt->execute();
-  $indicator->init($stmt->rowCount(), 75, 500);
+  $indicator->init($stmt->rowCount(), 75, 1000);
   while ($tt = $stmt->fetch(PDO::FETCH_ASSOC)) {
       $source_database_ids = getSourceDatabaseIds($tt);
-      $species_count = null;//countSpecies($tt);
-      updateTaxonTree($tt, $source_database_ids, $species_count);
+      updateTaxonTree($tt, $source_database_ids);
       $indicator->iterate();
   }
-/*
-  echo '</p><p>Importing species estimates from the ' . IMPORT_SPECIES_ESTIMATE . ' table...<br>';
-  $clean = 'UPDATE ' . TAXON_TREE . ' SET `total_species_estimation` = 0, `estimate_source` = ""';
-  $stmt = $pdo->prepare($clean);
-  $stmt->execute();
-  $query = 'SELECT `species_estimate`, `source`, `name`, `rank` 
-            FROM ' . IMPORT_SPECIES_ESTIMATE;
-  $stmt = $pdo->prepare($query);
-  $stmt->execute();
-  $result = $stmt->fetchAll(PDO::FETCH_NUM);
-  foreach ($result as $est) {
-      $update = 'UPDATE ' . TAXON_TREE . ' SET 
-                     `total_species_estimation` = ?, 
-                     `estimate_source` = ? 
-                     WHERE `name` = ? 
-                     AND `rank` = ?';
-      $stmt = $pdo->prepare($update);
-      $stmt->execute($est);
-  }
 
-  echo 'Importing qualifiers from the ' . IMPORT_SOURCE_DATABASE_QUALIFIERS . ' table...<br>';
-  $clean = 'UPDATE ' . SOURCE_DATABASE_DETAILS . ' SET `coverage` = "", `completeness` = 0, `confidence` = 0;';
-  $stmt = $pdo->prepare($clean);
-  $stmt->execute();
-  $query = 'SELECT `coverage`, `completeness`, `confidence`, `source_database_name` 
-            FROM ' . IMPORT_SOURCE_DATABASE_QUALIFIERS;
-  $stmt = $pdo->prepare($query);
-  $stmt->execute();
-  $result = $stmt->fetchAll(PDO::FETCH_NUM);
-  foreach ($result as $sdd) {
-      $update = 'UPDATE ' . SOURCE_DATABASE_DETAILS . ' SET 
-                     `coverage` = ?, 
-                     `completeness` = ?,
-                     `confidence` = ?  
-                     WHERE `short_name` = ?';
-      $stmt = $pdo->prepare($update);
-      $stmt->execute($sdd);
-  }
-
-  echo '</p><p><b>Shrinking columns of post-processed tables</b><br>';
-  foreach ($postponed_tables as $table => $columns) {
-      foreach ($columns as $cl => $type) {
-          echo 'Shrinking column ' . $cl . ' in table ' . $table . '...<br>';
-          if ($type == 'varchar') {
-              shrinkVarChar($table, array(
-                  'Field' => $cl
-              ));
-          }
-          else {
-              shrinkInt($table, array(
-                  'Field' => $cl
-              ));
-          }
-      }
-  }
-*/
   echo '</p><p><b>Analyzing denormalized tables</b><br>';
   foreach ($tables as $table => $indices) {
       echo "Analyzing table $table...<br>";
