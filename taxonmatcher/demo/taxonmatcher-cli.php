@@ -18,10 +18,10 @@
 
 header('Content-Type', 'text/plain');
 
-interface_exists('TaxonMatcherEventListener', false) || include 'TaxonMatcherEventListener.php';
+interface_exists('TaxonMatcherEventListener', false) || include '../TaxonMatcherEventListener.php';
 
-class_exists('TaxonMatcher', false) || include 'TaxonMatcher.php';
-class_exists('EchoEventListener', false) || include 'EchoEventListener.php';
+class_exists('TaxonMatcher', false) || include '../TaxonMatcher.php';
+class_exists('EchoEventListener', false) || include '../EchoEventListener.php';
 
 
 
