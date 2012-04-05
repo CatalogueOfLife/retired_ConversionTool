@@ -22,7 +22,7 @@ GETTING STARTED
 The taxonmatcher-cli.php script is also a good place to start when
 you want to understand the TaxonMatcher PHP code, because it shows
 you how to instantiate, configure and run the central class in the
-library: TaxonMatcher (defined in TaxonMatcher.php). Then go on the
+library: TaxonMatcher (defined in TaxonMatcher.php). Then go on to the
 TaxonMatcher class itself and see how it employs the other classes
 and interfaces in the library.
 

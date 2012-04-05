@@ -13,6 +13,8 @@
  * php taxonmatcher-cli.php [path/to/ini/file]
  *
  * If you omit the ini file argument, ./TaxonMatcher.ini will be assumed.
+ * Before you run taxonmatcher-cli.php, adjust the settings in TaxonMatcher.ini
+ * as appropriate for your environment.
  */
 
 
