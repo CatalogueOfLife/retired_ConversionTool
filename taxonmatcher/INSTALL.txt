@@ -1,0 +1,18 @@
+SYSTEM REQUIREMENTS
+====================
+PHP  
+  Required version: 5.2+
+
+  * Extensions:
+    pdo   (http://php.net/manual/en/book.pdo.php)
+  
+MySQL
+  Required version: 5.0+
+  
+To use the taxon matcher, just place the taxonmatcher directory
+on the PHP include path. Then include at least TaxonMatcher.php
+in your own PHP script. See taxonmatcher-cli.php in the demo
+directory for an example.
+
+
+  

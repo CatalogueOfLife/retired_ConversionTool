@@ -1,0 +1,22 @@
+4d4Life e-2 Architecture Software Licence
+-----------------------------------------
+This software is licensed solely for deployment on development servers at 
+Cardiff University, University of Reading and ETI Bioinformatics (Leiden) 
+for the purpose of testing by Species2000, Cardiff University, University of 
+Reading and ETI BioInformatics (Leiden) in connection with the unified 
+production process for the assembly of the Species2000/ITIS Catalogue of Life. 
+
+The use of this software, including reverse engineering, for any other purpose 
+is prohibited without the express written permission of the software owner, 
+ETI BioInformatics
+
+Contact:
+ETI BioInformatics
+Einsteinweg 2
+2333 CC Leiden
+The Netherlands
+
+telephone: +31 28 2087 4812 
+email: info@eti.uva.nl
+
+Copyright (C) 2012 ETI BioInformatics 

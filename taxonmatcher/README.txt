@@ -8,16 +8,13 @@ the previous edition of the Catalogue of Life (CoL) is found, it
 copies the LSID from that taxon. Otherwise the taxon gets assigned
 a new LSID.
 
-The logic and procedural steps in matching taxa and assigning LSIDs
-has been preserverd in the PHP version of the taxon matcher. Some
-auxialiary functionality that is never used when the taxon matcher
-is used as just one chain in a series of tools that together produce
-the CoL has been stripped.
-
-Moreover, the PHP version is set up as a library rather than a
-stand-alone command line script. However, in the demo directory
-you will find a script that you can run as a stand-alone
-command line script: taxonmatcher-cli.php.
+The logic and procedure for computing LSIDs have been copied from
+the PERL version to the PHP version as-is. Some utility functions
+in the PERL version have been left out. Moreover, the PHP version
+is set up as a library rather than a stand-alone command line
+script. However, in the demo directory you will find a script that
+you can run as a stand-alone command line script:
+taxonmatcher-cli.php.
 
 
 GETTING STARTED
@@ -29,3 +26,7 @@ library: TaxonMatcher (defined in TaxonMatcher.php). Then go on the
 TaxonMatcher class itself and see how it employs the other classes
 and interfaces in the library.
 
+
+LICENSING
+=========
+See LICENCE.txt
