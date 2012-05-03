@@ -101,7 +101,7 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
             'FROM `scientific_names` '.
             'WHERE `record_id` = ? '
         );
-        $stmt->setFetchMode(PDO::FETCH_INTO);
+        //$stmt->setFetchMode(PDO::FETCH_INTO);
         $stmt->execute(array($taxon->id));
         $data = $stmt->fetch(PDO::FETCH_ASSOC);
         foreach ($data as $propName => $propValue) {
