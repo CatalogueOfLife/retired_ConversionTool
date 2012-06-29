@@ -170,7 +170,7 @@
   $indicator = new Indicator();
 
   $scriptStart = microtime(true);
- 
+
    echo '<p>First denormalized tables are created and indices are created for the denormalized tables. 
         Taxonomic coverage is processed from free text field to a dedicated database table to determine 
         points of attachment for each GSD sector. Finally species estimates, species count and source databases 
@@ -383,11 +383,7 @@
       $stmt->execute();
   }
 
-  echo '</p><p>Adding species count and source databases to ' . TAXON_TREE . '...<br>';
-  $clean = 'UPDATE ' . TAXON_TREE . ' SET `total_species` = 0, `total_species_estimation` = 0, `estimate_source` = ""; 
-            TRUNCATE TABLE `' . SOURCE_DATABASE_TO_TAXON_TREE_BRANCH . '`;';
-  $stmt = $pdo->prepare($clean);
-  $stmt->execute();
+  echo '</p><p>Adding source databases to ' . TAXON_TREE . '...<br>';
   $query = 'SELECT t1.`taxon_id`, 
               t1.`rank`, 
               t1.`name`, 
@@ -401,7 +397,7 @@
   $indicator->init($stmt->rowCount(), 75, 1000);
   while ($tt = $stmt->fetch(PDO::FETCH_ASSOC)) {
       $source_database_ids = getSourceDatabaseIds($tt);
-      updateTaxonTree($tt, $source_database_ids);
+      updateTaxonTree($tt['taxon_id'], $source_database_ids);
       $indicator->iterate();
   }
 

@@ -538,8 +538,11 @@ function getSourceDatabaseIds ($tt)
     try {
         $stmt = $pdo->prepare($query);
         $stmt->execute($params);
-        $result = $stmt->fetchAll(PDO::FETCH_NUM);
-        return $result ? array_unique($result) : array();
+        //$result = $stmt->fetchAll(PDO::FETCH_NUM);
+        while ($row = $stmt->fetch(PDO::FETCH_NUM)) {
+        	$result[$row[0]] = $row[0];
+        }
+        return isset($result) ? $result : array();
     }
     catch (Exception $e) {
         echo $e->getMessage() . '<br>' . $query;
@@ -576,18 +579,17 @@ function countSpecies ($tt)
     return 0;
 }
 
-function updateTaxonTree ($tt, $source_database_ids)
+function updateTaxonTree ($taxon_id, $source_database_ids)
 {
     $pdo = DbHandler::getInstance('target');
-    foreach ($source_database_ids as $row) {
-        $source_database_id = $row[0];
+    foreach ($source_database_ids as $source_database_id) {
         try {
             $stmt = $pdo->prepare(
                 'INSERT INTO ' . SOURCE_DATABASE_TO_TAXON_TREE_BRANCH . ' (`source_database_id`, `taxon_tree_id`) VALUES (?, ?)');
             $stmt->execute(
                 array(
                     $source_database_id, 
-                    $tt['taxon_id']
+                    $taxon_id
                 ));
         }
         catch (Exception $e) {
