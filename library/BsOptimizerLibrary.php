@@ -619,5 +619,25 @@ function checkImportTables ($dbName, $tables)
     return $empty;
 }
 
-
-
+function createTaxonTreeFunction ()
+{
+	// show function status
+	$pdo = DbHandler::getInstance('target');
+	$sql =
+		'DROP FUNCTION IF EXISTS getTotalSpeciesFromChildren;
+		CREATE FUNCTION getTotalSpeciesFromChildren(
+			X INT( 10 )
+		) RETURNS INT( 10 ) READS SQL DATA BEGIN DECLARE tot INT;
+		
+		SELECT SUM( total_species )
+		INTO tot
+		FROM _taxon_tree
+		WHERE parent_id = X;
+		
+		RETURN (
+			tot
+		);
+		
+		END;';
+	$pdo->query($sql);
+}

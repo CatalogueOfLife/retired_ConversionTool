@@ -23,6 +23,7 @@
   // Names of SQL queries in files, .sql omitted!
   define('SEARCH_ALL', '_search_all');
   define('SEARCH_ALL_COMMON_NAMES', '_search_all_common_names');
+  define('TAXON_TREE_SPECIES_TOTALS', '_taxon_tree_species_totals');
   define('SEARCH_DISTRIBUTION', '_search_distribution');
   define('SEARCH_SCIENTIFIC', '_search_scientific');
   define('SEARCH_FAMILY', '_search_family');
@@ -118,7 +119,6 @@
       ), 
       TAXON_TREE => array(
           'taxon_id', 
-          'parent_id', 
           'name', 
           'rank'
       ), 
@@ -173,9 +173,8 @@
 
    echo '<p>First denormalized tables are created and indices are created for the denormalized tables. 
         Taxonomic coverage is processed from free text field to a dedicated database table to determine 
-        points of attachment for each GSD sector. Finally species estimates, species count and source databases 
+        points of attachment for each GSD sector. Finally species estimates and source databases 
         are linked to the tree.</p>';
-
   foreach ($files as $file) {
       $start = microtime(true);
       writeSql($file['path'], $file['dumpFile'], $file['message']);
@@ -183,6 +182,14 @@
       echo "Script took $runningTime seconds to complete</p>";
   }
 
+  $start = microtime(true);
+  createTaxonTreeFunction();
+  echo '<p>Adding species totals to ' . TAXON_TREE . ' table...<br>';
+  $sql = file_get_contents(PATH . DENORMALIZED_TABLES_PATH . TAXON_TREE_SPECIES_TOTALS . '.sql');
+  $stmt = $pdo->query($sql);
+  $runningTime = round(microtime(true) - $start);
+  echo "Script took $runningTime seconds to complete<br></p>";
+  
   $start = microtime(true);
   echo '<p>Adding common names to ' . SEARCH_ALL . ' table...<br>';
   $sql = file_get_contents(PATH . DENORMALIZED_TABLES_PATH . SEARCH_ALL_COMMON_NAMES . '.sql');
@@ -233,6 +240,7 @@
 	  echo '</p>';
   }
 
+  
   echo '<p><b>Post-processing ' . SEARCH_ALL . ', ' . SEARCH_DISTRIBUTION . ', ' .
       SEARCH_SCIENTIFIC . ' and ' . TAXON_TREE . ' tables</b><br>';
   echo 'Updating ' . SEARCH_ALL . '...<br>';
