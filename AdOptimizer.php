@@ -52,7 +52,7 @@
 */    
     
     $scriptStart = microtime(true);
-/*    echo '<p>Checking database structure...</p>';
+    echo '<p>Checking database structure...</p>';
     $errors = checkDatabase();
     if (!empty($errors)) {
       printErrors($errors);
@@ -67,7 +67,7 @@
     if (!empty($errors)) {
       printErrors($errors);
     } 
-*/    echo "</p><p><b>Building 'taxa' table</b><br>";
+    echo "</p><p><b>Building 'taxa' table</b><br>";
     $errors = buildTaxaTable();
     if (!empty($errors)) {
       echo '</p><p>';
