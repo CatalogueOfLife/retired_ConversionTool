@@ -101,7 +101,8 @@
           'species', 
           'infraspecies', 
           'genus,species,infraspecies', 
-          'accepted_species_id'
+          'subgenus,species,infraspecies', 
+      	  'accepted_species_id'
       ), 
       SOURCE_DATABASE_DETAILS => array(
           'id'
@@ -115,7 +116,8 @@
           'superfamily_id', 
           'family_id', 
           'genus_id', 
-          'source_database_id'
+          'subgenus_id', 
+      	  'source_database_id'
       ), 
       TAXON_TREE => array(
           'taxon_id', 
@@ -175,6 +177,7 @@
         Taxonomic coverage is processed from free text field to a dedicated database table to determine 
         points of attachment for each GSD sector. Finally species estimates and source databases 
         are linked to the tree.</p>';
+ 
   foreach ($files as $file) {
       $start = microtime(true);
       writeSql($file['path'], $file['dumpFile'], $file['message']);
@@ -191,7 +194,7 @@
   echo "Script took $runningTime seconds to complete<br></p>";
   
   $start = microtime(true);
-  echo '<p>Adding common names to ' . SEARCH_ALL . ' table...<br>';
+  echo '<p>Adding common name elements to ' . SEARCH_ALL . ' table...<br>';
   $sql = file_get_contents(PATH . DENORMALIZED_TABLES_PATH . SEARCH_ALL_COMMON_NAMES . '.sql');
   $stmt = $pdo->prepare($sql);
   $stmt->execute();
@@ -251,6 +254,7 @@
   while ($ne = $stmt->fetch(PDO::FETCH_ASSOC)) {
       cleanNameElements($ne, $delete_name_elements, $delete_chars);
   }
+
   echo '&nbsp;&nbsp;&nbsp; Creating temporary column to mark rows that should be processed...<br>';
   $query = 'ALTER TABLE `' . SEARCH_ALL . '` ADD `delete_me` TINYINT( 1 ) NOT NULL , ADD INDEX ( `delete_me` ) ';
   $stmt = $pdo->prepare($query);
@@ -261,6 +265,7 @@
   $stmt->execute(array(
       1
   ));
+
   echo '&nbsp;&nbsp;&nbsp; Splitting ' . $stmt->rowCount() . ' rows...<br>';
   $query = 'SELECT * FROM `' . SEARCH_ALL . '` WHERE `delete_me` = 1';
   $stmt = $pdo->prepare($query);
@@ -268,65 +273,118 @@
   while ($ne = $stmt->fetch(PDO::FETCH_ASSOC)) {
       splitAndInsertNameElements($ne);
   }
+
   echo '&nbsp;&nbsp;&nbsp; Deleting original rows...<br>';
   $query = 'DELETE FROM `' . SEARCH_ALL . '` WHERE `delete_me` = ?';
   $stmt = $pdo->prepare($query);
   $stmt->execute(array(
       1
   ));
+
   echo '&nbsp;&nbsp;&nbsp; Dropping temporary column...<br>';
   $query = 'ALTER TABLE `' . SEARCH_ALL . '` DROP `delete_me`';
   $stmt = $pdo->prepare($query);
   $stmt->execute();
 
+  echo '&nbsp;&nbsp;&nbsp; Creating common name entries without spaces...<br>';
+  $query = 'INSERT INTO `' . SEARCH_ALL . '` (
+  		SELECT DISTINCT NULL, LOWER(REPLACE(`name`, " ", "")) AS `name_element`, 
+  		`name`, `name_suffix`, `rank`, 6, `name_status_suffix`, `name_status_suffix_suffix`, 
+  		`group`, `source_database_name`, `source_database_id`, `accepted_taxon_id` 
+  		FROM `' . SEARCH_ALL . '`
+  		WHERE `name_status` = 6 AND `name` LIKE "% %"
+  	)';
+  $stmt = $pdo->prepare($query);
+  $stmt->execute();
+  
   echo 'Updating ' . SEARCH_DISTRIBUTION . '...<br>';
   $query = 'UPDATE `' . SEARCH_DISTRIBUTION . '` AS sd, `' . SEARCH_ALL . '` AS sa 
     SET sd.`name` = sa.`name`, sd.`kingdom` = sa.`group` WHERE sd.`accepted_species_id` = sa.`id`';
   $stmt = $pdo->prepare($query);
   $stmt->execute();
 
-  echo 'Updating ' . SEARCH_SCIENTIFIC . '...<br>';
+/*
   $query = 'UPDATE `' . SEARCH_SCIENTIFIC . '` AS dss 
       SET dss.`author` = IF(dss.`accepted_species_id` = "", (
           SELECT `string` 
           FROM `taxon_detail` 
           LEFT JOIN `author_string` ON `author_string_id` = `author_string`.`id` 
           WHERE `taxon_id` = dss.`id`),
-          (SELECT `string` 
-          FROM `synonym` 
-          LEFT JOIN `author_string` ON `synonym`.`author_string_id` = `author_string`.`id` 
-          WHERE `synonym`.`id` = dss.`id`
-      )
+          (
+	  		  SELECT `string` 
+	          FROM `synonym` 
+	          LEFT JOIN `author_string` ON `synonym`.`author_string_id` = `author_string`.`id` 
+	          WHERE `synonym`.`id` = dss.`id`
+  		  )
       ),
-          dss.`status` = IF(dss.`accepted_species_id` = "", (
+      dss.`status` = IF(dss.`accepted_species_id` = "", (
           SELECT `scientific_name_status_id` 
           FROM `taxon_detail` 
-          WHERE `taxon_id` = dss.`id`), (
+          WHERE `taxon_id` = dss.`id`), 
+  		  (
               SELECT `scientific_name_status_id` 
               FROM `synonym` 
               WHERE `synonym`.`id` = dss.`id`
           )
       ),
       dss.`source_database_name` = (
-          SELECT DISTINCT sa.`source_database_name` 
+          SELECT sa.`source_database_name` 
           FROM `' . SEARCH_ALL . '` AS sa 
           WHERE dss.`id` = sa.`id` 
           AND sa.`name_status` = dss.`status`
+          GROUP BY sa.`id` 
       ),
       dss.`accepted_species_author` = (
-          SELECT DISTINCT sa.`name_suffix` 
+          SELECT sa.`name_suffix` 
           FROM `' . SEARCH_ALL . '` AS sa 
           WHERE dss.`accepted_species_id` = sa.`id` 
           AND sa.`name_status` = dss.`status`
+          GROUP BY sa.`id` 
       ),
       dss.`accepted_species_name` = (
-          SELECT DISTINCT sa.`name` 
+          SELECT sa.`name` 
           FROM `' . SEARCH_ALL . '` AS sa 
           WHERE dss.`accepted_species_id` = sa.`id` 
           AND sa.`name_status` = dss.`status`
+          GROUP BY sa.`id` 
       )';
-  $stmt = $pdo->prepare($query);
-  $stmt->execute();
+*/
+   
+  echo 'Updating ' . SEARCH_SCIENTIFIC . '...<br>';
+  $queries = array(
+  	'UPDATE `' . SEARCH_SCIENTIFIC . '` AS dss 
+      SET dss.`author` = IF(dss.`accepted_species_id` = "", (
+          SELECT `string` 
+          FROM `taxon_detail` 
+          LEFT JOIN `author_string` ON `author_string_id` = `author_string`.`id` 
+          WHERE `taxon_id` = dss.`id`),
+          (
+	  		  SELECT `string` 
+	          FROM `synonym` 
+	          LEFT JOIN `author_string` ON `synonym`.`author_string_id` = `author_string`.`id` 
+	          WHERE `synonym`.`id` = dss.`id`
+  		  )
+      ),
+      dss.`status` = IF(dss.`accepted_species_id` = "", (
+          SELECT `scientific_name_status_id` 
+          FROM `taxon_detail` 
+          WHERE `taxon_id` = dss.`id`), 
+  		  (
+              SELECT `scientific_name_status_id` 
+              FROM `synonym` 
+              WHERE `synonym`.`id` = dss.`id`
+          )
+      ) ;',
+  	'UPDATE `' . SEARCH_SCIENTIFIC . '` AS dss 
+	 JOIN `' . SEARCH_ALL . '` AS sa ON dss.`id` = sa.`id` 
+     SET dss.`source_database_name` = sa.`source_database_name`,
+    	 dss.`accepted_species_author` =  sa.`name_suffix`,
+     	 dss.`accepted_species_name` =  sa.`name` ;'	
+  );		
+  foreach ($queries as $query) {
+  	$stmt = $pdo->prepare($query);
+  	$stmt->execute();
+  }	
 
   echo 'Updating ' . TAXON_TREE . '...<br>';
   $query = 'SELECT `taxon_id` FROM `' . TAXON_TREE . '` 
@@ -336,7 +394,7 @@
   while ($id = $stmt->fetchColumn()) {
       updateTaxonTreeName($id);
   }
-
+    
   echo '</p><p><b>Converting taxonomic coverage column to database table</b><br>';
   echo 'Converting text to table...<br>';
   $pdo->query('TRUNCATE TABLE `taxonomic_coverage`');
@@ -390,7 +448,7 @@
       $stmt = $pdo->prepare('ALTER TABLE ' . SPECIES_DETAILS . ' DROP INDEX ' . $index);
       $stmt->execute();
   }
-
+  
   echo '</p><p>Adding source databases to ' . TAXON_TREE . '...<br>';
   $query = 'SELECT t1.`taxon_id`, 
               t1.`rank`, 
@@ -409,6 +467,32 @@
       $indicator->iterate();
   }
 
+  echo '</p><p><b>Capitalizing valid hybrids in denormalized tables</b><br>';
+  echo 'Updating ' . SEARCH_ALL . '...<br>';
+  $query = 'SELECT `id`, `name` FROM `' . SEARCH_ALL . '` 
+      		WHERE `name` REGEXP "^[^A-Za-z]+([A-Za-z])" AND `name_status` IN (0,1,4)';
+  $stmt = $pdo->prepare($query);
+  $stmt->execute();
+  while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+	  updateHybrid(SEARCH_ALL, array('name', capitalizeHybridName($row['name'])), array('id',$row['id']));
+  }
+  echo 'Updating ' . TAXON_TREE . '...<br>';
+  $query = 'SELECT `taxon_id`, `name` FROM `' . TAXON_TREE . '` 
+  			WHERE `name` REGEXP "^[^A-Za-z]+([A-Za-z])"';
+  $stmt = $pdo->prepare($query);
+  $stmt->execute();
+  while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+  	updateHybrid(TAXON_TREE, array('name', capitalizeHybridName($row['name'])), array('taxon_id', $row['taxon_id']));
+  }
+  echo 'Updating ' . SPECIES_DETAILS . '...<br>';
+  $query = 'SELECT `taxon_id`, `genus_name` FROM `' . SPECIES_DETAILS . '` 
+  			WHERE `genus_name` REGEXP "^[^A-Za-z]+([A-Za-z])" AND `status` IN (0, 1, 4)';
+  $stmt = $pdo->prepare($query);
+  $stmt->execute();
+  while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+  	updateHybrid(SPECIES_DETAILS, array('genus_name', capitalizeHybridName($row['genus_name'])), array('taxon_id', $row['taxon_id']));
+  }
+  
   echo '</p><p><b>Analyzing denormalized tables</b><br>';
   foreach ($tables as $table => $indices) {
       echo "Analyzing table $table...<br>";
@@ -418,6 +502,6 @@
   $totalTime = round(microtime(true) - $scriptStart);
   echo '</p><p>Ready! Optimalization took ' . $indicator->formatTime($totalTime) . '.</p>';
 
-  ?>
+?>
 </body>
 </html>

@@ -11,7 +11,7 @@ require_once 'converters/Ac/Model/AcToBs/Synonym.php';
 
 /**
  * 
- * @author N�ria Torrescasana Aloy, Ruud Altenburg
+ * @author Nuria Torrescasana Aloy, Ruud Altenburg
  *
  */
 class Ac_Loader_Taxon extends Ac_Loader_Abstract

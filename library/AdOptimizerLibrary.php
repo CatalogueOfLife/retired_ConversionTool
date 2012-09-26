@@ -463,17 +463,16 @@ function addGeneraToTaxa () {
         $this_superfamily = $row[6];
         $this_family = $row[7];
         
-        if ($family_id == "") {
-            $errors_found[] = "No family ID found for $taxon_level $taxon (id: $family_id)";
-        }
-        if ($this_kingdom == "Viruses" || $this_kingdom == "Subviral agents") {
-            $taxon = $this_genus;
-            $taxon_with_italics = "$this_genus";
-        } else {
-            $taxon = $this_genus;
+		$taxon = $taxon_with_italics = $this_genus;
+        if ($this_kingdom != "Viruses" && $this_kingdom != "Subviral agents") {
             $taxon_with_italics = "<i>$this_genus</i>";
         }
         $taxon_level = "Genus";
+        
+        if ($family_id == "") {
+            $errors_found[] = "No family ID found for $taxon_level $taxon (id: $family_id)";
+        }
+        
         $parent_hierarchy = $this_kingdom . "_" . $this_phylum . "_" . $this_class . "_" . $this_order . "_" . 
             (($this_superfamily != "") ? $this_superfamily . "_" : "") . $this_family;
         $hierarchy = $parent_hierarchy . "_" . $this_genus;
@@ -498,18 +497,85 @@ function addGeneraToTaxa () {
     return $errors_found;
 }
 
+function addSubgeneraToTaxa () {
+    $indicator = new Indicator();
+    $link = mysqlConnect();
+    $errors_found = array() ;
+    $higher_taxon_record_id = getHigherTaxonRecordId();
+    
+    $sql_query = "SELECT DISTINCT t1.`genus`, t1.`family_id`, t2.`kingdom`, t2.`phylum`, t2.`class`, 
+                  t2.`order`, t2.`superfamily`, t2.`family`, t1.`subgenus` 
+                  FROM `scientific_names` AS t1 
+                  LEFT JOIN `families` AS t2 ON t1.`family_id` = t2.`record_id`
+    			  WHERE t1.`subgenus` > ''";
+    $sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
+    $number_of_records = mysql_num_rows($sql_result);
+    echo "$number_of_records subgenera found in 'scientific_names' table<br>";
+    
+    $indicator->init($number_of_records, 100, 300);
+    $family_id = $hierarchy = $parent_hierarchy = $parent_id = "";
+    while ($row = mysql_fetch_array($sql_result, MYSQL_NUM)) {
+        $indicator->iterate();
+
+        $old_family_id = $family_id;
+        $old_hierarchy = $hierarchy;
+        $old_parent_hierarchy = $parent_hierarchy;
+        
+        $this_subgenus = trim($row[8]);
+        $this_genus = $row[0];
+        $family_id = $row[1];
+        $this_kingdom = $row[2];
+        $this_phylum = $row[3];
+        $this_class = $row[4];
+        $this_order = $row[5];
+        $this_superfamily = $row[6];
+        $this_family = $row[7];
+        
+		$taxon_level = 'Subgenus';
+		$taxon_with_italics = $taxon = $this_subgenus;
+		
+        if ($this_kingdom != "Viruses" && $this_kingdom != "Subviral agents") {
+        	$taxon_with_italics = '<i>'.$taxon.'</i>';
+        }
+        
+        if ($family_id == "") {
+            $errors_found[] = "No family ID found for $taxon_level $taxon (id: $family_id)";
+        }
+
+        $parent_hierarchy = $this_kingdom . "_" . $this_phylum . "_" . $this_class . "_" . $this_order . "_" . 
+            (($this_superfamily != "") ? $this_superfamily . "_" : "") . $this_family . "_" . $this_genus;
+        $hierarchy = $parent_hierarchy . "_" . $this_subgenus;
+        
+        // find record ID of parent taxon
+        if ($old_parent_hierarchy == "" || $parent_hierarchy != $old_parent_hierarchy) {
+            if (!$parent_id = getRecordIdInTaxa(array('HierarchyCode' => $parent_hierarchy))) {
+                $errors_found[] = "No parent taxon found for $taxon_level $taxon (id: $family_id)";
+                $parent_id = 0;
+            }
+        }
+        
+        // add taxon to 'taxa' table
+        if (!getRecordIdInTaxa(array('HierarchyCode' => $hierarchy, 'name' => $taxon))) {
+            $higher_taxon_record_id++;
+            taxaInsert(
+                array($higher_taxon_record_id, $taxon, $taxon_with_italics, $taxon_level, '', 
+                      $parent_id, 0, 0, 0, 1, $hierarchy)
+            );
+        }
+    }
+    return $errors_found;
+}
+
+
 function addSpeciesToTaxa () {
     $indicator = new Indicator();
     $link = mysqlConnect();
     $errors_found = array() ;
     $acceptedStatuses = getAcceptedStatuses();
     
-// testing only!
-//mysql_query('DELETE FROM `taxa` WHERE `taxon` = "Species"');
-    
     $sql_query = "SELECT t1.`record_id`, t1.`genus`, t1.`species`, t1.`name_code`, t1.`sp2000_status_id`, 
                       t1.`accepted_name_code`, t1.`database_id`, t1.`family_id`, t2.`kingdom`, 
-                      t2.`phylum`, t2.`class`, t2.`order`, t2.`superfamily`, t2.`family` 
+                      t2.`phylum`, t2.`class`, t2.`order`, t2.`superfamily`, t2.`family`, t1.`subgenus` 
                   FROM `scientific_names` AS t1 
                   LEFT JOIN `families` AS t2 ON t1.`family_id`= t2.`record_id` 
                   WHERE (t1.`infraspecies` = '' OR t1.`infraspecies` IS NULL)  ";
@@ -530,6 +596,7 @@ function addSpeciesToTaxa () {
         
         $record_id = $row[0];
         $this_genus = $row[1];
+        $this_subgenus = $row[14];
         $this_species = $row[2];
         $this_name_code = $row[3];
         $this_sp2000_status_id = $row[4];
@@ -544,19 +611,21 @@ function addSpeciesToTaxa () {
         $this_superfamily = $row[12];
         $this_family = $row[13];
         
+        if ($this_kingdom == "Viruses" || $this_kingdom == "Subviral agents") {
+            $taxon = $taxon_with_italics = $this_species;
+        } else {
+            $taxon = $this_genus . ' ' . (($this_subgenus != "") ? "($this_subgenus) " : "") . $this_species;
+            $taxon_with_italics = "<i>$taxon</i>";
+        }
+        $taxon_level = "Species";
+
         if ($family_id == "") {
             $errors_found[] = "No family ID found for $taxon_level $taxon (id: $family_id)";
         }        
-        if ($this_kingdom == "Viruses" || $this_kingdom == "Subviral agents") {
-            $taxon = $this_species;
-            $taxon_with_italics = $this_species;
-        } else {
-            $taxon = "$this_genus $this_species";
-            $taxon_with_italics = "<i>$this_genus $this_species</i>";
-        }
-        $taxon_level = "Species";
+        
         $parent_hierarchy = $this_kingdom . "_" . $this_phylum . "_" . $this_class . "_" . $this_order . "_" . 
-            (($this_superfamily != "") ? $this_superfamily . "_" : "") . $this_family . "_" . $this_genus;
+            (($this_superfamily != "") ? $this_superfamily . "_" : "") . $this_family . "_" . $this_genus .
+        	(($this_subgenus != "") ? "_" . $this_subgenus : "");
         $hierarchy = $parent_hierarchy . "_" . $this_species;
         
         if (!$parent_id = getRecordIdInTaxa(array('HierarchyCode' => $parent_hierarchy))) {
@@ -599,19 +668,16 @@ function addInfraspeciesToTaxa() {
     $errors_found = array() ;
     $acceptedStatuses = getAcceptedStatuses();
 
-    // testing only!
-//mysql_query('DELETE FROM `taxa` WHERE `taxon` = "Infraspecies"');
-    
     $sql_query = "SELECT t1.`record_id`, t1.`genus`, t1.`species`, t1.`infraspecies_marker`,
                   t1.`infraspecies`, t1.`name_code`, t1.`sp2000_status_id`, t1.`accepted_name_code`,
                   t1.`database_id`, t1.`family_id`, t2.`kingdom`, t2.`phylum`, t2.`class`, 
-                  t2.`order`, t2.`superfamily`, t2.`family` 
+                  t2.`order`, t2.`superfamily`, t2.`family`, t1.`subgenus` 
                   FROM `scientific_names` AS t1 
                   LEFT JOIN `families` AS t2 ON t1.`family_id`= t2.`record_id` 
-                  WHERE t1.`infraspecies` != '' AND t1.`infraspecies` IS NOT NULL ";
+                  WHERE t1.`infraspecies` > '' ";
     $sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
     $number_of_records = mysql_num_rows($sql_result);
-    echo "$number_of_records species found in 'scientific_names' table<br>";
+    echo "$number_of_records infraspecies found in 'scientific_names' table<br>";
     
     list($i, $n, $recordsPerBatch, $sql_query2) = array(0, 0, 3000, startTaxaInsert());
     $indicator->init($number_of_records, 100, 500);
@@ -626,6 +692,7 @@ function addInfraspeciesToTaxa() {
         
         $record_id = $row[0];
         $this_genus = $row[1];
+        $this_subgenus = $row[16];
         $this_species = $row[2];
         $this_infraspecies_marker = $row[3];
         $this_infraspecies = $row[4];
@@ -650,22 +717,22 @@ function addInfraspeciesToTaxa() {
             $taxon .= " $this_infraspecies";
             $taxon_with_italics = $taxon;
         } else {
-            $taxon = "$this_genus $this_species";
-            if ($this_infraspecies_marker != "") {
-                $taxon .= " $this_infraspecies_marker";
+            $species_part = $taxon = $this_genus . ' ' . (($this_subgenus != "") ? "($this_subgenus) " : "") . $this_species;
+        	if ($this_infraspecies_marker != "") {
+                $taxon = $species_part . " $this_infraspecies_marker";
             }
             $taxon .= " $this_infraspecies";
             if ($this_infraspecies_marker == "") {
-                $taxon_with_italics = "<i>$this_genus $this_species $this_infraspecies</i>";
+                $taxon_with_italics = "<i>$taxon</i>";
             } else {
                 $taxon_with_italics = 
-                    "<i>$this_genus $this_species</i> $this_infraspecies_marker <i>$this_infraspecies</i>";
+                    "<i>$species_part</i> $this_infraspecies_marker <i>$this_infraspecies</i>";
             }
         }
         $taxon_level = "Infraspecies";
         $parent_hierarchy = $this_kingdom . "_" . $this_phylum . "_" . $this_class . "_" . $this_order . "_" . 
             (($this_superfamily != "") ? $this_superfamily . "_" : "") . $this_family . "_" . $this_genus . "_" . 
-            $this_species;
+            (($this_subgenus != "") ? $this_subgenus . "_" : "") . $this_species;
         $hierarchy = $parent_hierarchy . "_" . $this_infraspecies;
         
         // Ruud 09-11-10: moved this check up so it can be used to check infraspecies parent
@@ -679,7 +746,8 @@ function addInfraspeciesToTaxa() {
         if ($parent_hierarchy != "" && $family_id != "") {
             if (!$parent_id = getRecordIdInTaxa(setInfraspeciesSearch($parent_hierarchy, $is_accepted_name))) {
                 $parent_hierarchy = $this_kingdom . "_" . $this_phylum . "_" . $this_class . "_" . $this_order . "_" . 
-                    (($this_superfamily != "") ? $this_superfamily . "_" : "") . $this_family . "_" . $this_genus;
+          			(($this_superfamily != "") ? $this_superfamily . "_" : "") . $this_family . "_" . $this_genus .
+        			(($this_subgenus != "") ? "_$this_subgenus" : "");
                 $hierarchy = $parent_hierarchy . "_" . $this_infraspecies;
                 if (!$parent_id = getRecordIdInTaxa(setInfraspeciesSearch ($parent_hierarchy, $is_accepted_name))) {
                     $errors_found[] = "No parent taxon found for infraspecies $taxon (id: $record_id)";
@@ -722,7 +790,7 @@ function setInfraspeciesSearch ($parent_hierarchy, $is_accepted_name) {
 
 function higherTaxaWithAcceptedNames () {
     $link = mysqlConnect();
-    $taxa = array("genera" => "Genus" , "families" => "Family" , "superfamilies" => "Superfamily" , 
+    $taxa = array("subgenera" => "Subgenus", "genera" => "Genus" , "families" => "Family" , "superfamilies" => "Superfamily" , 
                   "orders" => "Order" , "classes" => "Class" , "phyla" => "Phylum" , "kingdoms" => "Kingdom");
     foreach ($taxa as $label => $rank) {
         echo "Finding $label with accepted names...<br>";
@@ -752,6 +820,8 @@ function buildTaxaTable () {
     $errors_found['Higher taxa'] = addHigherTaxaToTaxa();
     echo "<br><br>Adding genera: ";
     $errors_found['Genera'] = addGeneraToTaxa();
+    echo "<br><br>Adding subgenera: ";
+    $errors_found['Subgenera'] = addSubgeneraToTaxa();
     echo "<br><br>Adding species: ";
     $errors_found['Species'] = addSpeciesToTaxa(); 
     echo "<br><br>Adding infraspecies: ";

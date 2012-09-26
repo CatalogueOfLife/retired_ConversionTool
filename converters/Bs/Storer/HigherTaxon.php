@@ -6,14 +6,13 @@ require_once 'converters/Bs/Storer/Uri.php';
 /**
  * HigherTaxon storer
  * 
- * @author N�ria Torrescasana Aloy, Ruud Altenburg
+ * @author Nuria Torrescasana Aloy, Ruud Altenburg
  */
 class Bs_Storer_HigherTaxon extends Bs_Storer_TaxonAbstract implements Bs_Storer_Interface
 {
 
     public function store (Model $taxon)
     {
-        //$this->printObject($taxon);
         // Source database id is NULL for all higher taxa
         $this->_setTaxonomicRankId(
             $taxon);

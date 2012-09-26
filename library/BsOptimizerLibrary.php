@@ -619,6 +619,22 @@ function checkImportTables ($dbName, $tables)
     return $empty;
 }
 
+function capitalizeHybridName ($name) {
+	preg_match('/^[^A-Za-z]+([A-Za-z])/', $name, $matches);
+	return strtoupper($name[strlen($matches[0])-1]);
+}
+
+function updateHybrid ($table, $name, $id)
+{
+	$pdo = DbHandler::getInstance('target');
+	$update = 'UPDATE `' . $table . '` SET `' . $name['field'] . '` = ? WHERE `' . $id['field'] . '` = ?';
+	$stmt = $pdo->prepare($update);
+	$stmt->execute(array(
+		$name['value'], 
+		$id['value']
+	));
+}
+
 function createTaxonTreeFunction ()
 {
 	// show function status
