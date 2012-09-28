@@ -19,37 +19,13 @@
     require 'taxonmatcher/EchoEventListener.php';
     alwaysFlush();
     $indicator = new Indicator();
-    
+    ini_set('memory_limit', '1024M');
+        
     if (isset($argv) && isset($argv[1])) {
       $config = parse_ini_file($argv[1], true);
     } else {
       $config = parse_ini_file('config/AcToBs.ini', true);
     }
-    
-/*    
-    // Compare Jorrit's taxa to Ruud's taxa
-    $link = mysqlConnect();
-    echo "Fetching Ruud's data...<br>";
-    mysql_select_db('assembly');
-    $q = 'select name, name_code from taxa';
-    $r = mysql_query($q) or die(mysql_error);
-    while ($row = mysql_fetch_array($r, MYSQL_NUM)) {
-        $jorrit[$row[1]] = $row[0];
-    }
-    echo "Fetching Jorrit's data...<br>";
-    mysql_select_db('assembly_jorrit');
-    $q = 'select name, name_code from taxa';
-    $r = mysql_query($q) or die(mysql_error);
-    $indicator->init(mysql_num_rows($r), 100, 10000);
-    while ($row = mysql_fetch_array($r, MYSQL_NUM)) {
-        $indicator->iterate();
-        if (isset($jorrit[$row[1]]) && $jorrit[$row[1]] == $row[0]) {
-            unset($jorrit[$row[1]]);
-        }
-    }
-    echo '<pre>'; print_r($jorrit); echo '</pre>';
-    die();
-*/    
     
     $scriptStart = microtime(true);
     echo '<p>Checking database structure...</p>';
@@ -60,21 +36,21 @@
     echo '<p><b>Copy foreign key codes to foreign key IDs</b><br>';
     $errors = copyCodesToIds();
     if (!empty($errors)) {
-      printErrors($errors);
+      echo '';
+      printErrors($errors, 'Error: ' . count($errors) . ' missing foreign key codes');
     }
     echo '</p><p><b>Checking foreign key references</b><br>';
     $errors = checkForeignKeys();
     if (!empty($errors)) {
-      printErrors($errors);
+      printErrors($errors, 'Missing foreign key references');
     } 
     echo "</p><p><b>Building 'taxa' table</b><br>";
     $errors = buildTaxaTable();
     if (!empty($errors)) {
-      echo '</p><p>';
+      echo '</p><p style="color: red;"><b>Errors during creation of \'taxa\' table"></b></p>';
       foreach ($errors as $category => $categoryErrors) {
           if (!empty($categoryErrors)) {
-              echo "<b>$category:</b><br>";
-              printErrors($categoryErrors);
+              printErrors($categoryErrors, $category);
           }
       }
     }
