@@ -81,6 +81,8 @@
   );
 
   // Denormalized tables and their indices
+  // Indices on multiple columns should be written as 'column1, column2, etc'
+  // Add [size] in case a shortened index is needed, e.g. 'column1[10], column2[10], etc'
   $tables = array(
       SEARCH_ALL => array(
           'name_element', 
@@ -98,12 +100,17 @@
           'order', 
           'superfamily', 
           'family', 
+      	  'subgenus',
           'species', 
           'infraspecies', 
-          'genus,species,infraspecies', 
-          'subgenus,species,infraspecies', 
-      	  'accepted_species_id'
-      ), 
+          'genus, species, infraspecies', 
+      	  'accepted_species_id',
+      	  'accepted_species_id, genus[15], subgenus[15], species[15], infraspecies[15]',
+          'accepted_species_id, genus[15]',
+      	  'accepted_species_id, infraspecies[15]',
+      	  'accepted_species_id, species[15]',
+          'accepted_species_id, subgenus[15]'
+  ), 
       SOURCE_DATABASE_DETAILS => array(
           'id'
       ), 
@@ -218,7 +225,7 @@
           } else if (count($indexParameters) == 1) {
               $indexType = 'varchar (' . $indexParameters[$index] . ')';
               $query .= '`' . $index . '` (' . $indexParameters[$index] . ')';
-          // Index on combined varchar column
+          // Index on combined column (results in varchar)
           } else {
               $indexType = 'varchar (';
               foreach ($indexParameters as $column => $size) {

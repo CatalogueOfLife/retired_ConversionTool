@@ -144,16 +144,26 @@ function getOptimizedIndex ($table, $column)
 {
     $pdo = DbHandler::getInstance('target');
     $indices = array();
-    $stmt = $pdo->prepare('SHOW COLUMNS FROM `' . $table . "` WHERE `Field` = '$column'");
-    $stmt->execute();
-    $r = $stmt->fetch(PDO::FETCH_ASSOC);
+    // Index over multiple columns
     if (strpos($column, ',') !== false) {
         $indexParts = explode(',', $column);
         for ($i = 0; $i < count($indexParts); $i++) {
-            $indices[$indexParts[$i]] = getMaxLengthVarChar($table, $indexParts[$i]);
+        	$combinedColumn = trim($indexParts[$i]);
+        	// No fixed size given for index
+        	if (strpos($combinedColumn, '[') === false) {
+            	$indices[$column] = getMaxLengthVarChar($table, $combinedColumn);
+        	// Use fixed size for index
+        	} else {
+        		list($a, $b) = explode('[', $combinedColumn);
+        		$indices[trim($a)] = substr($b, 0, -1);
+        	}
         }
+    // Single column index
     } else {
-        if (isVarCharField($r['Type'])) {
+	    $stmt = $pdo->prepare('SHOW COLUMNS FROM `' . $table . "` WHERE `Field` = '$column'");
+	    $stmt->execute();
+	    $r = $stmt->fetch(PDO::FETCH_ASSOC);
+    	if (isVarCharField($r['Type'])) {
             $indices[$column] = getMaxLengthVarChar($table, $column);
         }
     }
