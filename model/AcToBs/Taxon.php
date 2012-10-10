@@ -7,6 +7,7 @@ class Taxon implements Model
     public $taxonomicRank;
     public $name;
     public $genus;
+    public $subgenus;
     public $species;
     public $infraspecies;
     public $infraSpecificMarker;

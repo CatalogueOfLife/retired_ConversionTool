@@ -8,7 +8,7 @@ require_once 'model/AcToBs/Taxon.php';
  * database but are derived and used to store data needed specifically for
  * the AcToBs storer
  * 
- * @author N�ria Torrescasana Aloy, Ruud Altenburg
+ * @author Nuria Torrescasana Aloy, Ruud Altenburg
  */
 class Bs_Model_AcToBs_Taxon extends Taxon
 {

@@ -37,9 +37,8 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon implements Bs_Storer_Interfa
         }
         
         // Species rank id
-        if ($taxon->infraSpecificMarker == '' && $taxon->infraspecies ==
-             '') {
-                $this->_setTaxonomicRankId($taxon);
+        if ($taxon->infraspecies == '') {
+            $this->_setTaxonomicRankId($taxon);
         // Infraspecies rank id
         }
         else {
@@ -68,12 +67,10 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon implements Bs_Storer_Interfa
 
     protected function _setScientificNameElements (Model $taxon)
     {
-        $nameElements = array(
-            $this->_getTaxonomicRankId('genus') => $taxon->genus, 
-            $this->_getTaxonomicRankId('species') => $taxon->species
-        );
-        if ($taxon->infraSpecificMarker != '') {
-            $nameElements[$taxon->taxonomicRankId] = $taxon->infraspecies;
+        foreach (array('genus', 'subgenus', 'species', 'infraspecies') as $ne) {
+        	if (!empty($taxon->{$ne})) {
+        		$nameElements[$this->_getTaxonomicRankId($ne)] = $taxon->{$ne};
+        	}
         }
         foreach ($nameElements as $rankId => $nameElement) {
             $name = strtolower($nameElement);

@@ -7,7 +7,7 @@ require_once 'converters/Bs/Storer/Reference.php';
 /**
  * Synonym storer
  * 
- * @author N�ria Torrescasana Aloy, Ruud Altenburg
+ * @author Nuria Torrescasana Aloy, Ruud Altenburg
  */
 class Bs_Storer_Synonym extends Bs_Storer_TaxonAbstract implements Bs_Storer_Interface
 {
@@ -17,8 +17,7 @@ class Bs_Storer_Synonym extends Bs_Storer_TaxonAbstract implements Bs_Storer_Int
         if (empty($synonym->id)) {
             return $synonym;
         }
-        // Exit if id already exists; test needed because error occurred 
-        // during import.
+        // Exit if id already exists; test needed because error occurred during import.
         $config = parse_ini_file('config/AcToBs.ini', true);
         if (isset($config['checks']['synonym_ids']) && $config['checks']['synonym_ids'] == 1) {
             if ($this->_recordExists(
@@ -26,7 +25,8 @@ class Bs_Storer_Synonym extends Bs_Storer_TaxonAbstract implements Bs_Storer_Int
                     'id' => $synonym->id
                 ))) {
                 $name = trim(
-                    $synonym->genus . ' ' . $synonym->species . ' ' . $synonym->infraspecies);
+                    $synonym->genus . ' ' . $synonym->subgenus . ' ' . $synonym->species . 
+                	' ' . $synonym->infraspecies);
                 $this->writeToErrorTable($synonym->id, $name, 'Synonym already exists');
                 return $synonym;
             }
@@ -54,7 +54,9 @@ class Bs_Storer_Synonym extends Bs_Storer_TaxonAbstract implements Bs_Storer_Int
         $storer->store($author);
         
         $stmt = $this->_dbh->prepare(
-            'INSERT INTO `synonym` (`id`, `taxon_id`, `author_string_id`, `scientific_name_status_id`, `original_id`) VALUES (?, ?, ?, ?, ?)');
+            'INSERT INTO `synonym` (`id`, `taxon_id`, `author_string_id`, `scientific_name_status_id`, 
+        	`original_id`) VALUES (?, ?, ?, ?, ?)'
+        );
         $stmt->execute(
             array(
                 $synonym->id, 
@@ -70,17 +72,18 @@ class Bs_Storer_Synonym extends Bs_Storer_TaxonAbstract implements Bs_Storer_Int
 
     protected function _setSynonymNameElements (Model $synonym)
     {
-        $nameElements = array(
-            $this->_getTaxonomicRankId('genus') => $synonym->genus, 
-            $this->_getTaxonomicRankId('species') => $synonym->species
-        );
-        if ($synonym->infraspecies != '') {
-            $nameElements[$synonym->taxonomicRankId] = $synonym->infraspecies;
+        foreach (array('genus', 'subgenus', 'species', 'infraspecies') as $ne) {
+        	if (!empty($synonym->{$ne})) {
+        		$nameElements[$this->_getTaxonomicRankId($ne)] = $synonym->{$ne};
+        	}
         }
         $synonym->nameElementIds = $nameElements;
         $stmt = $this->_dbh->prepare(
-            'INSERT INTO `synonym_name_element` (' . '`taxonomic_rank_id`, `scientific_name_element_id`, `synonym_id`, `hybrid_order`) VALUES (?, ?, ?, ?)');
-        /*      foreach ($synonym->nameElementIds as $rankId => $nameElement) {
+            'INSERT INTO `synonym_name_element` (' . '`taxonomic_rank_id`, `scientific_name_element_id`, 
+        	`synonym_id`, `hybrid_order`) VALUES (?, ?, ?, ?)'
+        );
+/*
+        foreach ($synonym->nameElementIds as $rankId => $nameElement) {
             if ($hybridElements = $this->_isHybrid($nameElement)) {
                 foreach ($hybridElements as $hybridOrder => $hybridElement) {
                     // Start order with 1 rather than 0

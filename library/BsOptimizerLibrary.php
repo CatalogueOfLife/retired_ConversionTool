@@ -148,13 +148,13 @@ function getOptimizedIndex ($table, $column)
     if (strpos($column, ',') !== false) {
         $indexParts = explode(',', $column);
         for ($i = 0; $i < count($indexParts); $i++) {
-        	$combinedColumn = trim($indexParts[$i]);
+        	$c = trim($indexParts[$i]);
         	// No fixed size given for index
-        	if (strpos($combinedColumn, '[') === false) {
-            	$indices[$column] = getMaxLengthVarChar($table, $combinedColumn);
+        	if (strpos($c, '[') === false) {
+            	$indices[$c] = getMaxLengthVarChar($table, $c);
         	// Use fixed size for index
         	} else {
-        		list($a, $b) = explode('[', $combinedColumn);
+        		list($a, $b) = explode('[', $c);
         		$indices[trim($a)] = substr($b, 0, -1);
         	}
         }
@@ -634,14 +634,14 @@ function capitalizeHybridName ($name) {
 	return strtoupper($name[strlen($matches[0])-1]);
 }
 
-function updateHybrid ($table, $name, $id)
+function updateHybrid ($table, array $name, array $id)
 {
 	$pdo = DbHandler::getInstance('target');
-	$update = 'UPDATE `' . $table . '` SET `' . $name['field'] . '` = ? WHERE `' . $id['field'] . '` = ?';
+	$update = 'UPDATE `' . $table . '` SET `' . key($name) . '` = ? WHERE `' . key($id) . '` = ?';
 	$stmt = $pdo->prepare($update);
 	$stmt->execute(array(
-		$name['value'], 
-		$id['value']
+		reset($name), 
+		reset($id)
 	));
 }
 

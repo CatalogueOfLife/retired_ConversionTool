@@ -82,7 +82,8 @@
 
   // Denormalized tables and their indices
   // Indices on multiple columns should be written as 'column1, column2, etc'
-  // Add [size] in case a shortened index is needed, e.g. 'column1[10], column2[10], etc'
+  // Add [size] in case a partial index is needed, e.g. 'column1[10], column2[10], etc'
+  // Use [0] for int columns in partial indices, so these are properly parsed
   $tables = array(
       SEARCH_ALL => array(
           'name_element', 
@@ -93,7 +94,6 @@
       ), 
       SEARCH_DISTRIBUTION => array(), 
       SEARCH_SCIENTIFIC => array(
-          'id', 
           'kingdom', 
           'phylum', 
           'class', 
@@ -104,12 +104,13 @@
           'species', 
           'infraspecies', 
           'genus, species, infraspecies', 
+      	  'status',
       	  'accepted_species_id',
-      	  'accepted_species_id, genus[15], subgenus[15], species[15], infraspecies[15]',
-          'accepted_species_id, genus[15]',
-      	  'accepted_species_id, infraspecies[15]',
-      	  'accepted_species_id, species[15]',
-          'accepted_species_id, subgenus[15]'
+      	  'accepted_species_id[0], genus[15], subgenus[10], species[10], infraspecies[10]',
+          'accepted_species_id[0], genus[10]',
+      	  'accepted_species_id[0], infraspecies[10]',
+      	  'accepted_species_id[0], species[10]',
+          'accepted_species_id[0], subgenus[10]'
   ), 
       SOURCE_DATABASE_DETAILS => array(
           'id'
@@ -184,7 +185,7 @@
         Taxonomic coverage is processed from free text field to a dedicated database table to determine 
         points of attachment for each GSD sector. Finally species estimates and source databases 
         are linked to the tree.</p>';
- 
+
   foreach ($files as $file) {
       $start = microtime(true);
       writeSql($file['path'], $file['dumpFile'], $file['message']);
@@ -227,16 +228,18 @@
               $query .= '`' . $index . '` (' . $indexParameters[$index] . ')';
           // Index on combined column (results in varchar)
           } else {
-              $indexType = 'varchar (';
+              $indexType = 'multi-column';
+              $index = '';
               foreach ($indexParameters as $column => $size) {
-                  $query .= '`' . $column . '` (' . $size . '), ';
-                  $indexType .= $size . ', ';
+              	  // Use [0] to disable partial index on int columns
+                  $query .= '`' . $column . ($size != 0 ? '` (' . $size . '), ' : '`, ');
+                  $index .= $column . ', ';
               }
               $query = substr($query, 0, -2);
-              $indexType = substr($indexType, 0, -2).')';
+              $index = substr($index, 0, -2);
           }
           $query .= ')';
-          echo 'Adding ' . $indexType ." index to $index...<br>";
+          echo 'Adding ' . $indexType ." index on $index...<br>";
           $stmt2 = $pdo->prepare($query);
 	      $stmt2->execute();
 	  }
@@ -309,85 +312,101 @@
     SET sd.`name` = sa.`name`, sd.`kingdom` = sa.`group` WHERE sd.`accepted_species_id` = sa.`id`';
   $stmt = $pdo->prepare($query);
   $stmt->execute();
-
-/*
-  $query = 'UPDATE `' . SEARCH_SCIENTIFIC . '` AS dss 
-      SET dss.`author` = IF(dss.`accepted_species_id` = "", (
-          SELECT `string` 
-          FROM `taxon_detail` 
-          LEFT JOIN `author_string` ON `author_string_id` = `author_string`.`id` 
-          WHERE `taxon_id` = dss.`id`),
-          (
-	  		  SELECT `string` 
-	          FROM `synonym` 
-	          LEFT JOIN `author_string` ON `synonym`.`author_string_id` = `author_string`.`id` 
-	          WHERE `synonym`.`id` = dss.`id`
-  		  )
-      ),
-      dss.`status` = IF(dss.`accepted_species_id` = "", (
-          SELECT `scientific_name_status_id` 
-          FROM `taxon_detail` 
-          WHERE `taxon_id` = dss.`id`), 
-  		  (
-              SELECT `scientific_name_status_id` 
-              FROM `synonym` 
-              WHERE `synonym`.`id` = dss.`id`
-          )
-      ),
-      dss.`source_database_name` = (
-          SELECT sa.`source_database_name` 
-          FROM `' . SEARCH_ALL . '` AS sa 
-          WHERE dss.`id` = sa.`id` 
-          AND sa.`name_status` = dss.`status`
-          GROUP BY sa.`id` 
-      ),
-      dss.`accepted_species_author` = (
-          SELECT sa.`name_suffix` 
-          FROM `' . SEARCH_ALL . '` AS sa 
-          WHERE dss.`accepted_species_id` = sa.`id` 
-          AND sa.`name_status` = dss.`status`
-          GROUP BY sa.`id` 
-      ),
-      dss.`accepted_species_name` = (
-          SELECT sa.`name` 
-          FROM `' . SEARCH_ALL . '` AS sa 
-          WHERE dss.`accepted_species_id` = sa.`id` 
-          AND sa.`name_status` = dss.`status`
-          GROUP BY sa.`id` 
-      )';
-*/
    
   echo 'Updating ' . SEARCH_SCIENTIFIC . '...<br>';
+
+/*  
+ $queries = array(
+  		'UPDATE `' . SEARCH_SCIENTIFIC . '` AS dss
+  		SET dss.`author` = IF(dss.`accepted_species_id` = "", (
+  				SELECT `string`
+  				FROM `taxon_detail`
+  				LEFT JOIN `author_string` ON `author_string_id` = `author_string`.`id`
+  				WHERE `taxon_id` = dss.`id`),
+  				(
+  						SELECT `string`
+  						FROM `synonym`
+  						LEFT JOIN `author_string` ON `synonym`.`author_string_id` = `author_string`.`id`
+  						WHERE `synonym`.`id` = dss.`id`
+  				)
+  		),
+  		dss.`status` = IF(dss.`accepted_species_id` = "", (
+  				SELECT `scientific_name_status_id`
+  				FROM `taxon_detail`
+  				WHERE `taxon_id` = dss.`id`),
+  				(
+  						SELECT `scientific_name_status_id`
+  						FROM `synonym`
+  						WHERE `synonym`.`id` = dss.`id`
+  				)
+  		),
+  		dss.`source_database_name` = (
+  				SELECT sa.`source_database_name`
+  				FROM `' . SEARCH_ALL . '` AS sa
+  				WHERE dss.`id` = sa.`id`
+  				AND sa.`name_status` = dss.`status`
+  				GROUP BY sa.`id`
+  		),
+  		dss.`accepted_species_author` = (
+  				SELECT sa.`name_suffix`
+  				FROM `' . SEARCH_ALL . '` AS sa
+  				WHERE dss.`accepted_species_id` = sa.`id`
+  				AND sa.`name_status` = dss.`status`
+  				GROUP BY sa.`id`
+  		),
+  		dss.`accepted_species_name` = (
+  				SELECT sa.`name`
+  				FROM `' . SEARCH_ALL . '` AS sa
+  				WHERE dss.`accepted_species_id` = sa.`id`
+  				AND sa.`name_status` = dss.`status`
+  				GROUP BY sa.`id`
+  		)'
+  );
+*/
+
   $queries = array(
   	'UPDATE `' . SEARCH_SCIENTIFIC . '` AS dss 
-      SET dss.`author` = IF(dss.`accepted_species_id` = "", (
-          SELECT `string` 
-          FROM `taxon_detail` 
-          LEFT JOIN `author_string` ON `author_string_id` = `author_string`.`id` 
-          WHERE `taxon_id` = dss.`id`),
+     SET dss.`author` = IF(dss.`accepted_species_id` = "", 
+  		  (
+  	      	  SELECT `string`
+  		      FROM `taxon_detail`
+  		      LEFT JOIN `author_string` ON `author_string_id` = `author_string`.`id` 
+          	  WHERE `taxon_id` = dss.`id`
+  		  ),
           (
 	  		  SELECT `string` 
-	          FROM `synonym` 
-	          LEFT JOIN `author_string` ON `synonym`.`author_string_id` = `author_string`.`id` 
-	          WHERE `synonym`.`id` = dss.`id`
+		      FROM `synonym` 
+		      LEFT JOIN `author_string` ON `synonym`.`author_string_id` = `author_string`.`id` 
+		      WHERE `synonym`.`id` = dss.`id`
   		  )
       ),
-      dss.`status` = IF(dss.`accepted_species_id` = "", (
-          SELECT `scientific_name_status_id` 
-          FROM `taxon_detail` 
-          WHERE `taxon_id` = dss.`id`), 
+      dss.`status` = IF(dss.`accepted_species_id` = "", 
   		  (
-              SELECT `scientific_name_status_id` 
-              FROM `synonym` 
-              WHERE `synonym`.`id` = dss.`id`
+	  		  SELECT `scientific_name_status_id` 
+	          FROM `taxon_detail` 
+	          WHERE `taxon_id` = dss.`id`
+  		  ), 
+  		  (
+	  		  SELECT `scientific_name_status_id` 
+	          FROM `synonym` 
+	          WHERE `synonym`.`id` = dss.`id`
           )
-      ) ;',
+      );',
+  		
   	'UPDATE `' . SEARCH_SCIENTIFIC . '` AS dss 
 	 JOIN `' . SEARCH_ALL . '` AS sa ON dss.`id` = sa.`id` 
-     SET dss.`source_database_name` = sa.`source_database_name`,
-    	 dss.`accepted_species_author` =  sa.`name_suffix`,
-     	 dss.`accepted_species_name` =  sa.`name` ;'	
-  );		
+     SET dss.`source_database_name` = sa.`source_database_name`
+  	 WHERE dss.`id` = sa.`id` 
+  	 AND sa.`name_status` = dss.`status`;',
+  		
+  	'UPDATE `' . SEARCH_SCIENTIFIC . '` AS dss 
+	 JOIN `' . SEARCH_ALL . '` AS sa ON dss.`id` = sa.`id` 
+  	 SET dss.`accepted_species_author` =  sa.`name_status_suffix_suffix`,
+     	 dss.`accepted_species_name` =  sa.`name_status_suffix` 
+  	 WHERE dss.`accepted_species_id` > 0  	 
+  	 AND sa.`name_status` = dss.`status`;'
+  );
+  
   foreach ($queries as $query) {
   	$stmt = $pdo->prepare($query);
   	$stmt->execute();
@@ -481,7 +500,11 @@
   $stmt = $pdo->prepare($query);
   $stmt->execute();
   while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-	  updateHybrid(SEARCH_ALL, array('name', capitalizeHybridName($row['name'])), array('id',$row['id']));
+	  updateHybrid(
+	  	SEARCH_ALL, 
+	  	array('name' => capitalizeHybridName($row['name'])), 
+	  	array('id' => $row['id'])
+	 );
   }
   echo 'Updating ' . TAXON_TREE . '...<br>';
   $query = 'SELECT `taxon_id`, `name` FROM `' . TAXON_TREE . '` 
@@ -489,7 +512,11 @@
   $stmt = $pdo->prepare($query);
   $stmt->execute();
   while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-  	updateHybrid(TAXON_TREE, array('name', capitalizeHybridName($row['name'])), array('taxon_id', $row['taxon_id']));
+  	updateHybrid(
+  		TAXON_TREE, 
+  		array('name' => capitalizeHybridName($row['name'])), 
+  		array('taxon_id' => $row['taxon_id'])
+  	);
   }
   echo 'Updating ' . SPECIES_DETAILS . '...<br>';
   $query = 'SELECT `taxon_id`, `genus_name` FROM `' . SPECIES_DETAILS . '` 
@@ -497,7 +524,11 @@
   $stmt = $pdo->prepare($query);
   $stmt->execute();
   while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-  	updateHybrid(SPECIES_DETAILS, array('genus_name', capitalizeHybridName($row['genus_name'])), array('taxon_id', $row['taxon_id']));
+  	updateHybrid(
+  		SPECIES_DETAILS, 
+  		array('genus_name' => capitalizeHybridName($row['genus_name'])), 
+  		array('taxon_id' => $row['taxon_id'])
+  	);
   }
   
   echo '</p><p><b>Analyzing denormalized tables</b><br>';

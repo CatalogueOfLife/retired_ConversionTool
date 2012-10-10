@@ -202,17 +202,26 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
     protected function _setTaxonSynonyms(Model $taxon)
     {
     	$stmt = $this->_dbh->prepare(
-    	   'SELECT t1.`record_id` AS id, t1.`name_code` AS originalId, '.
-    	   't1.`genus`, t1.`species`, t1.`infraspecies`, '.
-    	   't1.`author` AS authorString, t1.`web_site` AS uri, '.
-    	   't1.`infraspecies_marker` AS infraSpecificMarker, '.
-    	   't2.`sp2000_status` AS scientificNameStatus, '.
-    	   'IF (t1.`infraspecies` = "" OR t1.`infraspecies` IS NULL, '.
-    	       '"Species", "Infraspecies") AS taxonomicRank '.
-           'FROM `scientific_names` t1, `sp2000_statuses` t2 WHERE '.
-           't1.`sp2000_status_id` = t2.`record_id` AND '.
-    	   't1.`accepted_name_code` = ? AND t1.`is_accepted_name` = 0 AND '.
-    	   't1.`name_code` != t1.`accepted_name_code`'
+    	   'SELECT t1.`record_id` AS id, 
+				   t1.`name_code` AS originalId, 
+				   t1.`genus`, 
+				   t1.`subgenus`, 
+				   t1.`species`, 
+				   t1.`infraspecies`, 
+				   t1.`author` AS authorString, 
+				   t1.`web_site` AS uri, 
+				   t1.`infraspecies_marker` AS infraSpecificMarker, 
+				   t2.`sp2000_status` AS scientificNameStatus,
+				   IF (
+				   		(t1.`infraspecies` = "" OR t1.`infraspecies` IS NULL) AND (t1.`species` = "" OR t1.`species` IS NULL), "Subgenus",
+						IF(t1.`infraspecies` = "" OR t1.`infraspecies` IS NULL, "Species",  "Infraspecies")
+					) AS taxonomicRank 
+			FROM `scientific_names` t1, 
+			       `sp2000_statuses` t2 
+			WHERE t1.`sp2000_status_id` = t2.`record_id` AND 
+				  t1.`accepted_name_code` = ? AND 
+				  t1.`is_accepted_name` = 0 AND 
+			      t1.`name_code` != t1.`accepted_name_code`'
     	);
         $stmt->execute(array($taxon->originalId));
         $taxon->synonyms = $stmt->fetchAll(
