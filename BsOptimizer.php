@@ -500,7 +500,8 @@
         SET t1.`parent_id` = t2.`parent_id`
         WHERE t2.`rank` = "subgenus";',
     'DELETE FROM `' . TAXON_TREE . '` WHERE `rank` = "subgenus";',
-    'DELETE FROM `' . SEARCH_SCIENTIFIC . '` WHERE `subgenus` != "" AND `species` = "";'
+    'DELETE FROM `' . SEARCH_SCIENTIFIC . '` WHERE `subgenus` != "" AND `species` = "";',
+    'DELETE FROM `' . SEARCH_ALL . '` WHERE `rank` = "subgenus";'
   );
   foreach ($queries as $query) {
       $stmt = $pdo->prepare($query);
