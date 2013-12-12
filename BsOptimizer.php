@@ -493,6 +493,20 @@
       $indicator->iterate();
   }
 
+  echo '</p><p>Deleting subgenus from ' . TAXON_TREE . ' AND ' . SEARCH_SCIENTIFIC . '...<br>';
+  $queries = array(
+    'UPDATE `' . TAXON_TREE . '` AS t1
+        LEFT JOIN `' . TAXON_TREE . '` AS t2 ON t1.`parent_id` = t2.`taxon_id`
+        SET t1.`parent_id` = t2.`parent_id`
+        WHERE t2.`rank` = "subgenus";',
+    'DELETE FROM `' . TAXON_TREE . '` WHERE `rank` = "subgenus";',
+    'DELETE FROM `' . SEARCH_SCIENTIFIC . '` WHERE `subgenus` != "" AND `species` = "";'
+  );
+  foreach ($queries as $query) {
+      $stmt = $pdo->prepare($query);
+      $stmt->execute();
+  }
+  
   echo '</p><p><b>Capitalizing valid hybrids in denormalized tables</b><br>';
   echo 'Updating ' . SEARCH_ALL . '...<br>';
   $query = 'SELECT `id`, `name` FROM `' . SEARCH_ALL . '` 
