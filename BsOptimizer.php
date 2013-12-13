@@ -179,7 +179,7 @@
   $pdo = DbHandler::getInstance('target');
   $indicator = new Indicator();
 
-  $scriptStart = microtime(true);
+   $scriptStart = microtime(true);
 
    echo '<p>First denormalized tables are created and indices are created for the denormalized tables. 
         Taxonomic coverage is processed from free text field to a dedicated database table to determine 
@@ -200,7 +200,7 @@
   $stmt = $pdo->query($sql);
   $runningTime = round(microtime(true) - $start);
   echo "Script took $runningTime seconds to complete<br></p>";
-  
+ 
   $start = microtime(true);
   echo '<p>Adding common name elements to ' . SEARCH_ALL . ' table...<br>';
   $sql = file_get_contents(PATH . DENORMALIZED_TABLES_PATH . SEARCH_ALL_COMMON_NAMES . '.sql');
@@ -295,7 +295,9 @@
   $query = 'ALTER TABLE `' . SEARCH_ALL . '` DROP `delete_me`';
   $stmt = $pdo->prepare($query);
   $stmt->execute();
+  
 
+  $pdo->query("SET SESSION sql_mode = '';");
   echo '&nbsp;&nbsp;&nbsp; Creating common name entries without spaces...<br>';
   $query = 'INSERT INTO `' . SEARCH_ALL . '` (
   		SELECT DISTINCT NULL, LOWER(REPLACE(`name`, " ", "")) AS `name_element`, 
@@ -306,6 +308,7 @@
   	)';
   $stmt = $pdo->prepare($query);
   $stmt->execute();
+  $pdo->query("SET SESSION sql_mode = 'TRADITIONAL';");
   
   echo 'Updating ' . SEARCH_DISTRIBUTION . '...<br>';
   $query = 'UPDATE `' . SEARCH_DISTRIBUTION . '` AS sd, `' . SEARCH_ALL . '` AS sa 
@@ -314,56 +317,6 @@
   $stmt->execute();
    
   echo 'Updating ' . SEARCH_SCIENTIFIC . '...<br>';
-
-/*  
- $queries = array(
-  		'UPDATE `' . SEARCH_SCIENTIFIC . '` AS dss
-  		SET dss.`author` = IF(dss.`accepted_species_id` = "", (
-  				SELECT `string`
-  				FROM `taxon_detail`
-  				LEFT JOIN `author_string` ON `author_string_id` = `author_string`.`id`
-  				WHERE `taxon_id` = dss.`id`),
-  				(
-  						SELECT `string`
-  						FROM `synonym`
-  						LEFT JOIN `author_string` ON `synonym`.`author_string_id` = `author_string`.`id`
-  						WHERE `synonym`.`id` = dss.`id`
-  				)
-  		),
-  		dss.`status` = IF(dss.`accepted_species_id` = "", (
-  				SELECT `scientific_name_status_id`
-  				FROM `taxon_detail`
-  				WHERE `taxon_id` = dss.`id`),
-  				(
-  						SELECT `scientific_name_status_id`
-  						FROM `synonym`
-  						WHERE `synonym`.`id` = dss.`id`
-  				)
-  		),
-  		dss.`source_database_name` = (
-  				SELECT sa.`source_database_name`
-  				FROM `' . SEARCH_ALL . '` AS sa
-  				WHERE dss.`id` = sa.`id`
-  				AND sa.`name_status` = dss.`status`
-  				GROUP BY sa.`id`
-  		),
-  		dss.`accepted_species_author` = (
-  				SELECT sa.`name_suffix`
-  				FROM `' . SEARCH_ALL . '` AS sa
-  				WHERE dss.`accepted_species_id` = sa.`id`
-  				AND sa.`name_status` = dss.`status`
-  				GROUP BY sa.`id`
-  		),
-  		dss.`accepted_species_name` = (
-  				SELECT sa.`name`
-  				FROM `' . SEARCH_ALL . '` AS sa
-  				WHERE dss.`accepted_species_id` = sa.`id`
-  				AND sa.`name_status` = dss.`status`
-  				GROUP BY sa.`id`
-  		)'
-  );
-*/
-
   $queries = array(
   	'UPDATE `' . SEARCH_SCIENTIFIC . '` AS dss 
      SET dss.`author` = IF(dss.`accepted_species_id` = "", 
@@ -408,6 +361,7 @@
   );
   
   foreach ($queries as $query) {
+  	$pdo->query("SET SESSION sql_mode = '';");
   	$stmt = $pdo->prepare($query);
   	$stmt->execute();
   }	
