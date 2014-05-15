@@ -4,44 +4,45 @@ require_once 'Abstract.php';
 
 /**
  * Taxon storer abstract
- * 
+ *
  * Second abstract class for HigherTaxon, Taxon and Synonym
- * 
+ *
  * @author Nœria Torrescasana Aloy, Ruud Altenburg
  */
 class Bs_Storer_TaxonAbstract extends Bs_Storer_Abstract
 {
     public static $hybridMarkers = array(
-        'x ', 
+        'x ',
         ' x '
     );
     // Overview of infraspecific markers in Sp2010ac database that can be
-    // mapped to predefined markers taken from TDWG. Any markers that are not 
+    // mapped to predefined markers taken from TDWG. Any markers that are not
     // present will be added to the `taxonomic_rank` table with standard = 0
     public static $markerMap = array(
-        'convar.' => 'convar', 
-        'cv.' => 'cultivar', 
-        'f.' => 'form', 
-        'forma' => 'form', 
-        'm.' => 'morph', 
-        'monst.' => 'monster', 
-        'monstr.' => 'monster', 
-        'mut.' => 'mutant', 
-        'prol.' => 'prole', 
-        'proles' => 'prole', 
-        'raca' => 'race', 
-        'ssp.' => 'subspecies', 
-        'subf.' => 'subform', 
-        'subforma' => 'subform', 
-        'subs.' => 'subspecies', 
-        'subsp,' => 'subspecies', 
-        'subsp.' => 'subspecies', 
-        'subsp..' => 'subspecies', 
-        'subvar.' => 'sub-variety', 
-        'susbp.' => 'subspecies', 
-        'susp.' => 'subspecies', 
-        'var' => 'variety', 
-        'var,' => 'variety', 
+        'convar.' => 'convar',
+        'cv.' => 'cultivar',
+        'f.' => 'form',
+        'forma' => 'form',
+        'forma.' => 'form',
+        'm.' => 'morph',
+        'monst.' => 'monster',
+        'monstr.' => 'monster',
+        'mut.' => 'mutant',
+        'prol.' => 'prole',
+        'proles' => 'prole',
+        'raca' => 'race',
+        'ssp.' => 'subspecies',
+        'subf.' => 'subform',
+        'subforma' => 'subform',
+        'subs.' => 'subspecies',
+        'subsp,' => 'subspecies',
+        'subsp.' => 'subspecies',
+        'subsp..' => 'subspecies',
+        'subvar.' => 'sub-variety',
+        'susbp.' => 'subspecies',
+        'susp.' => 'subspecies',
+        'var' => 'variety',
+        'var,' => 'variety',
         'var.' => 'variety'
     );
 
@@ -51,7 +52,7 @@ class Bs_Storer_TaxonAbstract extends Bs_Storer_Abstract
             $taxon->taxonomicRankId = $id;
             return $taxon;
         }
-        $id = $this->_recordExists('id', 'taxonomic_rank', 
+        $id = $this->_recordExists('id', 'taxonomic_rank',
             array(
                 'rank' => $taxon->taxonomicRank
             ));
@@ -65,12 +66,11 @@ class Bs_Storer_TaxonAbstract extends Bs_Storer_Abstract
 
     protected function _setInfraSpecificMarkerId (Model $taxon)
     {
-        $marker = trim($taxon->infraSpecificMarker);
+        $marker = trim(strtolower($taxon->infraSpecificMarker));
         // If infraSpecificMarker is empty, but infraspecies is not, set
         // marker to unknown
-        if ($marker == '' && $taxon->infraspecies !=
-             '') {
-                $taxon->infraSpecificMarker = $marker = 'not assigned';
+        if ($marker == '' && $taxon->infraspecies != '') {
+           $taxon->infraSpecificMarker = $marker = 'not assigned';
         }
         if (array_key_exists($marker, self::$markerMap)) {
             $marker = self::$markerMap[$marker];
@@ -79,7 +79,7 @@ class Bs_Storer_TaxonAbstract extends Bs_Storer_Abstract
             $taxon->taxonomicRankId = $markerId;
             return $taxon;
         }
-        $markerId = $this->_recordExists('id', 'taxonomic_rank', 
+        $markerId = $this->_recordExists('id', 'taxonomic_rank',
             array(
                 'rank' => $marker
             ));
@@ -91,8 +91,8 @@ class Bs_Storer_TaxonAbstract extends Bs_Storer_Abstract
         $stmt = $this->_dbh->prepare(
             'INSERT INTO `taxonomic_rank` (`rank`, `marker_displayed`, `standard`) VALUE (?, ?, ?)');
         $stmt->execute(array(
-            $marker, 
-            $marker, 
+            $marker,
+            $marker,
             0
         ));
         $markerId = $this->_dbh->lastInsertId();
@@ -108,7 +108,7 @@ class Bs_Storer_TaxonAbstract extends Bs_Storer_Abstract
             $taxon->scientificNameStatusId = $id;
             return $taxon;
         }
-        $id = $this->_recordExists('id', 'scientific_name_status', 
+        $id = $this->_recordExists('id', 'scientific_name_status',
             array(
                 'name_status' => $taxon->scientificNameStatus
             ));
@@ -131,7 +131,7 @@ class Bs_Storer_TaxonAbstract extends Bs_Storer_Abstract
         return false;
     }
 
-    // Two slightly modified methods that take a single parameter 
+    // Two slightly modified methods that take a single parameter
     // rather than the entire object
     protected function _getTaxonomicRankId ($rank)
     {
@@ -150,14 +150,14 @@ class Bs_Storer_TaxonAbstract extends Bs_Storer_Abstract
 
     protected function _getScientificNameElementId ($nameElement)
     {
-        $name = strtolower($nameElement);
-        $nameElementId = $this->_recordExists('id', 'scientific_name_element', 
+        $name = trim(strtolower($nameElement));
+        $nameElementId = $this->_recordExists('id', 'scientific_name_element',
             array(
-                'name_element' => $nameElement
+                'name_element' => $name
             ));
-        if (!$nameElementId && trim($name) != '') {
+        if (!$nameElementId && $name != '') {
             $stmt = $this->_dbh->prepare(
-                'INSERT INTO `scientific_name_element` ' . '(`name_element`) VALUE (?)');
+                'INSERT INTO `scientific_name_element` (`name_element`) VALUE (?)');
             $stmt->execute(array(
                 $name
             ));

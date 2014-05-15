@@ -10,7 +10,7 @@ require_once 'converters/Ac/Model/AcToBs/CommonName.php';
 require_once 'converters/Ac/Model/AcToBs/Synonym.php';
 
 /**
- * 
+ *
  * @author Nuria Torrescasana Aloy, Ruud Altenburg
  *
  */
@@ -19,7 +19,7 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
 {
     /**
      * Count number of (infra)species in Annual Checklist
-     * 
+     *
      * @return int
      */
     public function count()
@@ -35,31 +35,31 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
         unset($stmt);
         return $res;
     }
-    
+
     /**
      * Load taxa from Annual Checklist
-     * 
+     *
      * Iterates through all taxa and fetches objects in batches
-     * 
+     *
      * @param int $offset offset value for LIMIT in query
      * @param int $limit number of rows to be returned in query
      * @return array $taxa array of Taxon objects
-     * 
+     *
      * Memory may not exceed xx percentage of total memory (defined in $this->_maxMemoryUse)
      */
     public function load($offset, $limit)
     {
         $stmt = $this->_dbh->prepare(
-            'SELECT `record_id` AS id, `taxon` AS taxonomicRank, '.
-            '`name`, `lsid`, `parent_id` AS parentId, '.
-            '`database_id` AS sourceDatabaseId, '.
-            '`name_code` AS originalId,  '.
-            '`sp2000_status_id` AS scientificNameStatusId '.
-            'FROM `taxa` '.
-            'WHERE `is_accepted_name` = 1 '.
-            'AND `parent_id` != 0 '.
-            'AND (`taxon` = "species" OR  `taxon` = "infraspecies") '.
-            'LIMIT :offset, :limit '
+            'SELECT `record_id` AS id, `taxon` AS taxonomicRank,
+            `name`, `lsid`, `parent_id` AS parentId,
+            `database_id` AS sourceDatabaseId,
+            `name_code` AS originalId,
+            `sp2000_status_id` AS scientificNameStatusId
+            FROM `taxa`
+            WHERE `is_accepted_name` = 1
+            AND `parent_id` != 0
+            AND (`taxon` = "species" OR  `taxon` = "infraspecies")
+            LIMIT :offset, :limit '
         );
         $stmt->bindParam('offset', $offset, PDO::PARAM_INT);
         $stmt->bindParam('limit', $limit, PDO::PARAM_INT);
@@ -77,7 +77,7 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
             $this->_setTaxonSynonyms($taxon);
             $this->_setTaxonLifezones($taxon);
             $taxa[] = $taxon;
-            
+
             $memLimit++;
             if (self::memoryUse() > $this->_maxMemoryUse) {
                 return array($taxa, $memLimit);
@@ -86,8 +86,8 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
         unset($stmt);
         return array($taxa, $limit);
     }
-    
-    protected function _setTaxonDetails(Model $taxon) 
+
+    protected function _setTaxonDetails(Model $taxon)
     {
         $stmt = $this->_dbh->prepare(
             'SELECT `genus`, `species`, `infraspecies`, '.
@@ -110,24 +110,24 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
         unset($stmt);
         return $taxon;
     }
-    
+
     protected function _setTaxonScientificNameStatus(Model $taxon)
     {
         $stmt = $this->_dbh->prepare(
             'SELECT `sp2000_status` FROM `sp2000_statuses` WHERE ' .
-            'record_id = ?' 
+            'record_id = ?'
         );
         $stmt->execute(array($taxon->scientificNameStatusId));
         $taxon->scientificNameStatus = $stmt->fetchColumn(0);
         unset($stmt);
         return $taxon;
     }
-    
+
     protected function _setTaxonSpecialistName(Model $taxon)
     {
 		$stmt = $this->_dbh->prepare(
 		'SELECT `specialist_name` FROM `specialists` WHERE ' .
-		'record_id = ?' 
+		'record_id = ?'
 		);
 		$stmt->execute(array($taxon->specialistId));
 		$taxon->specialistName = $stmt->fetchColumn(0);
@@ -138,11 +138,11 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
     protected function _setTaxonReferences(Model $taxon)
     {
         $stmt = $this->_dbh->prepare(
-            'SELECT t1.`author` AS authors, t1.`year`, t1.`title`, 
-            t1.`source` AS text, t2.`reference_type` AS type 
-            FROM `references` t1 
-            LEFT JOIN `scientific_name_references` AS t2 ON t1.`record_id` = t2.`reference_id` 
-            WHERE t2.`name_code` = ? AND 
+            'SELECT t1.`author` AS authors, t1.`year`, t1.`title`,
+            t1.`source` AS text, t2.`reference_type` AS type
+            FROM `references` t1
+            LEFT JOIN `scientific_name_references` AS t2 ON t1.`record_id` = t2.`reference_id`
+            WHERE t2.`name_code` = ? AND
             (t2.`reference_type` != "ComNameRef" OR t2.`reference_type` IS NULL)'
 		);
 		$stmt->execute(array($taxon->originalId));
@@ -162,7 +162,7 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
             'ORDER BY IF (status = "" OR status IS NULL, 1, 0), status'
         );
         $stmt->execute(array($taxon->originalId));
-        $taxon->distribution = $stmt->fetchAll(PDO::FETCH_CLASS, 
+        $taxon->distribution = $stmt->fetchAll(PDO::FETCH_CLASS,
             'Bs_Model_AcToBs_Distribution');
         unset($stmt);
         return $taxon;
@@ -174,7 +174,7 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
             'SELECT `lifezone` FROM `lifezone` WHERE `name_code` = ?'
         );
         $stmt->execute(array($taxon->originalId));
-        $taxon->lifezones = $stmt->fetchAll(PDO::FETCH_CLASS, 
+        $taxon->lifezones = $stmt->fetchAll(PDO::FETCH_CLASS,
             'Bs_Model_AcToBs_Lifezone');
         unset($stmt);
         return $taxon;
@@ -202,25 +202,25 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
     protected function _setTaxonSynonyms(Model $taxon)
     {
     	$stmt = $this->_dbh->prepare(
-    	   'SELECT t1.`record_id` AS id, 
-				   t1.`name_code` AS originalId, 
-				   t1.`genus`, 
-				   t1.`subgenus`, 
-				   t1.`species`, 
-				   t1.`infraspecies`, 
-				   t1.`author` AS authorString, 
-				   t1.`web_site` AS uri, 
-				   t1.`infraspecies_marker` AS infraSpecificMarker, 
+    	   'SELECT t1.`record_id` AS id,
+				   t1.`name_code` AS originalId,
+				   t1.`genus`,
+				   t1.`subgenus`,
+				   t1.`species`,
+				   t1.`infraspecies`,
+				   t1.`author` AS authorString,
+				   t1.`web_site` AS uri,
+				   t1.`infraspecies_marker` AS infraSpecificMarker,
 				   t2.`sp2000_status` AS scientificNameStatus,
 				   IF (
 				   		(t1.`infraspecies` = "" OR t1.`infraspecies` IS NULL) AND (t1.`species` = "" OR t1.`species` IS NULL), "Subgenus",
 						IF(t1.`infraspecies` = "" OR t1.`infraspecies` IS NULL, "Species",  "Infraspecies")
-					) AS taxonomicRank 
-			FROM `scientific_names` t1, 
-			       `sp2000_statuses` t2 
-			WHERE t1.`sp2000_status_id` = t2.`record_id` AND 
-				  t1.`accepted_name_code` = ? AND 
-				  t1.`is_accepted_name` = 0 AND 
+					) AS taxonomicRank
+			FROM `scientific_names` t1,
+			       `sp2000_statuses` t2
+			WHERE t1.`sp2000_status_id` = t2.`record_id` AND
+				  t1.`accepted_name_code` = ? AND
+				  t1.`is_accepted_name` = 0 AND
 			      t1.`name_code` != t1.`accepted_name_code`'
     	);
         $stmt->execute(array($taxon->originalId));

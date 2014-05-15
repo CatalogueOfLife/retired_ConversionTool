@@ -4,22 +4,23 @@ require_once 'Abstract.php';
 
 /**
  * Reference storer
- * 
- * @author Nï¿½ria Torrescasana Aloy, Ruud Altenburg
+ *
+ * @author Nœria Torrescasana Aloy, Ruud Altenburg
  */
 class Bs_Storer_Reference extends Bs_Storer_Abstract implements Bs_Storer_Interface
 {
 
     public function store (Model $reference)
     {
-        if ($reference->title . $reference->authors . $reference->year . $reference->text == '') {
+        if (empty($reference->title) && empty($reference->authors) &&
+            empty($reference->year) && empty($reference->text)) {
             return $reference;
         }
-        $referenceId = $this->_recordExists('id', 'reference', 
+        $referenceId = $this->_recordExists('id', 'reference',
             array(
-                'authors' => $reference->authors, 
-                'year' => $reference->year, 
-                'title' => $reference->title, 
+                'authors' => $reference->authors,
+                'year' => $reference->year,
+                'title' => $reference->title,
                 'text' => $reference->text
             ));
         if ($referenceId) {
@@ -30,9 +31,9 @@ class Bs_Storer_Reference extends Bs_Storer_Abstract implements Bs_Storer_Interf
                 'INSERT INTO `reference` (`title`, `authors`, `year`, `text`) VALUES (?, ?, ?, ?)');
             $stmt->execute(
                 array(
-                    $reference->title, 
-                    $reference->authors, 
-                    $reference->year, 
+                    $reference->title,
+                    $reference->authors,
+                    $reference->year,
                     $reference->text
                 ));
             $reference->id = $this->_dbh->lastInsertId();
@@ -47,15 +48,15 @@ class Bs_Storer_Reference extends Bs_Storer_Abstract implements Bs_Storer_Interf
             return $reference;
         }
         $lookup = array(
-            'nomref' => 'Nomenclatural Reference', 
-            'taxaccref' => 'Taxonomic Acceptance Reference', 
+            'nomref' => 'Nomenclatural Reference',
+            'taxaccref' => 'Taxonomic Acceptance Reference',
             'comnameref' => 'Common Name Reference'
         );
         $type = $lookup[strtolower($reference->type)];
         if ($reference->typeId = Dictionary::get('reference_types', $type)) {
             return $reference;
         }
-        $reference->typeId = $this->_recordExists('id', 'reference_type', 
+        $reference->typeId = $this->_recordExists('id', 'reference_type',
             array(
                 'type' => $type
             ));

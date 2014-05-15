@@ -20,14 +20,15 @@
     alwaysFlush();
     $indicator = new Indicator();
     ini_set('memory_limit', '1024M');
-        
+
     if (isset($argv) && isset($argv[1])) {
       $config = parse_ini_file($argv[1], true);
     } else {
       $config = parse_ini_file('config/AcToBs.ini', true);
     }
-    
+
     $scriptStart = microtime(true);
+
     echo '<p>Checking database structure...</p>';
     $errors = checkDatabase();
     if (!empty($errors)) {
@@ -43,11 +44,12 @@
     $errors = checkForeignKeys();
     if (!empty($errors)) {
       printErrors($errors, 'Missing foreign key references');
-    } 
+    }
+
     echo "</p><p><b>Building 'taxa' table</b><br>";
     $errors = buildTaxaTable();
     if (!empty($errors)) {
-      echo '</p><p style="color: red;"><b>Errors during creation of \'taxa\' table"></b></p>';
+      echo '</p><p style="color: red;"><b>Errors during creation of \'taxa\' table</b></p>';
       foreach ($errors as $category => $categoryErrors) {
           if (!empty($categoryErrors)) {
               printErrors($categoryErrors, $category);
@@ -56,7 +58,7 @@
     }
     $totalTime = round(microtime(true) - $scriptStart);
     echo '</p><p>Optimalization took ' . $indicator->formatTime($totalTime) . '.</p>';
-    
+
     echo '<p><br><br><b>Creating LSIDs</b><br>';
     $taxonMatcher = new TaxonMatcher();
     $taxonMatcher->setDbHost($config['source']['host']);
@@ -67,7 +69,7 @@
     $taxonMatcher->setDbNameStage($config['taxonmatcher']['dbNameStage']);
     $taxonMatcher->setLSIDSuffix($config['taxonmatcher']['lsidSuffix']);
     $taxonMatcher->setResetLSIDs(true);
-    
+
     $listener = new EchoEventListener();
     $listener->setContentTypeHTML();
     $listener->showStackTrace();
@@ -82,9 +84,9 @@
     }
     catch(Exception $e) {
         echo "\n" . $e->getTraceAsString();
-    }    
+    }
 ?>
-    </p><p><br><br>Post-processing ready! Proceed to <b>Step 2</b>: 
+    </p><p><br><br>Post-processing ready! Proceed to <b>Step 2</b>:
     <a href="AcToBs.php">Import the data into the new database</a>.</p>
 </body>
 </html>

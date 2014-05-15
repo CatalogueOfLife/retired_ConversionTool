@@ -14,15 +14,15 @@ require_once 'converters/Bs/Storer/Uri.php';
 
 /**
  * Taxon storer
- * 
- * @author N�ria Torrescasana Aloy, Ruud Altenburg
+ *
+ * @author Nuria Torrescasana Aloy, Ruud Altenburg
  */
 class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon implements Bs_Storer_Interface
 {
 
     public function store (Model $taxon)
     {
-        // Check if taxon_id already exist. Some stray taxa appear twice 
+        // Check if taxon_id already exist. Some stray taxa appear twice
         // in the loader because either status or record_id are duplicated.
         // It is faster to skip them in the storer than in the loader.
         $config = parse_ini_file('config/AcToBs.ini', true);
@@ -31,11 +31,21 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon implements Bs_Storer_Interfa
                 'id', 'taxon', array(
                     'id' => $taxon->id
                 ))) {
-                $this->writeToErrorTable($taxon->id, $taxon->name, 'Taxon already exists');
+                $this->writeToErrorTable($taxon->id, $taxon->name, 'Taxon already exists',
+                    $taxon->originalId);
                 return $taxon;
             }
         }
-        
+
+        // Check if parent of infraspecies really is a species
+        if (isset($config['checks']['infraspecies_parent_ids']) &&
+            $config['checks']['infraspecies_parent_ids'] == 1 &&
+            !$this->_checkInfraspeciesParent($taxon)) {
+            $this->writeToErrorTable($taxon->id, $taxon->name,
+                'Parent of infraspecies not a(n accepted) species', $taxon->originalId);
+            return $taxon;
+        }
+
         // Species rank id
         if ($taxon->infraspecies == '') {
             $this->_setTaxonomicRankId($taxon);
@@ -45,15 +55,10 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon implements Bs_Storer_Interfa
             $this->_setInfraSpecificMarkerId($taxon);
         }
         $this->_getScientificNameStatusId($taxon);
-        
+
         $this->_setTaxon($taxon);
         $this->_setScientificNameElements($taxon);
-        // Abort if parent taxon does not match for infraspecies
-        if (!$this->_setTaxonNameElement($taxon)) {
-            $this->writeToErrorTable($taxon->id, $taxon->name, 
-                'Parent of infraspecies not a species');
-            return false;
-        }
+        $this->_setTaxonNameElement($taxon);
         $this->_setTaxonScrutiny($taxon);
         $this->_setTaxonReferences($taxon);
         $this->_setTaxonLsid($taxon);
@@ -65,16 +70,31 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon implements Bs_Storer_Interfa
         $this->_setTaxonLifezones($taxon);
     }
 
+    protected function _checkInfraspeciesParent ($taxon) {
+        if (isset(
+            $taxon->infraspecies) && $taxon->infraspecies != '') {
+            $parentRankId = $this->_recordExists('taxonomic_rank_id', 'taxon',
+                array(
+                    'id' => $taxon->parentId
+                ));
+            if ($parentRankId != $this->_getTaxonomicRankId('species')) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     protected function _setScientificNameElements (Model $taxon)
     {
         foreach (array('genus', 'subgenus', 'species', 'infraspecies') as $ne) {
-        	if (!empty($taxon->{$ne})) {
-        		$nameElements[$this->_getTaxonomicRankId($ne)] = $taxon->{$ne};
+        	$name = trim($taxon->{$ne});
+        	if (!empty($name)) {
+        		$nameElements[$this->_getTaxonomicRankId($ne)] = $name;
         	}
         }
         foreach ($nameElements as $rankId => $nameElement) {
             $name = strtolower($nameElement);
-            $nameElementId = $this->_recordExists('id', 'scientific_name_element', 
+            $nameElementId = $this->_recordExists('id', 'scientific_name_element',
                 array(
                     'name_element' => $name
                 ));
@@ -108,12 +128,12 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon implements Bs_Storer_Interfa
         $storer->store($specialist);
         // Reset specialist id to new value
         $taxon->specialistId = $specialist->id;
-        
+
         $date = $this->parseAcDate($taxon->scrutinyDate);
-        $scrutinyId = $this->_recordExists('id', 'scrutiny', 
+        $scrutinyId = $this->_recordExists('id', 'scrutiny',
             array(
-                'specialist_id' => $taxon->specialistId, 
-                'scrutiny_date' => $date, 
+                'specialist_id' => $taxon->specialistId,
+                'scrutiny_date' => $date,
                 'original_scrutiny_date' => $taxon->scrutinyDate
             ));
         if ($scrutinyId) {
@@ -124,8 +144,8 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon implements Bs_Storer_Interfa
                 'INSERT INTO `scrutiny` (`specialist_id`, `scrutiny_date`, `original_scrutiny_date`) VALUES (?, ?, ?)');
             $stmt->execute(
                 array(
-                    $taxon->specialistId, 
-                    $date, 
+                    $taxon->specialistId,
+                    $date,
                     $taxon->scrutinyDate
                 ));
             $taxon->scrutinyId = $this->_dbh->lastInsertId();
@@ -140,16 +160,16 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon implements Bs_Storer_Interfa
         $author->authorString = $taxon->authorString;
         $storer = new Bs_Storer_Author($this->_dbh, $this->_logger);
         $storer->store($author);
-        
+
         $stmt = $this->_dbh->prepare(
-            'INSERT INTO `taxon_detail` (`taxon_id`, `author_string_id`, `scientific_name_status_id`, 
+            'INSERT INTO `taxon_detail` (`taxon_id`, `author_string_id`, `scientific_name_status_id`,
             `additional_data`, `scrutiny_id`, `taxon_guid`, `name_guid`) VALUES (?, ?, ?, ?, ?, ?, ?)');
         $stmt->execute(
             array(
-                $taxon->id, 
-                $author->id, 
-                $taxon->scientificNameStatusId, 
-                $taxon->additionalData, 
+                $taxon->id,
+                $author->id,
+                $taxon->scientificNameStatusId,
+                $taxon->additionalData,
                 $taxon->scrutinyId,
                 $taxon->taxonGuid,
                 $taxon->nameGuid
@@ -167,10 +187,10 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon implements Bs_Storer_Interfa
         $uri->resourceIdentifier = $taxon->uri;
         $storer = new Bs_Storer_Uri($this->_dbh, $this->_logger);
         $storer->store($uri);
-        
+
         $stmt = $this->_dbh->prepare('INSERT INTO `uri_to_taxon` (uri_id, taxon_id) VALUES (?, ?)');
         $stmt->execute(array(
-            $uri->id, 
+            $uri->id,
             $taxon->id
         ));
         unset($storer, $uri);
@@ -182,16 +202,16 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon implements Bs_Storer_Interfa
         $storer = new Bs_Storer_Reference($this->_dbh, $this->_logger);
         foreach ($taxon->references as $reference) {
             $storer->store($reference);
-            if (!in_array($reference->id, $referenceIds)) {
+            if (!empty($reference->id) && !in_array($reference->id, $referenceIds)) {
                 $referenceIds[] = $reference->id;
                 $stmt = $this->_dbh->prepare(
                     'INSERT INTO `reference_to_taxon` (`reference_id`, `taxon_id`, '.
                     '`reference_type_id`) VALUES (?, ?, ?)');
                 $stmt->execute(
                     array(
-                        $reference->id, 
+                        $reference->id,
                         $taxon->id,
-                        $reference->typeId
+                        empty($reference->typeId) ? null : $reference->typeId
                     )
                 );
             }
@@ -203,7 +223,7 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon implements Bs_Storer_Interfa
     protected function _setTaxonDistribution (Model $taxon)
     {
         $storer = new Bs_Storer_Distribution($this->_dbh, $this->_logger);
-        // Assembly database may contain duplicates; probably fastest to eradicate 
+        // Assembly database may contain duplicates; probably fastest to eradicate
         // these at storage stage, obviates DISTINCT query
         $storedDistributions = array();
         foreach ($taxon->distribution as $distribution) {
@@ -241,10 +261,14 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon implements Bs_Storer_Interfa
     protected function _setTaxonLifezones (Model $taxon)
     {
         $storer = new Bs_Storer_Lifezone($this->_dbh, $this->_logger);
+        $storedLifezones = array();
         foreach ($taxon->lifezones as $lifezone) {
-            $lifezone->taxonId = $taxon->id;
-            $storer->store($lifezone);
+            if (!in_array($lifezone->lifezone, $storedLifezones)) {
+                $lifezone->taxonId = $taxon->id;
+                $storer->store($lifezone);
+                $storedLifezones[] = $lifezone->lifezone;
+            }
         }
-        unset($storer);
+        unset($storer, $storedLifezones);
     }
 }

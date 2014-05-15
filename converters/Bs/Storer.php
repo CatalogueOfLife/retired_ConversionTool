@@ -3,11 +3,11 @@ require_once 'Storer/Interface.php';
 
 /**
  * Storer
- * 
- * Dynamically loads the appropriate class. In the script that runs the 
+ *
+ * Dynamically loads the appropriate class. In the script that runs the
  * conversion, only Class has to be given rather than Ac_Storer_Class
- * 
- * @author N�ria Torrescasana Aloy, Ruud Altenburg
+ *
+ * @author Nuria Torrescasana Aloy, Ruud Altenburg
  */
 class Bs_Storer
 {
@@ -15,47 +15,49 @@ class Bs_Storer
     protected $_logger;
     protected $_storers = array();
     protected $_indicator;
-    
+
     private static $dbTables = array(
-        'author_string', 
-        'common_name', 
-        'common_name_element', 
-        'distribution', 
-        'distribution_free_text', 
-        'lifezone_to_taxon_detail', 
-        'reference', 
-        'reference_to_common_name', 
-        'reference_to_synonym', 
-        'reference_to_taxon', 
-        'region_free_text', 
-        'scientific_name_element', 
-        'scrutiny', 
-        'source_database', 
-        'specialist', 
-        'synonym', 
-        'synonym_name_element', 
-        'taxon', 
-        'taxon_detail', 
-        'taxon_name_element', 
-        'uri', 
-        'uri_to_source_database', 
+        'author_string',
+        'common_name',
+        'common_name_element',
+        'distribution',
+        'distribution_free_text',
+        'lifezone_to_taxon_detail',
+        'reference',
+        'reference_to_common_name',
+        'reference_to_synonym',
+        'reference_to_taxon',
+        'region_free_text',
+        'scientific_name_element',
+        'scrutiny',
+        'source_database',
+        'specialist',
+        'synonym',
+        'synonym_name_element',
+        'taxon',
+        'taxon_detail',
+        'taxon_name_element',
+        'uri',
+        'uri_to_source_database',
         'uri_to_taxon'
     );
-    
+
     private static $dbDenormalizedTables = array(
-        '_conversion_errors', 
-        '_new_search_name_elements', 
-        '_image_resource', 
-        '_search_all', 
-        '_search_all_new', 
-        '_search_distribution', 
-        '_search_family', 
-        '_search_scientific', 
-        '_source_database_details', 
-        '_source_database_taxonomic_coverage', 
-        '_species_details', 
-        '_taxon_tree', 
-        '_totals'
+        '_conversion_errors',
+        '_new_search_name_elements',
+        '_image_resource',
+        '_search_all',
+        '_search_all_new',
+        '_search_distribution',
+        '_search_family',
+        '_search_scientific',
+        '_source_database_details',
+        '_source_database_taxonomic_coverage',
+        '_species_details',
+        '_taxon_tree',
+        '_totals',
+        '_natural_keys',
+        '_source_database_to_taxon_tree_branch'
     );
 
     public function __construct (PDO $dbh, Zend_Log $logger, Indicator $indicator)
@@ -67,10 +69,10 @@ class Bs_Storer
 
     /**
      * Dynamically loads the appropriate storer class
-     * 
+     *
      * Takes a simplified notation of the storer class that should be used
      * and dispatches the store() method to that class
-     * 
+     *
      * @param string $name class name
      * @throws exception
      * @return class loader class
@@ -83,7 +85,7 @@ class Bs_Storer
             $name = current(array_reverse($parts));
         }
         $class = 'Bs_Storer_' . $name;
-        
+
         if (!include_once ('Storer/' . $name . '.php')) {
             throw new Exception('Storer class file not found');
         }
@@ -108,10 +110,10 @@ class Bs_Storer
         return $this->_getStorer($what)->clear();
     }
     */
-    
+
     /**
      * Passes store function on to appropriate storer class
-     * 
+     *
      * @param class $object class defined in model or, when extended,
      * in converters/Ac/Model
      */
@@ -127,7 +129,7 @@ class Bs_Storer
 
     /**
      * Passes storeAll function on to appropriate storer class
-     * 
+     *
      * Not used in this conversion; see ScToDc for implementation.
      */
     public function storeAll (array $arr)
@@ -144,12 +146,12 @@ class Bs_Storer
 
     /**
      * Clears all entries in Base Scheme database from a previous import
-     * 
+     *
      * Rather than clearing individual tables as in the ScToDc conversion,
-     * this function is used to clear the entire database, using the column 
-     * order in the static $dbTables array. Emptying individual tables is 
-     * practically impossible because of the strict foreign key contraints 
-     * in the Base Scheme. Also resets AUTO_INCREMENT values and clears 
+     * this function is used to clear the entire database, using the column
+     * order in the static $dbTables array. Emptying individual tables is
+     * practically impossible because of the strict foreign key contraints
+     * in the Base Scheme. Also resets AUTO_INCREMENT values and clears
      * custom entries from the the taxonomic_rank table.
      */
     public function clearDb ()

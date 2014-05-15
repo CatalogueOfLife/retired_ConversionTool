@@ -1,7 +1,7 @@
 <?php
 /**
  * Abstract storer
- * 
+ *
  * @author N�ria Torrescasana Aloy, Ruud Altenburg
  */
 abstract class Bs_Storer_Abstract
@@ -17,9 +17,9 @@ abstract class Bs_Storer_Abstract
 
     /**
      * Test if a single record exists in storer database
-     * 
+     *
      * Returns the value of $return_column or false if record does not exist.
-     * 
+     *
      * @param mixed $return_column value in this field will be returned
      * @param string $table table to be searched
      * @param array $where associative array with pairs column => value
@@ -44,7 +44,7 @@ abstract class Bs_Storer_Abstract
 
     /**
      * Converts HTML entities to UTF8
-     * 
+     *
      * @param string $string
      * @return string converted string
      */
@@ -55,7 +55,7 @@ abstract class Bs_Storer_Abstract
 
     /**
      * Returns the last value from an array
-     * 
+     *
      * @param array $array
      * @return mixed last value of array
      */
@@ -79,10 +79,10 @@ abstract class Bs_Storer_Abstract
 
     /**
      * Parse date from Annual Checklist to yyyy-mm-dd
-     * 
+     *
      * Strips off specific strings used in Annual Checklist 2010 and tries to
      * format to valid date. Returns NULL if string cannot be parsed.
-     * 
+     *
      * @param string $date
      * @return date|NULL correctly formatted MySQL date or NULL if parsing is not possible
      */
@@ -99,9 +99,9 @@ abstract class Bs_Storer_Abstract
             }
         }
         // Only dates of the type 5-Mar-1990 or 05-Mar-1990 are considered valid
-        if (strpos($date, '-') !== false && in_array(strlen($date), 
+        if (strpos($date, '-') !== false && in_array(strlen($date),
             array(
-                10, 
+                10,
                 11
             ))) {
             $dateToTimestamp = strtotime($date);
@@ -110,14 +110,15 @@ abstract class Bs_Storer_Abstract
         return null;
     }
 
-    public function writeToErrorTable ($taxon_id, $name, $message)
+    public function writeToErrorTable ($taxon_id, $name, $message, $nameCode = null)
     {
         $stmt = $this->_dbh->prepare(
-            'INSERT INTO `_conversion_errors` (`id`, `name`, `message`) VALUES (?, ?, ?)');
+            'INSERT INTO `_conversion_errors` (`id`, `name`, `message`, `name_code`) VALUES (?, ?, ?, ?)');
         $stmt->execute(array(
-            $taxon_id, 
-            $name, 
-            $message
+            $taxon_id,
+            $name,
+            $message,
+            $nameCode
         ));
     }
 }

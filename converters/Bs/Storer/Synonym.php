@@ -6,7 +6,7 @@ require_once 'converters/Bs/Storer/Reference.php';
 
 /**
  * Synonym storer
- * 
+ *
  * @author Nuria Torrescasana Aloy, Ruud Altenburg
  */
 class Bs_Storer_Synonym extends Bs_Storer_TaxonAbstract implements Bs_Storer_Interface
@@ -25,9 +25,14 @@ class Bs_Storer_Synonym extends Bs_Storer_TaxonAbstract implements Bs_Storer_Int
                     'id' => $synonym->id
                 ))) {
                 $name = trim(
-                    $synonym->genus . ' ' . $synonym->subgenus . ' ' . $synonym->species . 
-                	' ' . $synonym->infraspecies);
-                $this->writeToErrorTable($synonym->id, $name, 'Synonym already exists');
+                    $synonym->genus . ' ' .
+                    (!empty($synonym->subgenus) ? '(' . $synonym->subgenus. ') ' : '') .
+                    $synonym->species . ' ' .
+                    (!empty($synonym->infraSpecificMarker) ? $synonym->infraSpecificMarker. ' ' : '') .
+                    (!empty($synonym->infraspecies) ? $synonym->infraspecies : '')
+                );
+                $this->writeToErrorTable($synonym->id, $name, 'Synonym already exists',
+                    $synonym->originalId);
                 return $synonym;
             }
         }
@@ -52,17 +57,17 @@ class Bs_Storer_Synonym extends Bs_Storer_TaxonAbstract implements Bs_Storer_Int
         $author->authorString = $synonym->authorString;
         $storer = new Bs_Storer_Author($this->_dbh, $this->_logger);
         $storer->store($author);
-        
+
         $stmt = $this->_dbh->prepare(
-            'INSERT INTO `synonym` (`id`, `taxon_id`, `author_string_id`, `scientific_name_status_id`, 
+            'INSERT INTO `synonym` (`id`, `taxon_id`, `author_string_id`, `scientific_name_status_id`,
         	`original_id`) VALUES (?, ?, ?, ?, ?)'
         );
         $stmt->execute(
             array(
-                $synonym->id, 
-                $synonym->taxonId, 
-                $author->id, 
-                $synonym->scientificNameStatusId, 
+                $synonym->id,
+                $synonym->taxonId,
+                $author->id,
+                $synonym->scientificNameStatusId,
                 $synonym->originalId
             ));
         $synonym->id = $this->_dbh->lastInsertId();
@@ -72,49 +77,32 @@ class Bs_Storer_Synonym extends Bs_Storer_TaxonAbstract implements Bs_Storer_Int
 
     protected function _setSynonymNameElements (Model $synonym)
     {
-        foreach (array('genus', 'subgenus', 'species', 'infraspecies') as $ne) {
-        	if (!empty($synonym->{$ne})) {
-        		$nameElements[$this->_getTaxonomicRankId($ne)] = $synonym->{$ne};
+        foreach (array('genus', 'subgenus', 'species') as $ne) {
+            $name = trim($synonym->{$ne});
+        	if (!empty($name)) {
+        		$nameElements[$this->_getTaxonomicRankId($ne)] = $name;
         	}
+        }
+        $name = trim($synonym->infraspecies);
+        if (!empty($name)) {
+            $nameElements[$synonym->taxonomicRankId] = $name;
         }
         $synonym->nameElementIds = $nameElements;
         $stmt = $this->_dbh->prepare(
-            'INSERT INTO `synonym_name_element` (' . '`taxonomic_rank_id`, `scientific_name_element_id`, 
+            'INSERT INTO `synonym_name_element` (`taxonomic_rank_id`, `scientific_name_element_id`,
         	`synonym_id`, `hybrid_order`) VALUES (?, ?, ?, ?)'
         );
-/*
-        foreach ($synonym->nameElementIds as $rankId => $nameElement) {
-            if ($hybridElements = $this->_isHybrid($nameElement)) {
-                foreach ($hybridElements as $hybridOrder => $hybridElement) {
-                    // Start order with 1 rather than 0
-                    $hybridOrder++;
-                    $hybridElement = 
-                        trim(str_replace('x ', '', $hybridElement));
-                    $nameElementId = 
-                        $this->_getScientificNameElementId($hybridElement);
-                    $stmt->execute(array(
-                        $rankId, $nameElementId, $synonym->id, $hybridOrder)
-                    );
-                }
-            } else {
-                $nameElementId = 
-                        $this->_getScientificNameElementId($nameElement);
-                $stmt->execute(array(
-                    $rankId, $nameElementId, $synonym->id, NULL)
-                );
-            }
-        }
-*/
+
         // Hybrid synonyms are currently stored as regular taxa as
         // accepted hybrids cannot be stored according to the rules either
         foreach ($synonym->nameElementIds as $rankId => $nameElement) {
             $nameElementId = $this->_getScientificNameElementId($nameElement);
             $stmt->execute(
                 array(
-                    $rankId, 
-                    $nameElementId, 
-                    $synonym->id, 
-                    NULL
+                    $rankId,
+                    $nameElementId,
+                    $synonym->id,
+                    null
                 ));
         }
         return $synonym;
@@ -126,16 +114,16 @@ class Bs_Storer_Synonym extends Bs_Storer_TaxonAbstract implements Bs_Storer_Int
         $storer = new Bs_Storer_Reference($this->_dbh, $this->_logger);
         foreach ($synonym->references as $reference) {
             $storer->store($reference);
-            if (!in_array($reference->id, $referenceIds)) {
+            if (!empty($reference->id) && !in_array($reference->id, $referenceIds)) {
                 $referenceIds[] = $reference->id;
                 $stmt = $this->_dbh->prepare(
                     'INSERT INTO `reference_to_synonym` (`reference_id`, `synonym_id`, '.
                     '`reference_type_id`) VALUES (?, ?, ?)');
                 $stmt->execute(
                     array(
-                        $reference->id, 
+                        $reference->id,
                         $synonym->id,
-                        $reference->typeId
+                        empty($reference->typeId) ? null : $reference->typeId
                     )
                 );
             }

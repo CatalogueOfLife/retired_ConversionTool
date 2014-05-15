@@ -84,27 +84,27 @@ class TaxonMatcher {
 			$start = time();
 			$this->_validateInput();
 			$this->_connect();
-				
+
 			$this->_initializeStagingArea();
-				
+
 			// Erase LSIDs in new AC, when requested
 			if($this->_resetLSIDs) {
 				$this->_resetLSIDs();
 			}
-				
+
 			// import data from old AC into staging area
 			$this->_importAC($this->_dbNameCurrent);
-				
+
 			// import data from new AC into staging area
 			$this->_importAC($this->_dbNameNext);
-				
+
 			$this->_compareEditions();
 			$this->_addLSIDs();
-				
+
 			if($this->_dropStagingArea) {
 				$this->_dropStagingArea();
 			}
-				
+
 			$timer = self::_getTimer(time() - $start);
 			$this->_info(sprintf("Total duration: %02d:%02d:%02d", $timer['H'], $timer['i'], $timer['s']));
 		}
@@ -303,7 +303,7 @@ class TaxonMatcher {
 		$this->_exec("ALTER TABLE {$table} DISABLE KEYS");
 
 		$whereClause = $this->_taxonNameFilter === null ? "" : "WHERE genus LIKE '{$this->_taxonNameFilter}'";
-		
+
 		if($edition === 0 || $this->_resetLSIDs) {
 			$sql = <<<SQL
 			INSERT INTO {$table} (
@@ -357,7 +357,7 @@ SQL;
 					  $whereClause
 					GROUP BY S.accepted_name_code
 					{$this->_readLimitClause}
-		
+
 SQL;
 		}
 		$this->_exec($sql);
@@ -933,10 +933,10 @@ SQL;
 		 		code         VARCHAR(137) NOT NULL DEFAULT '',
 		 		lsid         VARCHAR(36) NOT NULL DEFAULT '',
 		 		rank         VARCHAR(12) NOT NULL DEFAULT '',
-				nameCodes    VARCHAR(1024) NOT NULL DEFAULT '',
-		 		sciNames     TEXT NOT NULL DEFAULT '',
-		 		commonNames  TEXT NOT NULL DEFAULT '',
-		 		distribution VARCHAR(2048) NOT NULL DEFAULT '',
+				nameCodes    VARCHAR(4000) NOT NULL DEFAULT '',
+		 		sciNames     TEXT,
+		 		commonNames  TEXT,
+		 		distribution TEXT,
 		 		otherData    VARCHAR(512) NOT NULL DEFAULT '',
 		 		allData      BINARY(16) NOT NULL DEFAULT '',
 		 		INDEX        (edRecordId),
@@ -961,10 +961,10 @@ SQL;
 		 		code         VARCHAR(137) NOT NULL DEFAULT '',
 		 		lsid         VARCHAR(36) NOT NULL DEFAULT '',
 		 		rank         VARCHAR(12) NOT NULL DEFAULT '',
-				nameCodes    VARCHAR(1024) NOT NULL DEFAULT '',
-		 		sciNames     TEXT NOT NULL DEFAULT '',
-		 		commonNames  TEXT NOT NULL DEFAULT '',
-		 		distribution VARCHAR(2048) NOT NULL DEFAULT '',
+				nameCodes    VARCHAR(4000) NOT NULL DEFAULT '',
+		 		sciNames     TEXT,
+		 		commonNames  TEXT,
+		 		distribution TEXT,
 		 		otherData    VARCHAR(512) NOT NULL DEFAULT '',
 		 		allData      BINARY(16) NOT NULL DEFAULT '',
 		 		INDEX        (edRecordId),

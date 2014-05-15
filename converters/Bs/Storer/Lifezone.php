@@ -4,8 +4,8 @@ require_once 'Abstract.php';
 
 /**
  * Lifezone storer
- * 
- * @author N�ria Torrescasana Aloy, Ruud Altenburg
+ *
+ * @author Nuria Torrescasana Aloy, Ruud Altenburg
  */
 class Bs_Storer_Lifezone extends Bs_Storer_Abstract
     implements Bs_Storer_Interface
@@ -15,44 +15,52 @@ class Bs_Storer_Lifezone extends Bs_Storer_Abstract
         if (empty($lifezone->lifezone)) {
             return $lifezone;
         }
-        $this->_getLifezoneId($lifezone);
-        $stmt = $this->_dbh->prepare(
-            'INSERT INTO `lifezone_to_taxon_detail` 
-            (`lifezone_id`, `taxon_detail_id`) VALUES (?, ?)'
-        );
-        $stmt->execute(array(
-            $lifezone->lifezoneId,
-            $lifezone->taxonId)
-        );
+        $pts = explode(',', $lifezone->lifezone);
+        foreach ($pts as $p) {
+            $lifezone->lifezone = $p;
+            $this->_getLifezoneId($lifezone);
+            if (!empty($lifezone->lifezoneId)) {
+                $stmt = $this->_dbh->prepare(
+                    'INSERT INTO `lifezone_to_taxon_detail`
+                    (`lifezone_id`, `taxon_detail_id`) VALUES (?, ?)'
+                );
+                $stmt->execute(array(
+                    $lifezone->lifezoneId,
+                    $lifezone->taxonId)
+                );
+            }
+        }
         return $lifezone;
     }
-   
-    public function _getLifezoneId(Model $lifezone) 
+
+    public function _getLifezoneId(Model $lifezone)
     {
-        $cleanedLifezone = $this->_cleanLifezone($lifezone->lifezone);
-        if ($lifezone->lifezoneId = Dictionary::get('lifezone', $cleanedLifezone)) {
+        $this->_cleanLifezone($lifezone);
+        if ($lifezone->lifezoneId = Dictionary::get('lifezone', $lifezone->lifezone)) {
             return $lifezone;
         }
         $lifezone->lifezoneId = $this->_recordExists(
-            'id', 'lifezone', array('lifezone' => $cleanedLifezone)
+            'id', 'lifezone', array('lifezone' => $lifezone->lifezone)
         );
         if ($lifezone->lifezoneId) {
-            Dictionary::add('lifezone', $cleanedLifezone, $lifezone->lifezoneId);
+            Dictionary::add('lifezone', $lifezone->lifezone, $lifezone->lifezoneId);
             return $lifezone;
         }
+        // Fallback for undetermined lifezones; these will be skipped in store process
+        $lifezone->lifezoneId = null;
         return false;
     }
-    
-    private function _cleanLifezone($str)
+
+    private function _cleanLifezone(Model $lifezone)
     {
-        $str = trim($str);
+        $lifezone->lifezone = trim($lifezone->lifezone);
         $replacements = array(
             'fresh' => 'freshwater',
             'terrestial' => 'terrestrial'
         );
-        if (array_key_exists($str, $replacements)) {
-            return $replacements[$str];
+        if (array_key_exists($lifezone->lifezone, $replacements)) {
+            $lifezone->lifezone = $replacements[$lifezone->lifezone];
         }
-        return $str;
+        return $lifezone;
     }
 }

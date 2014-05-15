@@ -1,11 +1,23 @@
 <?php
 
+$higherTaxa = array(
+    'genus',
+    'family',
+    'superfamily',
+    'order',
+    'class',
+    'phylum',
+    'kingdom'
+);
+
+
 /**
  * Initiate this function to flush the cache automatically
- * 
+ *
  * Sets various parameters so the cache is always immediately flushed.
  * This obviates the need to add flush()/ob_flush().
  */
+
 function alwaysFlush ()
 {
     @ini_set('zlib.output_compression', 0);
@@ -19,10 +31,10 @@ function alwaysFlush ()
 
 /**
  * Format exception
- * 
- * Logs and optionally dumps the exception on the screen 
+ *
+ * Logs and optionally dumps the exception on the screen
  * in a better readable format.
- * 
+ *
  * @param object $e exception to be formatted
  * @returns string
  */
@@ -47,11 +59,11 @@ function formatException (Exception $e)
 function showMemoryUse ()
 {
     $unit = array(
-        'B', 
-        'KB', 
-        'MB', 
-        'GB', 
-        'TB', 
+        'B',
+        'KB',
+        'MB',
+        'GB',
+        'TB',
         'PB'
     );
     $memory = memory_get_usage(true);
@@ -66,29 +78,29 @@ function logInvalidRecords ()
     createErrorTable();
     $invalidRecords = array(
         array(
-            'query' => 'SELECT t1.`record_id`, t1.`name` 
-                        FROM `taxa` AS t1 
+            'query' => 'SELECT t1.`record_id`, t1.`name`, t1.`name_code`
+                        FROM `taxa` AS t1
                         LEFT JOIN `taxa` AS t2 ON  t1.`parent_id` = t2.`record_id`
-                        WHERE t1.`is_accepted_name` = 1 AND 
-                        t2.`is_accepted_name` = 0', 
+                        WHERE t1.`is_accepted_name` = 1 AND
+                        t2.`is_accepted_name` = 0',
             'message' => 'Valid taxon with synonym as parent'
-        ), 
+        ) /*,
         array(
-            'query' => 'SELECT t1.`record_id`, t1.`name`  
-                        FROM `taxa`AS t1 
+            'query' => 'SELECT t1.`record_id`, t1.`name`, t1.`name_code`
+                        FROM `taxa`AS t1
                         LEFT JOIN `taxa` AS t2 ON t1.`parent_id` = t2.`record_id`
-                        WHERE t1.`taxon` = "Infraspecies" AND 
-                        t2.`taxon` != "Species" AND 
-                        t1.`is_accepted_name` = 1', 
+                        WHERE t1.`taxon` = "Infraspecies" AND
+                        t2.`taxon` != "Species" AND
+                        t1.`is_accepted_name` = 1',
             'message' => 'Valid infraspecies with genus (not species) as parent'
-        )
+        )*/
     );
     $pdo = DbHandler::getInstance('source');
     foreach ($invalidRecords as $invalid) {
         $stmt = $pdo->prepare($invalid['query']);
         $stmt->execute();
         while ($row = $stmt->fetch(PDO::FETCH_NUM)) {
-            writeToErrorTable($row[0], $row[1], $invalid['message']);
+            writeToErrorTable($row[0], $row[1], $invalid['message'], $row[2]);
         }
     }
 }
@@ -104,6 +116,7 @@ function createErrorTable ()
         CREATE TABLE `_conversion_errors` (
           `id` int(10) unsigned NOT NULL,
           `name` varchar(150) NOT NULL,
+          `name_code` varchar(255) NULL,
           `created` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
           `message` varchar(150) NOT NULL
         ) ENGINE=MyISAM DEFAULT CHARSET=utf8;');
@@ -112,14 +125,16 @@ function createErrorTable ()
 /**
  * Modified version of function in TaxonAbstract.php
  */
-function writeToErrorTable ($id, $name, $message)
+function writeToErrorTable ($id, $name, $message, $nameCode = null)
 {
     $pdo = DbHandler::getInstance('target');
-    $stmt = $pdo->prepare('INSERT INTO `_conversion_errors` (`id`, `name`, `message`) VALUES (?, ?, ?)');
+    $stmt = $pdo->prepare('INSERT INTO `_conversion_errors` (`id`, `name`, `message`, `name_code`)
+        VALUES (?, ?, ?, ?)');
     $stmt->execute(array(
-        $id, 
-        $name, 
-        $message
+        $id,
+        $name,
+        $message,
+        $nameCode
     ));
 }
 
@@ -264,7 +279,7 @@ function cleanNameElements ($ne, $delete_name_elements = array(), $delete_chars 
     if (in_array($nameElement, $delete_name_elements)) {
         $stmt = $pdo->prepare($delete);
         $stmt->execute(array(
-            $ne['id'], 
+            $ne['id'],
             $nameElement
         ));
         return;
@@ -278,8 +293,8 @@ function cleanNameElements ($ne, $delete_name_elements = array(), $delete_chars 
         $stmt = $pdo->prepare($update);
         $stmt->execute(
             array(
-                $nameElement, 
-                $ne['id'], 
+                $nameElement,
+                $ne['id'],
                 $ne['name_element']
             ));
     }
@@ -288,28 +303,28 @@ function cleanNameElements ($ne, $delete_name_elements = array(), $delete_chars 
 function insertCommonNameElements ($cn)
 {
     $pdo = DbHandler::getInstance('target');
-    $insert = 'INSERT INTO `' . SEARCH_ALL . '` 
-            (`id`, `name_element`, `name`, `name_suffix`, `rank`, `name_status`, 
-            `name_status_suffix`, `name_status_suffix_suffix`, `group`, 
-            `source_database_name`, `source_database_id`, `accepted_taxon_id`) 
-            VALUES 
+    $insert = 'INSERT INTO `' . SEARCH_ALL . '`
+            (`id`, `name_element`, `name`, `name_suffix`, `rank`, `name_status`,
+            `name_status_suffix`, `name_status_suffix_suffix`, `group`,
+            `source_database_name`, `source_database_id`, `accepted_taxon_id`)
+            VALUES
             (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
     $cnElements = explode(' ', $cn['name']);
     foreach ($cnElements as $cne) {
         $stmt = $pdo->prepare($insert);
         $stmt->execute(
             array(
-                $cn['id'], 
-                strtolower($cne), 
-                $cn['name'], 
-                $cn['name_suffix'], 
-                $cn['rank'], 
-                $cn['name_status'], 
-                $cn['name_status_suffix'], 
-                $cn['name_status_suffix_suffix'], 
-                $cn['kingdom'], 
-                $cn['source_database_name'], 
-                $cn['source_database_id'], 
+                $cn['id'],
+                strtolower($cne),
+                $cn['name'],
+                $cn['name_suffix'],
+                $cn['rank'],
+                $cn['name_status'],
+                $cn['name_status_suffix'],
+                $cn['name_status_suffix_suffix'],
+                $cn['kingdom'],
+                $cn['source_database_name'],
+                $cn['source_database_id'],
                 $cn['accepted_taxon_id']
             ));
     }
@@ -318,11 +333,11 @@ function insertCommonNameElements ($cn)
 function splitAndInsertNameElements ($ne)
 {
     $pdo = DbHandler::getInstance('target');
-    $insert = 'INSERT INTO `' . SEARCH_ALL . '` 
-            (`id`, `name_element`, `name`, `name_suffix`, `rank`, `name_status`, 
-            `name_status_suffix`, `name_status_suffix_suffix`, `group`, 
-            `source_database_name`, `source_database_id`, `accepted_taxon_id`, `delete_me`) 
-            VALUES 
+    $insert = 'INSERT INTO `' . SEARCH_ALL . '`
+            (`id`, `name_element`, `name`, `name_suffix`, `rank`, `name_status`,
+            `name_status_suffix`, `name_status_suffix_suffix`, `group`,
+            `source_database_name`, `source_database_id`, `accepted_taxon_id`, `delete_me`)
+            VALUES
             (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
     $ne['delete_me'] = 2;
     $elements = explode(' ', $ne['name_element']);
@@ -371,8 +386,8 @@ function insertTaxonomicCoverage ($source_database_id, $taxon_id, $sector_number
     $insert = 'INSERT INTO `taxonomic_coverage` (`source_database_id`, `taxon_id`, `sector`) VALUES (?, ?, ?)';
     $stmt = $pdo->prepare($insert);
     $stmt->execute(array(
-        $source_database_id, 
-        $taxon_id, 
+        $source_database_id,
+        $taxon_id,
         $sector_number
     ));
 }
@@ -380,10 +395,10 @@ function insertTaxonomicCoverage ($source_database_id, $taxon_id, $sector_number
 function getTaxonomicCoverage ($source_database_id)
 {
     $pdo = DbHandler::getInstance('target');
-    $query = 'SELECT t1.`taxon_id`, t1.`sector`, t2.`taxonomic_rank_id` 
-    FROM `taxonomic_coverage` t1 
-    LEFT JOIN `taxon` AS t2 ON t1.`taxon_id` = t2.`id` 
-    WHERE t1.`source_database_id` = ? 
+    $query = 'SELECT t1.`taxon_id`, t1.`sector`, t2.`taxonomic_rank_id`
+    FROM `taxonomic_coverage` t1
+    LEFT JOIN `taxon` AS t2 ON t1.`taxon_id` = t2.`id`
+    WHERE t1.`source_database_id` = ?
     ORDER BY t1.`sector`, t2.`taxonomic_rank_id`';
     $stmt = $pdo->prepare($query);
     $stmt->execute(array(
@@ -395,22 +410,22 @@ function getTaxonomicCoverage ($source_database_id)
 function determinePointsOfAttachment ($tc)
 {
     $taxonomic_order = array(
-        54, 
-        76, 
-        6, 
-        72, 
-        112, 
-        17, 
+        54,
+        76,
+        6,
+        72,
+        112,
+        17,
         20
     );
     $old_sector = $old_rank_key = $rank_key = 0;
     $poa = array();
-    
+
     foreach ($tc as $branch) {
         $sector = $branch['sector'];
         $taxonomic_rank_id = $branch['taxonomic_rank_id'];
         $taxon_id = $branch['taxon_id'];
-        
+
         if ($sector != $old_sector) {
             $poa[$sector] = $taxonomic_rank_id;
             $old_rank_key = 0;
@@ -433,32 +448,32 @@ function updatePointsOfAttachment ($source_database_id, $sector, $taxonomic_rank
 {
     $pdo = DbHandler::getInstance('target');
     // First get all taxa belonging to the specified taxonomic_rank_id...
-    $query = 'SELECT t1.`taxon_id` 
-    FROM `taxonomic_coverage` t1 
-    LEFT JOIN `taxon` AS t2 ON t1.`taxon_id` = t2.`id` 
-    WHERE t2.`taxonomic_rank_id` = ? 
-    AND t1.`sector` = ? 
+    $query = 'SELECT t1.`taxon_id`
+    FROM `taxonomic_coverage` t1
+    LEFT JOIN `taxon` AS t2 ON t1.`taxon_id` = t2.`id`
+    WHERE t2.`taxonomic_rank_id` = ?
+    AND t1.`sector` = ?
     AND t1.`source_database_id` = ?';
     $stmt = $pdo->prepare($query);
     $stmt->execute(array(
-        $taxonomic_rank_id, 
-        $sector, 
+        $taxonomic_rank_id,
+        $sector,
         $source_database_id
     ));
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
+
     // ... then update all appropriate records
     foreach ($rows as $row) {
-        $query = 'UPDATE `taxonomic_coverage` 
-        SET `point_of_attachment` = 1 
-        WHERE `source_database_id` = ? 
+        $query = 'UPDATE `taxonomic_coverage`
+        SET `point_of_attachment` = 1
+        WHERE `source_database_id` = ?
         AND `sector` = ?
         AND `taxon_id` = ?';
         $stmt = $pdo->prepare($query);
         $stmt->execute(
             array(
-                $source_database_id, 
-                $sector, 
+                $source_database_id,
+                $sector,
                 $row['taxon_id']
             ));
     }
@@ -482,15 +497,15 @@ function getPointsOfAttachment ($source_database_id)
 function setPointsOfAttachment ($source_database_id, $taxon_id)
 {
     $pdo = DbHandler::getInstance('target');
-    $update = 'UPDATE ' . SPECIES_DETAILS . ' 
-                SET `point_of_attachment_id` = ' . $taxon_id . ' 
+    $update = 'UPDATE ' . SPECIES_DETAILS . '
+                SET `point_of_attachment_id` = ' . $taxon_id . '
                 WHERE `source_database_id` = ?
-                AND (`kingdom_id` = ' . $taxon_id . ' 
-                OR `phylum_id` = ' . $taxon_id . ' 
-                OR `class_id` = ' . $taxon_id . ' 
-                OR `order_id` = ' . $taxon_id . ' 
-                OR `superfamily_id` = ' . $taxon_id . ' 
-                OR `family_id` = ' . $taxon_id . ' 
+                AND (`kingdom_id` = ' . $taxon_id . '
+                OR `phylum_id` = ' . $taxon_id . '
+                OR `class_id` = ' . $taxon_id . '
+                OR `order_id` = ' . $taxon_id . '
+                OR `superfamily_id` = ' . $taxon_id . '
+                OR `family_id` = ' . $taxon_id . '
                 OR `genus_id` = ' . $taxon_id . ')';
     $stmt = $pdo->prepare($update);
     $stmt->execute(array(
@@ -500,15 +515,17 @@ function setPointsOfAttachment ($source_database_id, $taxon_id)
 
 function getSourceDatabaseIds ($tt)
 {
+    global $higherTaxa;
     $pdo = DbHandler::getInstance('target');
     $name_elements = explode(' ', $tt['name']);
     $nr_elements = count($name_elements);
     // Higher taxon
-    if ($nr_elements == 1 || $tt['name'] == 'Not assigned') {
+    if (in_array(strtolower($tt['rank']), $higherTaxa) &&
+        ($nr_elements == 1 || $tt['name'] == 'Not assigned')) {
         // Top level
-        $query = 'SELECT `source_database_id` 
-                  FROM `' . SEARCH_SCIENTIFIC . '` 
-                  WHERE `' . strtolower($tt['rank']) . '` = ? 
+        $query = 'SELECT `source_database_id`
+                  FROM `' . SEARCH_SCIENTIFIC . '`
+                  WHERE `' . strtolower($tt['rank']) . '` = ?
                   AND `source_database_id` != 0 ';
         $params = array(
             $tt['name']
@@ -521,27 +538,27 @@ function getSourceDatabaseIds ($tt)
     }
     // Species
     else if ($nr_elements == 2) {
-        $query = 'SELECT `source_database_id` 
-                  FROM `' . SEARCH_SCIENTIFIC . '` 
-                  WHERE `genus` = ? 
+        $query = 'SELECT `source_database_id`
+                  FROM `' . SEARCH_SCIENTIFIC . '`
+                  WHERE `genus` = ?
                   AND `species` = ?
-                  AND `infraspecies` = "" 
+                  AND `infraspecies` = ""
                   AND `source_database_id` != 0
                   AND `status` IN (1,4)';
         $params = array(
-            $name_elements[0], 
+            $name_elements[0],
             $name_elements[1]
         );
     }
     // Infraspecies; query _search_all for this
     else {
-        $query = 'SELECT `source_database_id` 
-                  FROM `' . SEARCH_ALL . '` 
-                  WHERE `name` = ? 
-                  AND `rank` = ? 
+        $query = 'SELECT `source_database_id`
+                  FROM `' . SEARCH_ALL . '`
+                  WHERE `name` = ?
+                  AND `rank` = ?
                   AND `name_status` IN (1,4)';
         $params = array(
-            $tt['name'], 
+            $tt['name'],
             $tt['rank']
         );
     }
@@ -565,11 +582,11 @@ function countSpecies ($tt)
     $name_elements = explode(' ', $tt['name']);
     $nr_elements = count($name_elements);
     if ($nr_elements == 1 || $tt['name'] == 'Not assigned') {
-        $query = 'SELECT COUNT(1) 
-                  FROM `' . SEARCH_SCIENTIFIC . '` 
-                  WHERE `' . strtolower($tt['rank']) . '` = ? 
-                  AND `species` != "" 
-                  AND `infraspecies` = "" 
+        $query = 'SELECT COUNT(1)
+                  FROM `' . SEARCH_SCIENTIFIC . '`
+                  WHERE `' . strtolower($tt['rank']) . '` = ?
+                  AND `species` != ""
+                  AND `infraspecies` = ""
                   AND `accepted_species_id` = 0 ';
         $params = array(
             $tt['name']
@@ -598,7 +615,7 @@ function updateTaxonTree ($taxon_id, $source_database_ids)
                 'INSERT INTO ' . SOURCE_DATABASE_TO_TAXON_TREE_BRANCH . ' (`source_database_id`, `taxon_tree_id`) VALUES (?, ?)');
             $stmt->execute(
                 array(
-                    $source_database_id, 
+                    $source_database_id,
                     $taxon_id
                 ));
         }
@@ -614,8 +631,8 @@ function checkImportTables ($dbName, $tables)
     $empty = array();
     foreach ($tables as $table) {
         $stmt = $pdo->query(
-            'SELECT COUNT(1) FROM `information_schema`.`tables` 
-                             WHERE `table_schema` = "' . $dbName . '" 
+            'SELECT COUNT(1) FROM `information_schema`.`tables`
+                             WHERE `table_schema` = "' . $dbName . '"
                              AND `table_name` = "' . $table . '";');
         if ($stmt->fetchColumn() == 0) {
             $empty[] = $table;
@@ -640,7 +657,7 @@ function updateHybrid ($table, array $name, array $id)
 	$update = 'UPDATE `' . $table . '` SET `' . key($name) . '` = ? WHERE `' . key($id) . '` = ?';
 	$stmt = $pdo->prepare($update);
 	$stmt->execute(array(
-		reset($name), 
+		reset($name),
 		reset($id)
 	));
 }
@@ -654,16 +671,25 @@ function createTaxonTreeFunction ()
 		CREATE FUNCTION getTotalSpeciesFromChildren(
 			X INT( 10 )
 		) RETURNS INT( 10 ) READS SQL DATA BEGIN DECLARE tot INT;
-		
+
 		SELECT SUM( total_species )
 		INTO tot
 		FROM _taxon_tree
 		WHERE parent_id = X;
-		
+
 		RETURN (
 			tot
 		);
-		
+
 		END;';
 	$pdo->query($sql);
+}
+
+function insertNaturalKey ($d)
+{
+    $pdo = DbHandler::getInstance('target');
+    $insert = 'INSERT INTO `' . NATURAL_KEYS . '` (`id`, `hash`, `name`, `author`, `name_code`, `accepted`)
+        VALUES (?, ?, ?, ?, ?, ?)';
+    $stmt = $pdo->prepare($insert);
+    $stmt->execute($d);
 }

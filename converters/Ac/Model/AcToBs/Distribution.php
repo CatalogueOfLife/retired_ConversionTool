@@ -1,12 +1,12 @@
 <?php
 /**
  * Extended properties of Distribution
- * 
+ *
  * Properties in this class cannot be extracted directly from the source
  * database but are derived and used to store data needed specifically for
  * the AcToBs storer
- * 
- * @author N�ria Torrescasana Aloy, Ruud Altenburg
+ *
+ * @author Nuria Torrescasana Aloy, Ruud Altenburg
  */
 require_once 'model/AcToBs/Distribution.php';
 

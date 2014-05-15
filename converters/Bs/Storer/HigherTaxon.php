@@ -5,7 +5,7 @@ require_once 'converters/Bs/Storer/Uri.php';
 
 /**
  * HigherTaxon storer
- * 
+ *
  * @author Nuria Torrescasana Aloy, Ruud Altenburg
  */
 class Bs_Storer_HigherTaxon extends Bs_Storer_TaxonAbstract implements Bs_Storer_Interface
@@ -29,9 +29,9 @@ class Bs_Storer_HigherTaxon extends Bs_Storer_TaxonAbstract implements Bs_Storer
             'VALUES (?, ?, ?, ?)');
         $stmt->execute(
             array(
-                $taxon->id, 
-                $taxon->taxonomicRankId, 
-                $taxon->sourceDatabaseId, 
+                $taxon->id,
+                $taxon->taxonomicRankId,
+                $taxon->sourceDatabaseId,
                 $taxon->originalId
             ));
         return $taxon;
@@ -41,7 +41,7 @@ class Bs_Storer_HigherTaxon extends Bs_Storer_TaxonAbstract implements Bs_Storer
     {
         // All names are stored in lower case
         $name = strtolower($taxon->name);
-        $nameElementId = $this->_recordExists('id', 'scientific_name_element', 
+        $nameElementId = $this->_recordExists('id', 'scientific_name_element',
             array(
                 'name_element' => $name
             ));
@@ -63,28 +63,12 @@ class Bs_Storer_HigherTaxon extends Bs_Storer_TaxonAbstract implements Bs_Storer
         if ($taxon->parentId == '' || $taxon->parentId == 0) {
             $taxon->parentId = null;
         }
-        // Verify for infraspecies if parent is present and matches 
-        // record in the checklist; if not abort
-        $config = parse_ini_file('config/AcToBs.ini', true);
-        if (isset($config['checks']['infraspecies_parent_ids']) && 
-            $config['checks']['infraspecies_parent_ids'] == 1) {
-            if (isset(
-                $taxon->infraspecies) && $taxon->infraspecies != '') {
-                $parentRankId = $this->_recordExists('taxonomic_rank_id', 'taxon', 
-                    array(
-                        'id' => $taxon->parentId
-                    ));
-                if ($parentRankId != $this->_getTaxonomicRankId('species')) {
-                    return false;
-                }
-            }
-        }
         $stmt = $this->_dbh->prepare(
             'INSERT INTO `taxon_name_element` (`taxon_id`, `scientific_name_element_id`, `parent_id`) VALUES (?, ?, ?)');
         $stmt->execute(
             array(
-                $taxon->id, 
-                end($taxon->nameElementIds), 
+                $taxon->id,
+                end($taxon->nameElementIds),
                 $taxon->parentId
             ));
         return $taxon;
@@ -97,10 +81,10 @@ class Bs_Storer_HigherTaxon extends Bs_Storer_TaxonAbstract implements Bs_Storer
         $storer = new Bs_Storer_Uri($this->_dbh, $this->_logger);
         $uri->uriSchemeId = $storer->getUriSchemeIdByScheme('lsid');
         $storer->store($uri);
-        
+
         $stmt = $this->_dbh->prepare('INSERT INTO `uri_to_taxon` (uri_id, taxon_id) VALUES (?, ?)');
         $stmt->execute(array(
-            $uri->id, 
+            $uri->id,
             $taxon->id
         ));
         unset($storer, $uri);

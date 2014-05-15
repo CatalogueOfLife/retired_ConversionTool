@@ -114,7 +114,8 @@ for ($limit = $memLimit = 10000, $offset = 0; $offset < $total; $offset += $memL
                 echo '<pre>';
                 print_r($taxon);
                 echo '</pre>';
-                echo 'Store error: '.formatException($e);
+                echo 'Store error: ' . formatException($e);
+                //die();
             }
         }
         unset($taxa);
