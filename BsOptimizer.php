@@ -160,6 +160,19 @@
       PHP_EOL
   );
 
+  $higherTaxa = array(
+    'genus',
+    'family',
+    'superfamily',
+    'order',
+    'class',
+    'phylum',
+    'kingdom'
+    );
+
+
+
+
   if (isset($argv) && isset($argv[1])) {
       $config = parse_ini_file($argv[1], true);
   }
@@ -182,6 +195,7 @@
   $indicator = new Indicator();
 
   $scriptStart = microtime(true);
+
 
   echo '<p>First denormalized tables are created and indices are created for the denormalized tables.
         Taxonomic coverage is processed from free text field to a dedicated database table to determine
@@ -505,7 +519,7 @@
 
   // Natural keys for accepted (infra)species
   echo '</p><p><b>Creating natural keys</b><br>Creating keys for valid (infra)species...<br>';
-  $query = 'SELECT t1.`id`, t1.`kingdom`, t1.`genus`, t1.`subgenus`, t1.`species`,
+  $query = 'SELECT t1.`id`, t1.`family`, t1.`genus`, t1.`subgenus`, t1.`species`,
         t1.`infraspecies`, t1.`status`, t1.`infraspecific_marker`, t1.`author`, t2.`original_id`
     FROM `' . SEARCH_SCIENTIFIC . '` AS t1
     LEFT JOIN `taxon` AS t2 ON t1.`id` = t2.`id`
@@ -516,7 +530,7 @@
   	$name = $row['genus'] . (!empty($row['subgenus']) ? ' (' . $row['subgenus'] . ')' : '') .
   	 ' ' . $row['species'] . (!empty($row['infraspecies']) ? ' ' . $row['infraspecies'] : '');
   	// hash is combination of kingdom, name, status, author and infraspecific marker
-  	$hash = md5($row['kingdom'] . $name . $row['author'] . $row['infraspecific_marker'] . $row['status']);
+  	$hash = md5($row['family'] . $name . $row['author'] . $row['infraspecific_marker'] . $row['status']);
     insertNaturalKey(array(
          $row['id'], $hash, $name, $row['author'], $row['original_id'], 1
     ));
@@ -524,7 +538,7 @@
 
   // Natural keys for synonyms
   echo 'Creating keys for synonyms...<br>';
-  $query = 'SELECT `id`, `kingdom`, `genus`, `subgenus`, `species`, `infraspecies`,
+  $query = 'SELECT `id`, `family`, `genus`, `subgenus`, `species`, `infraspecies`,
         `status`, `infraspecific_marker`, `author`, `accepted_species_name`, `accepted_species_author`
     FROM `' . SEARCH_SCIENTIFIC . '`
     WHERE `species` != "" AND `accepted_species_id` > 0';
@@ -534,7 +548,7 @@
   	$name = $row['genus'] . (!empty($row['subgenus']) ? ' (' . $row['subgenus'] . ')' : '') .
   	 ' ' . $row['species'] . (!empty($row['infraspecies']) ? ' ' . $row['infraspecies'] : '');
   	// hash is combination of kingdom, name, status, author, infraspecific marker, accepted name and author
-  	$hash = md5($row['kingdom'] . $name . $row['author'] . $row['infraspecific_marker'] . $row['status'] .
+  	$hash = md5($row['family'] . $name . $row['author'] . $row['infraspecific_marker'] . $row['status'] .
         $row['accepted_species_name'] . $row['accepted_species_author']);
     insertNaturalKey(array(
          $row['id'], $hash, $name, $row['author'], null, 0
@@ -551,8 +565,10 @@
   while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     foreach ($higherTaxa as $rank) {
         if (!empty($row[$rank])) {
-            // hash is combination of kingdom, rank and taxon
-            $hash = md5($row['kingdom'] . $rank . $row[$rank]);
+            // hash is combination of kingdom, rank and taxon fro family and up
+            // and family, rank and taxon for genera
+            $topLevel = $rank == 'genus' ? $row['family'] : $row['kingdom'];
+            $hash = md5($topLevel . $rank . $row[$rank]);
             if ($row[$rank] != 'Not assigned') {
                 insertNaturalKey(array(
                      $row['id'], $hash, $row[$rank], null, null, 1
@@ -563,7 +579,29 @@
     }
    }
 
- echo '</p><p><b>Analyzing denormalized tables</b><br>';
+
+  // Natural keys for common names
+  echo 'Creating keys for common names...<br>';
+  $query = 'SELECT DISTINCT t1.`id`, t1.`name` AS `common_name`, t1.`name_suffix` AS `language`,
+     t1.`name_status_suffix` AS `scientific_name`, t1.`name_status_suffix_suffix` AS `author`,
+     t2.`family`
+    FROM `' . SEARCH_ALL . '` AS t1
+    LEFT JOIN `' . SEARCH_SCIENTIFIC . '` AS t2 ON t1.`accepted_taxon_id` = t2.`id`
+    WHERE t1.`name_status` = 6 AND t1.`id` != 0';
+  $stmt = $pdo->prepare($query);
+  $stmt->execute();
+  while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+  	$hash = md5($row['family'] . $row['common_name'] . $row['language'] . $row['scientific_name'] . $row['author']);
+    insertNaturalKey(array(
+         $row['id'], $hash, $row['common_name'], null, null, 0
+    ));
+  }
+
+  echo '</p><p>Adding tree estimates...<br>';
+  copyEstimates();
+
+
+  echo '</p><p><b>Analyzing denormalized tables</b><br>';
   foreach ($tables as $table => $indices) {
       echo "Analyzing table $table...<br>";
       $pdo->query('ANALYZE TABLE `' . $table . '`');

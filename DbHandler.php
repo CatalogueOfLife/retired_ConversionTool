@@ -35,7 +35,7 @@ class DbHandler
         }
         catch (PDOException $e) {
             echo $e->getMessage();
-            exit();
+            return false;
         }
     }
 
@@ -44,7 +44,7 @@ class DbHandler
     {
     }
     */
-    
+
     /**
      *
      * Return DB instance or create intitial connection
