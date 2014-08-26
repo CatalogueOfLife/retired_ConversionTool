@@ -87,10 +87,14 @@ class Bs_Storer
         $class = 'Bs_Storer_' . $name;
 
         if (!include_once ('Storer/' . $name . '.php')) {
-            throw new Exception('Storer class file not found');
+            $e = new Exception('Storer class file not found');
+            $this->_logger->err($e);
+            throw $e;
         }
         if (!class_exists($class)) {
-            throw new Exception('Storer class undefined');
+            $e = new Exception('Storer class undefined');
+            $this->_logger->err($e);
+            throw $e;
         }
         if (isset($this->_storers[$class])) {
             $storer = $this->_storers[$class];
@@ -98,8 +102,10 @@ class Bs_Storer
         else {
             $storer = new $class($this->_dbh, $this->_logger);
             if (!$storer instanceof Bs_Storer_Interface) {
+                $e = new Exception('Invalid storer instance');
+                $this->_logger->err($e);
                 unset($storer);
-                throw new Exception('Invalid storer instance');
+                throw $e;
             }
         }
         return $storer;

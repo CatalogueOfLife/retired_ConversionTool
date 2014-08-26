@@ -4,8 +4,8 @@ require_once 'Abstract.php';
 
 /**
  * Author storer
- * 
- * @author N�ria Torrescasana Aloy, Ruud Altenburg
+ *
+ * @author Nuria Torrescasana Aloy, Ruud Altenburg
  */
 class Bs_Storer_Author extends Bs_Storer_Abstract
     implements Bs_Storer_Interface
@@ -23,12 +23,15 @@ class Bs_Storer_Author extends Bs_Storer_Abstract
             $author->id = $authorId;
             return $author;
         }
-        $stmt = $this->_dbh->prepare(
-            'INSERT INTO `author_string` (`string`) VALUE (?)'
-        );
-        $stmt->execute(array($author->authorString));
-        $author->id = $this->_dbh->lastInsertId();
+        try {
+            $stmt = $this->_dbh->prepare(
+                'INSERT INTO `author_string` (`string`) VALUE (?)'
+            );
+            $stmt->execute(array($author->authorString));
+            $author->id = $this->_dbh->lastInsertId();
+        } catch (PDOException $e) {
+            $this->_handleException("Store error author", $e);
+        }
         return $author;
     }
-   
 }

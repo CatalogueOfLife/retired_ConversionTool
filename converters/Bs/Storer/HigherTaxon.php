@@ -27,13 +27,16 @@ class Bs_Storer_HigherTaxon extends Bs_Storer_TaxonAbstract implements Bs_Storer
         $stmt = $this->_dbh->prepare(
             'INSERT INTO `taxon` (`id`, `taxonomic_rank_id`, `source_database_id`, `original_id`)' .
             'VALUES (?, ?, ?, ?)');
-        $stmt->execute(
-            array(
+        try {
+            $stmt->execute(array(
                 $taxon->id,
                 $taxon->taxonomicRankId,
                 $taxon->sourceDatabaseId,
                 $taxon->originalId
             ));
+        } catch (PDOException $e) {
+            $this->_handleException("Store error taxon", $e);
+        }
         return $taxon;
     }
 
@@ -48,10 +51,12 @@ class Bs_Storer_HigherTaxon extends Bs_Storer_TaxonAbstract implements Bs_Storer
         if (!$nameElementId) {
             $stmt = $this->_dbh->prepare(
                 'INSERT INTO `scientific_name_element` (`name_element`) VALUE (?)');
-            $stmt->execute(array(
-                $name
-            ));
-            $nameElementId = $this->_dbh->lastInsertId();
+            try {
+                $stmt->execute(array($name));
+                $nameElementId = $this->_dbh->lastInsertId();
+            } catch (PDOException $e) {
+                $this->_handleException("Store error scientific name element", $e);
+            }
         }
         $taxon->nameElementIds[] = $nameElementId;
         return $taxon;
@@ -64,13 +69,17 @@ class Bs_Storer_HigherTaxon extends Bs_Storer_TaxonAbstract implements Bs_Storer
             $taxon->parentId = null;
         }
         $stmt = $this->_dbh->prepare(
-            'INSERT INTO `taxon_name_element` (`taxon_id`, `scientific_name_element_id`, `parent_id`) VALUES (?, ?, ?)');
-        $stmt->execute(
-            array(
+            'INSERT INTO `taxon_name_element` (`taxon_id`, `scientific_name_element_id`, `parent_id`)
+            VALUES (?, ?, ?)');
+        try {
+            $stmt->execute(array(
                 $taxon->id,
                 end($taxon->nameElementIds),
                 $taxon->parentId
             ));
+        } catch (PDOException $e) {
+            $this->_handleException("Store error taxon name element", $e);
+        }
         return $taxon;
     }
 
@@ -83,10 +92,14 @@ class Bs_Storer_HigherTaxon extends Bs_Storer_TaxonAbstract implements Bs_Storer
         $storer->store($uri);
 
         $stmt = $this->_dbh->prepare('INSERT INTO `uri_to_taxon` (uri_id, taxon_id) VALUES (?, ?)');
-        $stmt->execute(array(
-            $uri->id,
-            $taxon->id
-        ));
+        try {
+            $stmt->execute(array(
+                $uri->id,
+                $taxon->id
+            ));
+        } catch (PDOException $e) {
+            $this->_handleException("Store error taxon lsid", $e);
+        }
         unset($storer, $uri);
     }
 }

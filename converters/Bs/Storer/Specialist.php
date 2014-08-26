@@ -4,8 +4,8 @@ require_once 'Abstract.php';
 
 /**
  * Specialist storer
- * 
- * @author N�ria Torrescasana Aloy, Ruud Altenburg
+ *
+ * @author Nuria Torrescasana Aloy, Ruud Altenburg
  */
 class Bs_Storer_Specialist extends Bs_Storer_Abstract
     implements Bs_Storer_Interface
@@ -25,9 +25,13 @@ class Bs_Storer_Specialist extends Bs_Storer_Abstract
         $stmt = $this->_dbh->prepare(
             'INSERT INTO `specialist` (`name`) VALUE (?)'
         );
-        $stmt->execute(array($specialist->name));
-        $specialist->id = $this->_dbh->lastInsertId();
+        try {
+            $stmt->execute(array($specialist->name));
+            $specialist->id = $this->_dbh->lastInsertId();
+        } catch (PDOException $e) {
+            $this->_handleException("Store error specialist", $e);
+        }
         return $specialist;
     }
-   
+
 }

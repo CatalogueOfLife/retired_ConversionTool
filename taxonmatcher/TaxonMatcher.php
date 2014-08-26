@@ -384,6 +384,7 @@ SQL;
 		$this->_exec($sql);
 	}
 
+	/*
 
 	private function _importCommonNames($dbName)
 	{
@@ -402,9 +403,32 @@ SQL;
              GROUP BY C.name_code
              {$this->_readLimitClause}
 SQL;
+
              $this->_exec($sql);
 	}
+    */
 
+	private function _importCommonNames($dbName)
+	{
+		$this->_info('Importing common names');
+		$this->_exec("TRUNCATE TABLE `{$this->_dbNameStage}`.CommonName");
+		$table = $this->_getStagingTable($dbName);
+
+		$sql = <<<SQL
+			SELECT
+						T.code,
+		                GROUP_CONCAT(CONCAT_WS('/', common_name, `language`, country) ORDER BY common_name, `language`, country SEPARATOR ', ') AS commonNames
+              FROM {$table} T, `{$dbName}`.common_names C
+             WHERE T.code = C.name_code
+             GROUP BY C.name_code
+             {$this->_readLimitClause}
+SQL;
+        $commonNames = $this->_fetchAll($sql);
+        $stmt = $this->_pdo->prepare("INSERT INTO `{$this->_dbNameStage}`.CommonName(code, commonNames)) VALUES (?, ?)");
+        foreach ($commonNames as $row) {
+            $stmt->execute($row);
+        }
+ 	}
 
 	private function _copyCommonNamesToTaxonTable($dbName)
 	{
@@ -1027,6 +1051,15 @@ SQL;
 		return $statement->rowCount();
 	}
 
+	private function _fetchAll($sql)
+	{
+        $stmt = $this->_pdo->prepare($sql);
+		if($stmt->execute() === false) {
+			$error = $stmt->errorInfo();
+			throw new TaxonMatcherException($error[2]);
+		}
+        return $stmt->fetchAll(PDO::FETCH_NUM);
+	}
 
 	/**
 	 * Get a connection to the database containing the three databases that we are

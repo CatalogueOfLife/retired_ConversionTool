@@ -61,7 +61,7 @@ function showMemoryUse ()
 /**
  * Logs taxa that will be skipped during import
  */
-function logInvalidRecords ()
+function logInvalidRecords ($logger)
 {
     createErrorTable();
     $invalidRecords = array(
@@ -110,11 +110,22 @@ function createErrorTable ()
         ) ENGINE=MyISAM DEFAULT CHARSET=utf8;');
 }
 
+function handleException ($message, $e = false) {
+    global $logger;
+    if (!$logger) {
+        die('Logger not initialized');
+    }
+    $message = "\n$message: \n" . ($e ? "Exception: \n" . $e->getMessage() : '');
+    $logger->err($message);
+    die('<p>' . $message . '</p>');
+}
+
 /**
  * Modified version of function in TaxonAbstract.php
  */
 function writeToErrorTable ($id, $name, $message, $nameCode = null)
 {
+    global $logger;
     $pdo = DbHandler::getInstance('target');
     $stmt = $pdo->prepare('INSERT INTO `_conversion_errors` (`id`, `name`, `message`, `name_code`)
         VALUES (?, ?, ?, ?)');
@@ -124,6 +135,15 @@ function writeToErrorTable ($id, $name, $message, $nameCode = null)
         $message,
         $nameCode
     ));
+    if (!$logger) {
+        die('Logger not initialized');
+    }
+    $m = "\nRecord skipped during conversion: \n" .
+        "id: $id\n" .
+        "name: $name\n" .
+        "name code: $nameCode\n" .
+        "reason: $message\n";
+    $logger->err($m);
 }
 
 /**
@@ -133,13 +153,12 @@ function writeSql ($path, $dumpFile, $message)
 {
     $pdo = DbHandler::getInstance('target');
     echo '<p>' . $message . '...<br>';
+    $sql = file_get_contents($path . $dumpFile . '.sql');
+    $stmt = $pdo->prepare($sql);
     try {
-        $sql = file_get_contents($path . $dumpFile . '.sql');
-        $stmt = $pdo->prepare($sql);
         $stmt->execute();
-    }
-    catch (PDOException $e) {
-        echo $e->getMessage();
+    } catch (PDOException $e) {
+        handleException("Cannot write sql dump", $e);
     }
 }
 
@@ -223,7 +242,8 @@ function shrinkVarChar ($table, $cl)
     if ($maxLength[0] == '' || $maxLength[0] == 0) {
         $maxLength[0] = 1;
     }
-    $query = 'ALTER TABLE `' . $table . '` CHANGE `' . $column . '` `' . $column . '` VARCHAR(' . $maxLength[0] . ')  NOT NULL';
+    $query = 'ALTER TABLE `' . $table . '` CHANGE `' . $column . '` `' . $column .
+        '` VARCHAR(' . $maxLength[0] . ')  NOT NULL';
     $stmt = $pdo->prepare($query);
     $stmt->execute();
 }
@@ -266,10 +286,14 @@ function cleanNameElements ($ne, $delete_name_elements = array(), $delete_chars 
     // Delete row if name_element matches entry to be deleted
     if (in_array($nameElement, $delete_name_elements)) {
         $stmt = $pdo->prepare($delete);
-        $stmt->execute(array(
-            $ne['id'],
-            $nameElement
-        ));
+        try {
+            $stmt->execute(array(
+                $ne['id'],
+                $nameElement
+            ));
+        } catch (PDOException $e) {
+            handleException("Cannot delete name element", $e);
+        }
         return;
     }
     // Replace characters to be deleted with space and then remove double spaces
@@ -279,12 +303,16 @@ function cleanNameElements ($ne, $delete_name_elements = array(), $delete_chars 
     // Update only if parsed value does not match original value
     if ($nameElement != $ne['name_element']) {
         $stmt = $pdo->prepare($update);
-        $stmt->execute(
-            array(
-                $nameElement,
-                $ne['id'],
-                $ne['name_element']
-            ));
+        try {
+            $stmt->execute(
+                array(
+                    $nameElement,
+                    $ne['id'],
+                    $ne['name_element']
+                ));
+        } catch (PDOException $e) {
+            handleException("Cannot update name element", $e);
+        }
     }
 }
 
@@ -298,23 +326,27 @@ function insertCommonNameElements ($cn)
             VALUES
             (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
     $cnElements = explode(' ', $cn['name']);
+    $stmt = $pdo->prepare($insert);
     foreach ($cnElements as $cne) {
-        $stmt = $pdo->prepare($insert);
-        $stmt->execute(
-            array(
-                $cn['id'],
-                strtolower($cne),
-                $cn['name'],
-                $cn['name_suffix'],
-                $cn['rank'],
-                $cn['name_status'],
-                $cn['name_status_suffix'],
-                $cn['name_status_suffix_suffix'],
-                $cn['kingdom'],
-                $cn['source_database_name'],
-                $cn['source_database_id'],
-                $cn['accepted_taxon_id']
-            ));
+        try {
+            $stmt->execute(
+                array(
+                    $cn['id'],
+                    strtolower($cne),
+                    $cn['name'],
+                    $cn['name_suffix'],
+                    $cn['rank'],
+                    $cn['name_status'],
+                    $cn['name_status_suffix'],
+                    $cn['name_status_suffix_suffix'],
+                    $cn['kingdom'],
+                    $cn['source_database_name'],
+                    $cn['source_database_id'],
+                    $cn['accepted_taxon_id']
+                ));
+        } catch (PDOException $e) {
+            handleException("Cannot insert common name element", $e);
+        }
     }
 }
 
@@ -329,10 +361,14 @@ function splitAndInsertNameElements ($ne)
             (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
     $ne['delete_me'] = 2;
     $elements = explode(' ', $ne['name_element']);
+    $stmt = $pdo->prepare($insert);
     foreach ($elements as $nameElement) {
-        $stmt = $pdo->prepare($insert);
         $ne['name_element'] = $nameElement;
-        $stmt->execute(array_values($ne));
+        try {
+            $stmt->execute(array_values($ne));
+        } catch (PDOException $e) {
+            handleException("Cannot insert name element", $e);
+        }
     }
 }
 
@@ -341,9 +377,13 @@ function updateTaxonTreeName ($id)
     $pdo = DbHandler::getInstance('target');
     $update = 'UPDATE `' . TAXON_TREE . '` SET `name` = ? WHERE `taxon_id` = ' . $id;
     $stmt = $pdo->prepare($update);
-    $stmt->execute(array(
-        getNameFromSearchAll($id)
-    ));
+    try {
+        $stmt->execute(array(
+            getNameFromSearchAll($id)
+        ));
+    } catch (PDOException $e) {
+        handleException("Cannot update taxon tree name", $e);
+    }
 }
 
 function getNameFromSearchAll ($id)
@@ -373,11 +413,15 @@ function insertTaxonomicCoverage ($source_database_id, $taxon_id, $sector_number
     $pdo = DbHandler::getInstance('target');
     $insert = 'INSERT INTO `taxonomic_coverage` (`source_database_id`, `taxon_id`, `sector`) VALUES (?, ?, ?)';
     $stmt = $pdo->prepare($insert);
-    $stmt->execute(array(
-        $source_database_id,
-        $taxon_id,
-        $sector_number
-    ));
+    try {
+        $stmt->execute(array(
+            $source_database_id,
+            $taxon_id,
+            $sector_number
+        ));
+    } catch (PDOException $e) {
+        handleException("Cannot insert taxonomic coverage", $e);
+    }
 }
 
 function getTaxonomicCoverage ($source_database_id)
@@ -437,11 +481,11 @@ function updatePointsOfAttachment ($source_database_id, $sector, $taxonomic_rank
     $pdo = DbHandler::getInstance('target');
     // First get all taxa belonging to the specified taxonomic_rank_id...
     $query = 'SELECT t1.`taxon_id`
-    FROM `taxonomic_coverage` t1
-    LEFT JOIN `taxon` AS t2 ON t1.`taxon_id` = t2.`id`
-    WHERE t2.`taxonomic_rank_id` = ?
-    AND t1.`sector` = ?
-    AND t1.`source_database_id` = ?';
+        FROM `taxonomic_coverage` t1
+        LEFT JOIN `taxon` AS t2 ON t1.`taxon_id` = t2.`id`
+        WHERE t2.`taxonomic_rank_id` = ?
+        AND t1.`sector` = ?
+        AND t1.`source_database_id` = ?';
     $stmt = $pdo->prepare($query);
     $stmt->execute(array(
         $taxonomic_rank_id,
@@ -451,19 +495,23 @@ function updatePointsOfAttachment ($source_database_id, $sector, $taxonomic_rank
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // ... then update all appropriate records
-    foreach ($rows as $row) {
-        $query = 'UPDATE `taxonomic_coverage`
+    $query = 'UPDATE `taxonomic_coverage`
         SET `point_of_attachment` = 1
         WHERE `source_database_id` = ?
         AND `sector` = ?
         AND `taxon_id` = ?';
-        $stmt = $pdo->prepare($query);
-        $stmt->execute(
-            array(
-                $source_database_id,
-                $sector,
-                $row['taxon_id']
-            ));
+    $stmt = $pdo->prepare($query);
+    foreach ($rows as $row) {
+        try {
+            $stmt->execute(
+                array(
+                    $source_database_id,
+                    $sector,
+                    $row['taxon_id']
+                ));
+        } catch (PDOException $e) {
+            handleException("Cannot insert taxonomic coverage", $e);
+        }
     }
 }
 

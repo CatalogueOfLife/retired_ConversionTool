@@ -31,10 +31,11 @@ function dbName () {
     return $config['source']['dbname'];
 }
 
-function printErrors ($errors, $header = false) {
+function printErrors ($errors, $header = false, $logger = false) {
     if (is_array($errors) && !empty($errors)) {
         $output = '<p style="color: red;">' . ($header ? '<b>' . $header .'</b><br>' : '');
         foreach ($errors as $error) {
+            $logger->err("\n$header:\n" . strip_tags($error) . "\n");
             $output .= $error.'<br>';
         }
         echo $output.'</p>';
@@ -260,13 +261,15 @@ function checkForeignKeys () {
             $sql_query2 = "DELETE FROM `$foreign_key_table` WHERE `$foreign_key_field` IN ('" .
                 implode("', '", array_map('mysql_real_escape_string', $recordsToDelete)) . "')";
             $sql_result2 = mysql_query($sql_query2) or die("Error: MySQL query failed:" . mysql_error() . "</p>");
-            $errors_found[] = count($recordsToDelete) . " foreign key(s) for '$foreign_key_field' in table
-            	'$foreign_key_table' not found as primary key in table '$primary_key_table'; " .
-            	'id(s): ' . implode("', '", $recordsToDelete) . '<br>';
             $recordsDeleted = mysql_affected_rows();
+
+            foreach ($recordsToDelete as $errorId) {
+                $errors_found[] = "Foreign key $errorId for '$foreign_key_field' in table " .
+            	"'$foreign_key_table' not found as primary key in table '$primary_key_table'";
+
+            }
         }
         echo "Number of problematic records deleted from '$foreign_key_table': $recordsDeleted</br></br>\n" ;
-
     }
     return $errors_found;
 }
@@ -671,12 +674,12 @@ function addInfraspeciesToTaxa() {
     $acceptedStatuses = getAcceptedStatuses();
 
     $sql_query = "SELECT t1.`record_id`, t1.`genus`, t1.`species`, t1.`infraspecies_marker`,
-                  t1.`infraspecies`, t1.`name_code`, t1.`sp2000_status_id`, t1.`accepted_name_code`,
-                  t1.`database_id`, t1.`family_id`, t2.`kingdom`, t2.`phylum`, t2.`class`,
-                  t2.`order`, t2.`superfamily`, t2.`family`, t1.`subgenus`
-                  FROM `scientific_names` AS t1
-                  LEFT JOIN `families` AS t2 ON t1.`family_id`= t2.`record_id`
-                  WHERE (t1.`infraspecies` != '' AND t1.`infraspecies` IS NOT NULL) AND t1.`family_id` IS NOT NULL";
+        t1.`infraspecies`, t1.`name_code`, t1.`sp2000_status_id`,
+        t1.`accepted_name_code`, t1.`database_id`, t1.`family_id`, t2.`kingdom`, t2.`phylum`, t2.`class`,
+        t2.`order`, t2.`superfamily`, t2.`family`, t1.`subgenus`, t1.`infraspecies_parent_name_code`
+        FROM `scientific_names` AS t1
+        LEFT JOIN `families` AS t2 ON t1.`family_id`= t2.`record_id`
+        WHERE (t1.`infraspecies` != '' AND t1.`infraspecies` IS NOT NULL) AND t1.`family_id` IS NOT NULL";
     $sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
     $number_of_records = mysql_num_rows($sql_result);
     echo "$number_of_records infraspecies found in 'scientific_names' table<br>";
@@ -741,7 +744,11 @@ function addInfraspeciesToTaxa() {
         // Ruud 09-11-10: moved this check up so it can be used to check infraspecies parent
         $is_accepted_name = in_array($this_sp2000_status_id, $acceptedStatuses) ? 1 : 0;
 
-        $parent_id = getRecordIdInTaxa(array('HierarchyCode' => $parent_hierarchy));
+        // Ruud 22-08-14: fetching parent by hierarchy results in errors when the same name
+        // occurs both as accepted name and synonym. Obviously it should be fetched by
+        // infraspecies_parent_name_code, as this value is present in the table!!
+        // $parent_id = getRecordIdInTaxa(array('HierarchyCode' => $parent_hierarchy));
+        $parent_id = getInfraspeciesParentId($row[17]);
         if (!$parent_id) {
             // Try again with genus as direct parent
             $parent_id = getRecordIdInTaxa(array('HierarchyCode' =>
@@ -799,6 +806,18 @@ function addInfraspeciesToTaxa() {
 
     }
     return $errors_found;
+}
+
+function getInfraspeciesParentId ($nameCode) {
+    mysqlConnect();
+    $q = 'SELECT `record_id` FROM `scientific_names` WHERE
+        `name_code` = "' . mysql_real_escape_string($nameCode) . '"';
+    $r = mysql_query($q) or die(mysql_error(). $q);
+    if (mysql_num_rows($r) == 1) {
+        $row = mysql_fetch_row($r);
+        return $row[0];
+    }
+    return null;
 }
 
 function setInfraspeciesSearch ($parent_hierarchy, $is_accepted_name) {
@@ -899,4 +918,13 @@ unset($jorrit[$row[1]]);
 echo '<pre>'; print_r($jorrit); echo '</pre>';
 die();
 */
+
+function writeToLog ($logger, $id, $name, $message, $nameCode = null) {
+    $m = "\nRecord skipped during conversion: \n" .
+        "id: $id\n" .
+        "name: $name\n" .
+        "name code: $nameCode\n" .
+        "reason: $message\n";
+    $logger->err($m);
+}
 

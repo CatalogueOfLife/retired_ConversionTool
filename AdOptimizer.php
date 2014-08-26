@@ -11,15 +11,24 @@
 </head>
 
 <body>
-<h3>Assembly Database Optimizer</h3><?php
+<h3>Assembly Database Optimizer</h3>
+<?php
+    set_include_path('library' . PATH_SEPARATOR . get_include_path());
+    ini_set('memory_limit', '1024M');
+
     require_once 'library/AdOptimizerLibrary.php';
     require_once 'DbHandler.php';
+    require_once 'library/Zend/Log/Writer/Stream.php';
+    require_once 'library/Zend/Log.php';
     require_once 'Indicator.php';
     require 'taxonmatcher/TaxonMatcher.php';
     require 'taxonmatcher/EchoEventListener.php';
+    require 'taxonmatcher/LogEventListener.php';
     alwaysFlush();
+
+    $writer = new Zend_Log_Writer_Stream('logs/' . date("Y-m-d") . '-assembly-optimizer.log');
+    $logger = new Zend_Log($writer);
     $indicator = new Indicator();
-    ini_set('memory_limit', '1024M');
 
     if (isset($argv) && isset($argv[1])) {
       $config = parse_ini_file($argv[1], true);
@@ -32,28 +41,30 @@
     echo '<p>Checking database structure...</p>';
     $errors = checkDatabase();
     if (!empty($errors)) {
-      printErrors($errors);
+      printErrors($errors, 'Database error', $logger);
     }
     echo '<p><b>Copy foreign key codes to foreign key IDs</b><br>';
     $errors = copyCodesToIds();
     if (!empty($errors)) {
       echo '';
-      printErrors($errors, 'Error: ' . count($errors) . ' missing foreign key codes');
+      printErrors($errors, 'Missing foreign key code', $logger);
     }
     echo '</p><p><b>Checking foreign key references</b><br>';
     $errors = checkForeignKeys();
     if (!empty($errors)) {
-      printErrors($errors, 'Missing foreign key references');
+      printErrors($errors, 'Missing foreign key reference', $logger);
     }
 
     echo "</p><p><b>Building 'taxa' table</b><br>";
     $errors = buildTaxaTable();
-    if (!empty($errors)) {
-      echo '</p><p style="color: red;"><b>Errors during creation of \'taxa\' table</b></p>';
-      foreach ($errors as $category => $categoryErrors) {
-          if (!empty($categoryErrors)) {
-              printErrors($categoryErrors, $category);
+    $errorHeader = '</p><p style="color: red;"><b>Errors during creation of \'taxa\' table</b></p>';
+    foreach ($errors as $category => $categoryErrors) {
+      if (!empty($categoryErrors)) {
+          if ($errorHeader) {
+            echo $errorHeader;
+            $errorHeader = false;
           }
+          printErrors($categoryErrors, $category, $logger);
       }
     }
     $totalTime = round(microtime(true) - $scriptStart);
@@ -70,10 +81,15 @@
     $taxonMatcher->setLSIDSuffix($config['taxonmatcher']['lsidSuffix']);
     $taxonMatcher->setResetLSIDs(true);
 
-    $listener = new EchoEventListener();
-    $listener->setContentTypeHTML();
-    $listener->showStackTrace();
-    $taxonMatcher->addEventListener($listener);
+    $listenerEcho = new EchoEventListener();
+    $listenerEcho->setContentTypeHTML();
+    $listenerEcho->showStackTrace();
+    $taxonMatcher->addEventListener($listenerEcho);
+
+    $listenerLog = new LogEventListener();
+    $listenerLog->setLogger($logger);
+    $taxonMatcher->addEventListener($listenerLog);
+
     try {
         $taxonMatcher->run();
     }

@@ -7,7 +7,7 @@ require_once 'Abstract.php';
  *
  * Second abstract class for HigherTaxon, Taxon and Synonym
  *
- * @author Nœria Torrescasana Aloy, Ruud Altenburg
+ * @author Nuria Torrescasana Aloy, Ruud Altenburg
  */
 class Bs_Storer_TaxonAbstract extends Bs_Storer_Abstract
 {
@@ -61,7 +61,9 @@ class Bs_Storer_TaxonAbstract extends Bs_Storer_Abstract
             $taxon->taxonomicRankId = $id;
             return $taxon;
         }
-        throw new Exception('Taxonomic rank id could not be set!');
+        $e = new Exception('Taxonomic rank id could not be set!');
+        $this->_logger->err($e);
+        throw $e;
     }
 
     protected function _setInfraSpecificMarkerId (Model $taxon)
@@ -89,12 +91,17 @@ class Bs_Storer_TaxonAbstract extends Bs_Storer_Abstract
             return $taxon;
         }
         $stmt = $this->_dbh->prepare(
-            'INSERT INTO `taxonomic_rank` (`rank`, `marker_displayed`, `standard`) VALUE (?, ?, ?)');
-        $stmt->execute(array(
-            $marker,
-            $marker,
-            0
-        ));
+            'INSERT INTO `taxonomic_rank` (`rank`, `marker_displayed`, `standard`) VALUE (?, ?, ?)'
+        );
+        try {
+            $stmt->execute(array(
+                $marker,
+                $marker,
+                0
+            ));
+        } catch (PDOException $e) {
+            $this->_handleException("Store error taxonomic rank", $e);
+        }
         $markerId = $this->_dbh->lastInsertId();
         Dictionary::add('ranks', $marker, $markerId);
         $taxon->taxonomicRankId = $markerId;
@@ -117,8 +124,8 @@ class Bs_Storer_TaxonAbstract extends Bs_Storer_Abstract
             $taxon->scientificNameStatusId = $id;
             return $taxon;
         }
-        throw new Exception('Scientific name status could not be set!');
-    }
+        $this->_handleException('Scientific name status could not be set');
+     }
 
     protected function _isHybrid ($nameElement)
     {
@@ -158,9 +165,11 @@ class Bs_Storer_TaxonAbstract extends Bs_Storer_Abstract
         if (!$nameElementId && $name != '') {
             $stmt = $this->_dbh->prepare(
                 'INSERT INTO `scientific_name_element` (`name_element`) VALUE (?)');
-            $stmt->execute(array(
-                $name
-            ));
+            try {
+                $stmt->execute(array($name));
+            } catch (PDOException $e) {
+                $this->_handleException("Store error taxonomic rank", $e);
+            }
             $nameElementId = $this->_dbh->lastInsertId();
         }
         return $nameElementId;

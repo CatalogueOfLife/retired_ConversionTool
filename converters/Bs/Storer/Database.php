@@ -6,8 +6,8 @@ require_once 'converters/Bs/Storer/Uri.php';
 
 /**
  * Database storer
- * 
- * @author N�ria Torrescasana Aloy, Ruud Altenburg
+ *
+ * @author Nuria Torrescasana Aloy, Ruud Altenburg
  */
 class Bs_Storer_Database extends Bs_Storer_Abstract
     implements Bs_Storer_Interface
@@ -22,24 +22,28 @@ class Bs_Storer_Database extends Bs_Storer_Abstract
             'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
 
-        $stmt->execute(array(
-            $db->id,
-            $db->name,
-            $db->abbreviatedName,
-            $db->groupNameInEnglish,
-            $db->authorsAndEditors,
-            $db->organisation,
-            $db->contactPerson,
-            $db->abstract,
-            $db->version,
-            $db->releaseDate,
-            $db->taxonomicCoverage,
-            $db->isNew,
-            $db->coverage,
-            $db->completeness,
-            $db->confidence)
-        );
-        
+        try {
+            $stmt->execute(array(
+                $db->id,
+                $db->name,
+                $db->abbreviatedName,
+                $db->groupNameInEnglish,
+                $db->authorsAndEditors,
+                $db->organisation,
+                $db->contactPerson,
+                $db->abstract,
+                $db->version,
+                $db->releaseDate,
+                $db->taxonomicCoverage,
+                $db->isNew,
+                $db->coverage,
+                $db->completeness,
+                $db->confidence)
+            );
+        } catch (PDOException $e) {
+            $this->_handleException("Store error source database", $e);
+        }
+
         if ($db->uri != "") {
             $uri = new Uri();
             $uri->resourceIdentifier = $db->uri;

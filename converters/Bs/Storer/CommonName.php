@@ -6,24 +6,24 @@ require_once 'converters/Bs/Storer/Reference.php';
 
 /**
  * CommonName storer
- * 
- * @author N�ria Torrescasana Aloy, Ruud Altenburg
+ *
+ * @author Nuria Torrescasana Aloy, Ruud Altenburg
  */
 class Bs_Storer_CommonName extends Bs_Storer_Abstract
     implements Bs_Storer_Interface
 {
     /* BOTH LANGUAGE AND COUNTRY NEED TO BE EXTENDED!
 	Language
-	
-	SELECT language, count(language) as c from col2010ac.common_names where 
+
+	SELECT language, count(language) as c from col2010ac.common_names where
 	language not in (select name from base_scheme.language) group by language order by c desc
-	
+
 	Country
-	
-	SELECT country, count(country) as c from col2010ac.common_names where 
+
+	SELECT country, count(country) as c from col2010ac.common_names where
 	country not in (select name from base_scheme.country) group by country order by c desc
 */
-		
+
     // Incomplete set of languages in Sp2010ac database that cannot be
     // mapped to predefined languages from ISO standard
     private static $languageMap = array (
@@ -35,7 +35,7 @@ class Bs_Storer_CommonName extends Bs_Storer_Abstract
         'Slovene' => 'Slovenian',
         'Hungarian (Magyar)' => 'Hungarian'
     );
-    
+
     // Incomplete set of countries in Sp2010ac database that cannot be
     // mapped to predefined countries from ISO standard
     private static $countryMap = array (
@@ -54,14 +54,14 @@ class Bs_Storer_CommonName extends Bs_Storer_Abstract
         'United States' => 'USA',
         'U.S.A.' => 'USA'
     );
-    
+
     public function store(Model $commonName)
     {
         if (empty($commonName->commonNameElement)) {
             return $commonName;
         }
         // First decode HTML entries to UTF8
-        $commonName->commonNameElement = 
+        $commonName->commonNameElement =
             $this->convertHtmlToUtf($commonName->commonNameElement);
         // Translate language and country if necessary
         if (array_key_exists($commonName->language, self::$languageMap)) {
@@ -73,20 +73,20 @@ class Bs_Storer_CommonName extends Bs_Storer_Abstract
         }
         $this->_getCountryIso($commonName);
         $this->_getRegionFreeTextId($commonName);
-        
+
         $this->_setCommonNameElement($commonName);
         $this->_setCommonName($commonName);
         $this->_setCommonNameReference($commonName);
         return $commonName;
     }
 
-    
+
     private function _getRegionFreeTextId(Model $commonName)
     {
         if (empty($commonName->region)) {
             return $commonName;
         }
-        $id = $this->_recordExists('id', 'region_free_text', 
+        $id = $this->_recordExists('id', 'region_free_text',
             array(
                 'free_text' => $commonName->region
             )
@@ -102,13 +102,13 @@ class Bs_Storer_CommonName extends Bs_Storer_Abstract
         }
         return $commonName;
     }
-    
+
     private function _getLanguageIso(Model $commonName) {
         if ($iso = Dictionary::get('languages', $commonName->language)) {
             $commonName->languageIso = $iso;
             return $commonName;
         }
-        $iso = $this->_recordExists('iso', 'language', 
+        $iso = $this->_recordExists('iso', 'language',
             array('name' => $commonName->language));
         if ($iso) {
             Dictionary::add('languages', $commonName->language, $iso);
@@ -123,7 +123,7 @@ class Bs_Storer_CommonName extends Bs_Storer_Abstract
             $commonName->countryIso = $iso;
             return $commonName;
         }
-        $iso = $this->_recordExists('iso', 'country', 
+        $iso = $this->_recordExists('iso', 'country',
             array('name' => $commonName->country));
         if ($iso) {
             Dictionary::add('countries', $commonName->country, $iso);
@@ -132,7 +132,7 @@ class Bs_Storer_CommonName extends Bs_Storer_Abstract
         }
         return NULL;
     }
-    
+
     private function _setCommonNameReference(Model $commonName) {
         // Exit if no reference is set
         if ($commonName->referenceTitle.$commonName->referenceAuthors.
@@ -146,18 +146,18 @@ class Bs_Storer_CommonName extends Bs_Storer_Abstract
         $reference->text = $commonName->referenceText;
         $storer = new Bs_Storer_Reference($this->_dbh, $this->_logger);
         $storer->store($reference);
-        
+
         $commonName->referenceId = $reference->id;
         $this->_setReferenceToCommonName($commonName);
-        
+
         unset($reference, $storer);
         return $commonName;
     }
-    
- /*   
-    private function _setCommonNameElement(Model $commonName) 
+
+ /*
+    private function _setCommonNameElement(Model $commonName)
     {
-        $commonNameElementId = $this->_recordExists('id', 'common_name_element', 
+        $commonNameElementId = $this->_recordExists('id', 'common_name_element',
             array(
                 'name' => $commonName->commonNameElement,
                 'transliteration' => $commonName->transliteration
@@ -178,10 +178,10 @@ class Bs_Storer_CommonName extends Bs_Storer_Abstract
         return $commonName;
     }
 */
-    
-    private function _setCommonNameElement(Model $commonName) 
+
+    private function _setCommonNameElement(Model $commonName)
     {
-        $commonNameElementId = $this->_recordExists('id', 'common_name_element', 
+        $commonNameElementId = $this->_recordExists('id', 'common_name_element',
             array(
                 'name' => $commonName->commonNameElement,
                 'transliteration' => $commonName->transliteration
@@ -199,15 +199,19 @@ class Bs_Storer_CommonName extends Bs_Storer_Abstract
                 $query .= ') VALUE (?)';
             }
             $stmt = $this->_dbh->prepare($query);
-            $stmt->execute($params);
-            $commonName->commonNameElementId = $this->_dbh->lastInsertId();
+            try {
+                $stmt->execute($params);
+                $commonName->commonNameElementId = $this->_dbh->lastInsertId();
+            } catch (PDOException $e) {
+                $this->_handleException("Store error common name element", $e);
+            }
         }
         return $commonName;
     }
-     
-    private function _setCommonName(Model $commonName) 
+
+    private function _setCommonName(Model $commonName)
     {
-        $commonNameId = $this->_recordExists('id', 'common_name', 
+        $commonNameId = $this->_recordExists('id', 'common_name',
             array(
                 'taxon_id' => $commonName->taxonId,
                 'common_name_element_id' => $commonName->commonNameElementId,
@@ -222,22 +226,26 @@ class Bs_Storer_CommonName extends Bs_Storer_Abstract
                 '`language_iso`, `country_iso`, `region_free_text_id`) '.
                 'VALUES (?, ?, ?, ?, ?)'
             );
-            $stmt->execute(array(
-                $commonName->taxonId,
-                $commonName->commonNameElementId,
-                $commonName->languageIso,
-                $commonName->countryIso,
-                $commonName->regionFreeTextId)
-            );
-            $commonName->id = $this->_dbh->lastInsertId();
+            try {
+                $stmt->execute(array(
+                    $commonName->taxonId,
+                    $commonName->commonNameElementId,
+                    $commonName->languageIso,
+                    $commonName->countryIso,
+                    $commonName->regionFreeTextId)
+                );
+                $commonName->id = $this->_dbh->lastInsertId();
+            } catch (PDOException $e) {
+                $this->_handleException("Store error common name", $e);
+            }
         }
         return $commonName;
     }
-    
-    private function _setReferenceToCommonName(Model $commonName) 
+
+    private function _setReferenceToCommonName(Model $commonName)
     {
-        $refToCN = $this->_recordExists('reference_id', 
-            'reference_to_common_name', 
+        $refToCN = $this->_recordExists('reference_id',
+            'reference_to_common_name',
             array(
                 'reference_id' => $commonName->referenceId,
                 'common_name_id' => $commonName->id)
@@ -250,7 +258,11 @@ class Bs_Storer_CommonName extends Bs_Storer_Abstract
 	            'INSERT INTO `reference_to_common_name` (`reference_id`, '.
 	            '`common_name_id`) VALUES (?, ?)'
 	        );
-	        $stmt->execute(array($commonName->referenceId, $commonName->id));
+	    	try {
+	           $stmt->execute(array($commonName->referenceId, $commonName->id));
+            } catch (PDOException $e) {
+                $this->_handleException("Store error common name reference", $e);
+            }
         }
         return $commonName;
     }

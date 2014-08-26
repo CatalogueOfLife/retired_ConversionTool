@@ -16,18 +16,22 @@ class Bs_Storer_Lifezone extends Bs_Storer_Abstract
             return $lifezone;
         }
         $pts = explode(',', $lifezone->lifezone);
+        $stmt = $this->_dbh->prepare(
+            'INSERT INTO `lifezone_to_taxon_detail`
+            (`lifezone_id`, `taxon_detail_id`) VALUES (?, ?)'
+        );
         foreach ($pts as $p) {
             $lifezone->lifezone = $p;
             $this->_getLifezoneId($lifezone);
             if (!empty($lifezone->lifezoneId)) {
-                $stmt = $this->_dbh->prepare(
-                    'INSERT INTO `lifezone_to_taxon_detail`
-                    (`lifezone_id`, `taxon_detail_id`) VALUES (?, ?)'
-                );
-                $stmt->execute(array(
-                    $lifezone->lifezoneId,
-                    $lifezone->taxonId)
-                );
+                try {
+                    $stmt->execute(array(
+                        $lifezone->lifezoneId,
+                        $lifezone->taxonId)
+                    );
+                } catch (PDOException $e) {
+                    $this->_handleException("Store error lifezone", $e);
+                }
             }
         }
         return $lifezone;

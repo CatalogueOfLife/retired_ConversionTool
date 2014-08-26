@@ -36,13 +36,21 @@ class Bs_Storer_Synonym extends Bs_Storer_TaxonAbstract implements Bs_Storer_Int
                 return $synonym;
             }
         }
+        // Exit if status is accepted/provisionally accepted
+        $this->_getScientificNameStatusId($synonym);
+        if (in_array($synonym->scientificNameStatus, array(1, 4))) {
+            $this->writeToErrorTable($synonym->id, $name, 'Synonym with accepted name status',
+                $synonym->originalId);
+            return $synonym;
+        }
+
         if (strtolower($synonym->taxonomicRank) == 'infraspecies') {
             $this->_setInfraSpecificMarkerId($synonym);
         }
         else {
             $this->_setTaxonomicRankId($synonym);
         }
-        $this->_getScientificNameStatusId($synonym);
+
         $this->_setSynonym($synonym);
         $this->_setSynonymNameElements($synonym);
         if (is_array($synonym->references) && count($synonym->references) > 0) {
@@ -62,15 +70,19 @@ class Bs_Storer_Synonym extends Bs_Storer_TaxonAbstract implements Bs_Storer_Int
             'INSERT INTO `synonym` (`id`, `taxon_id`, `author_string_id`, `scientific_name_status_id`,
         	`original_id`) VALUES (?, ?, ?, ?, ?)'
         );
-        $stmt->execute(
-            array(
-                $synonym->id,
-                $synonym->taxonId,
-                $author->id,
-                $synonym->scientificNameStatusId,
-                $synonym->originalId
-            ));
-        $synonym->id = $this->_dbh->lastInsertId();
+        try {
+            $stmt->execute(
+                array(
+                    $synonym->id,
+                    $synonym->taxonId,
+                    $author->id,
+                    $synonym->scientificNameStatusId,
+                    $synonym->originalId
+                ));
+            $synonym->id = $this->_dbh->lastInsertId();
+        } catch (PDOException $e) {
+            $this->_handleException("Store error synonym", $e);
+        }
         unset($author);
         return $synonym;
     }
@@ -97,13 +109,16 @@ class Bs_Storer_Synonym extends Bs_Storer_TaxonAbstract implements Bs_Storer_Int
         // accepted hybrids cannot be stored according to the rules either
         foreach ($synonym->nameElementIds as $rankId => $nameElement) {
             $nameElementId = $this->_getScientificNameElementId($nameElement);
-            $stmt->execute(
-                array(
+            try {
+                $stmt->execute(array(
                     $rankId,
                     $nameElementId,
                     $synonym->id,
                     null
                 ));
+            } catch (PDOException $e) {
+                $this->_handleException("Store error synonym name element", $e);
+            }
         }
         return $synonym;
     }
@@ -112,20 +127,25 @@ class Bs_Storer_Synonym extends Bs_Storer_TaxonAbstract implements Bs_Storer_Int
     {
         $referenceIds = array();
         $storer = new Bs_Storer_Reference($this->_dbh, $this->_logger);
+        $stmt = $this->_dbh->prepare(
+            'INSERT INTO `reference_to_synonym` (`reference_id`, `synonym_id`, '.
+            '`reference_type_id`) VALUES (?, ?, ?)'
+        );
         foreach ($synonym->references as $reference) {
             $storer->store($reference);
             if (!empty($reference->id) && !in_array($reference->id, $referenceIds)) {
                 $referenceIds[] = $reference->id;
-                $stmt = $this->_dbh->prepare(
-                    'INSERT INTO `reference_to_synonym` (`reference_id`, `synonym_id`, '.
-                    '`reference_type_id`) VALUES (?, ?, ?)');
-                $stmt->execute(
-                    array(
-                        $reference->id,
-                        $synonym->id,
-                        empty($reference->typeId) ? null : $reference->typeId
-                    )
-                );
+                try {
+                    $stmt->execute(
+                        array(
+                            $reference->id,
+                            $synonym->id,
+                            empty($reference->typeId) ? null : $reference->typeId
+                        )
+                    );
+                } catch (PDOException $e) {
+                    $this->_handleException("Store error synonym reference", $e);
+                }
             }
         }
         unset($storer);

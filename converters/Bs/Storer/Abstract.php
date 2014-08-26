@@ -2,7 +2,7 @@
 /**
  * Abstract storer
  *
- * @author N�ria Torrescasana Aloy, Ruud Altenburg
+ * @author Nuria Torrescasana Aloy, Ruud Altenburg
  */
 abstract class Bs_Storer_Abstract
 {
@@ -36,8 +36,12 @@ abstract class Bs_Storer_Abstract
             $query .= ') AND ';
         }
         $stmt = $this->_dbh->prepare(substr($query, 0, -5));
-        if ($stmt->execute($where) && $stmt->rowCount() == 1) {
-            return $stmt->fetchColumn(0);
+        try {
+            if ($stmt->execute($where) && $stmt->rowCount() == 1) {
+                return $stmt->fetchColumn(0);
+            }
+        } catch (PDOException $e) {
+            $this->_handleException("Could not write conversion_error", $e);
         }
         return false;
     }
@@ -112,13 +116,31 @@ abstract class Bs_Storer_Abstract
 
     public function writeToErrorTable ($taxon_id, $name, $message, $nameCode = null)
     {
+        $m = "\nRecord skipped during conversion: \n" .
+            "id: $taxon_id\n" .
+            "name: $name\n" .
+            "name code: $nameCode\n" .
+            "reason: $message\n";
+        $this->_logger->err($m);
         $stmt = $this->_dbh->prepare(
-            'INSERT INTO `_conversion_errors` (`id`, `name`, `message`, `name_code`) VALUES (?, ?, ?, ?)');
-        $stmt->execute(array(
-            $taxon_id,
-            $name,
-            $message,
-            $nameCode
-        ));
+            'INSERT INTO `_conversion_errors` (`id`, `name`, `message`, `name_code`)
+            VALUES (?, ?, ?, ?)');
+        try {
+            $stmt->execute(array(
+                $taxon_id,
+                $name,
+                $message,
+                $nameCode
+            ));
+        } catch (PDOException $e) {
+            $this->_handleException("Could not write conversion_error", $e);
+        }
+    }
+
+    protected function _handleException ($message, $e = false)
+    {
+        $message = "\n$message: \n" . ($e ? "Exception: \n" . $e->getMessage() : '');
+        $this->_logger->err($message);
+        die('<p>' . $message . '</p>');
     }
 }

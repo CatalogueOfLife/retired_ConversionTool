@@ -4,8 +4,8 @@ require_once 'Abstract.php';
 
 /**
  * Uri storer
- * 
- * @author N�ria Torrescasana Aloy, Ruud Altenburg
+ *
+ * @author Nuria Torrescasana Aloy, Ruud Altenburg
  */
 class Bs_Storer_Uri extends Bs_Storer_Abstract
     implements Bs_Storer_Interface
@@ -29,18 +29,22 @@ class Bs_Storer_Uri extends Bs_Storer_Abstract
             return $uri;
         }
         $stmt = $this->_dbh->prepare(
-            'INSERT INTO `uri` 
+            'INSERT INTO `uri`
             (resource_identifier, uri_scheme_id) VALUES (?, ?)'
         );
-        $stmt->execute(array(
-            $uri->resourceIdentifier,
-            $uri->uriSchemeId)
-        );
-        $uri->id = $this->_dbh->lastInsertId();
+        try {
+            $stmt->execute(array(
+                $uri->resourceIdentifier,
+                $uri->uriSchemeId)
+            );
+            $uri->id = $this->_dbh->lastInsertId();
+        } catch (PDOException $e) {
+            $this->_handleException("Store error uri", $e);
+        }
         return $uri;
     }
-   
-    public function getUriSchemeIdByScheme($scheme) 
+
+    public function getUriSchemeIdByScheme($scheme)
     {
         if ($id = Dictionary::get('uri_scheme', $scheme)) {
             return $id;
@@ -55,8 +59,8 @@ class Bs_Storer_Uri extends Bs_Storer_Abstract
         // Assume url is web link by returning false
         return false;
     }
-    
-    private function _getUriSchemeId($resourceIdentifier) 
+
+    private function _getUriSchemeId($resourceIdentifier)
     {
         $pos = strpos($resourceIdentifier, '://');
         if ($pos) {
@@ -68,5 +72,5 @@ class Bs_Storer_Uri extends Bs_Storer_Abstract
         // Assume url is web link when lookup fails
         return $this->getUriSchemeIdByScheme('http');
     }
-    
+
 }

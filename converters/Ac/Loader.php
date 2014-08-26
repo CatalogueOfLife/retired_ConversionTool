@@ -3,30 +3,30 @@ require_once 'Loader/Interface.php';
 
 /**
  * Loader
- * 
- * Dynamically loads the appropriate class. In the script that runs the 
+ *
+ * Dynamically loads the appropriate class. In the script that runs the
  * conversion, only Class has to be given rather than Ac_Loader_Class
- * 
- * @author N�ria Torrescasana Aloy
+ *
+ * @author Nuria Torrescasana Aloy
  */
 class Ac_Loader
 {
     protected $_dbh;
     protected $_logger;
     protected $_loaders = array();
-    
+
     public function __construct(PDO $dbh, Zend_Log $logger)
     {
         $this->_dbh = $dbh;
         $this->_logger = $logger;
     }
-    
+
     /**
      * Dynamically loads the appropriate loader class
-     * 
+     *
      * Takes a simplified notation of the loader class that should be used
      * and dispatches the load() or count() methods to that class
-     * 
+     *
      * @param string $name class name
      * @throws exception
      * @return class $loader loader class
@@ -35,24 +35,30 @@ class Ac_Loader
     {
         $class = 'Ac_Loader_' . $name;
         if(!include_once('Loader/' . $name . '.php')) {
-            throw new Exception('Loader class file not found');
+            $e = new Exception('Loader class file not found');
+            $this->_logger->err($e);
+            throw $e;
         }
         if(!class_exists($class)) {
-            throw new Exception('Loader class undefined');
+            $e = new Exception('Loader class undefined');
+            $this->_logger->err($e);
+            throw $e;
         }
         if (isset($this->_loaders[$class])) {
             $loader = $this->_loaders[$class];
         } else {
             $loader = new $class($this->_dbh, $this->_logger);
             if(!$loader instanceof Ac_Loader_Interface) {
+                $e = new Exception('Invalid loader instance');
+                $this->_logger->err($e);
                 unset($loader);
-                throw new Exception('Invalid loader instance');
+                throw $e;
             }
             $this->_loaders[$class] = $loader;
         }
         return $loader;
     }
-    
+
     /**
      * Passes load function on to appropriate loader class
      */
@@ -60,7 +66,7 @@ class Ac_Loader
     {
         return $this->_getLoader($what)->load($offset, $limit);
     }
-    
+
     /**
      * Passes count function on to appropriate loader class
      */

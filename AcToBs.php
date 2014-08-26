@@ -24,8 +24,7 @@ alwaysFlush();
 /**
  * Logger initialization
  */
-$writer = new Zend_Log_Writer_Stream('logs/conversion.log');
-$writer->addFilter(Zend_Log::WARN);
+$writer = new Zend_Log_Writer_Stream('logs/' . date("Y-m-d") . '-converter.log');
 $logger = new Zend_Log($writer);
 $ind = new Indicator();
 
@@ -53,7 +52,7 @@ $storer->clearDb();
 echo 'Done!</p>';
 
 echo '<p>Logging invalid taxa...<br>';
-logInvalidRecords();
+logInvalidRecords($logger);
 echo 'Done!</p>';
 
 // Databases
@@ -74,10 +73,11 @@ for ($limit = $memLimit = 100000, $offset = 0; $offset < $total; $offset += $mem
     try {
         list($taxa, $memLimit) = $loader->load('HigherTaxon', $offset, $limit);
         foreach ($taxa as $taxon) {
-            try{
+            try {
                 $storer->store($taxon);
             }
             catch (PDOException $e) {
+                $logger->err("\nStore error: " . formatException($e));
                 echo '<pre>';
                 print_r($taxon);
                 echo '</pre>';
@@ -87,6 +87,7 @@ for ($limit = $memLimit = 100000, $offset = 0; $offset < $total; $offset += $mem
         unset($taxa);
     }
     catch (PDOException $e) {
+        $logger->err("\nLoad error: " . formatException($e));
         echo 'Load error: '.formatException($e);
     }
 }
@@ -111,6 +112,7 @@ for ($limit = $memLimit = 10000, $offset = 0; $offset < $total; $offset += $memL
                 $storer->store($taxon);
             }
             catch (PDOException $e) {
+                $logger->err("\nStore error: " . formatException($e));
                 echo '<pre>';
                 print_r($taxon);
                 echo '</pre>';
@@ -121,7 +123,8 @@ for ($limit = $memLimit = 10000, $offset = 0; $offset < $total; $offset += $memL
         unset($taxa);
     }
     catch (PDOException $e) {
-        echo 'Load error: '.formatException($e);
+        $logger->err("\nLoad error: " . formatException($e));
+        echo 'Load error: ' . formatException($e);
     }
 }
 ?>

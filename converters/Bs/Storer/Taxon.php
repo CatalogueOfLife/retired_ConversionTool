@@ -22,7 +22,7 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon implements Bs_Storer_Interfa
 
     public function store (Model $taxon)
     {
-        // Check if taxon_id already exist. Some stray taxa appear twice
+        // Verify that taxon_id already exists. Some stray taxa appear twice
         // in the loader because either status or record_id are duplicated.
         // It is faster to skip them in the storer than in the loader.
         $config = parse_ini_file('config/AcToBs.ini', true);
@@ -37,7 +37,7 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon implements Bs_Storer_Interfa
             }
         }
 
-        // Check if parent of infraspecies really is a species
+        // Verify that parent of infraspecies really is a species
         if (isset($config['checks']['infraspecies_parent_ids']) &&
             $config['checks']['infraspecies_parent_ids'] == 1 &&
             !$this->_checkInfraspeciesParent($taxon)) {
@@ -46,12 +46,18 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon implements Bs_Storer_Interfa
             return $taxon;
         }
 
+        // Verify that (infra)species has two or more name elements
+        if ($this->_countNameElements($taxon) < 2) {
+            $this->writeToErrorTable($taxon->id, $taxon->name,
+               '(Infra)species with only a single name part', $taxon->originalId);
+            return $taxon;
+        }
+
         // Species rank id
         if ($taxon->infraspecies == '') {
             $this->_setTaxonomicRankId($taxon);
         // Infraspecies rank id
-        }
-        else {
+        } else {
             $this->_setInfraSpecificMarkerId($taxon);
         }
         $this->_getScientificNameStatusId($taxon);
@@ -84,6 +90,15 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon implements Bs_Storer_Interfa
         return true;
     }
 
+    protected function _countNameElements (Model $taxon) {
+        foreach (array('genus', 'species', 'infraspecies') as $ne) {
+        	if (!empty($taxon->{$ne})) {
+        		$nameElements[$ne] = $taxon->{$ne};
+        	}
+        }
+        return isset($nameElements) ? count($nameElements) : 0;
+    }
+
     protected function _setScientificNameElements (Model $taxon)
     {
         foreach (array('genus', 'subgenus', 'species', 'infraspecies') as $ne) {
@@ -100,20 +115,22 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon implements Bs_Storer_Interfa
                 ));
             if (!$nameElementId) {
                 $stmt = $this->_dbh->prepare(
-                    'INSERT INTO `scientific_name_element` (`name_element`) VALUE (?)');
-                $stmt->execute(
-                    array(
-                        $name
-                    ));
-                $nameElementId = $this->_dbh->lastInsertId();
+                    'INSERT INTO `scientific_name_element` (`name_element`) VALUE (?)'
+                );
+                try {
+                    $stmt->execute(array($name));
+                    $nameElementId = $this->_dbh->lastInsertId();
+                } catch (PDOException $e) {
+                    $this->_handleException("Store error scientific name element", $e);
+                }
             }
             $taxon->nameElementIds[$rankId] = $nameElementId;
         }
         // At least two elements should have been set for (infra)species
+        // check added to discard names with just one part
         if (count($taxon->nameElementIds) >= 2) {
             return $taxon;
         }
-        throw new Exception('Scientific name element could not be set!');
         return false;
     }
 
@@ -141,14 +158,19 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon implements Bs_Storer_Interfa
         }
         else {
             $stmt = $this->_dbh->prepare(
-                'INSERT INTO `scrutiny` (`specialist_id`, `scrutiny_date`, `original_scrutiny_date`) VALUES (?, ?, ?)');
-            $stmt->execute(
-                array(
-                    $taxon->specialistId,
-                    $date,
-                    $taxon->scrutinyDate
-                ));
-            $taxon->scrutinyId = $this->_dbh->lastInsertId();
+                'INSERT INTO `scrutiny` (`specialist_id`, `scrutiny_date`, `original_scrutiny_date`)
+                VALUES (?, ?, ?)');
+            try {
+                $stmt->execute(
+                    array(
+                        $taxon->specialistId,
+                        $date,
+                        $taxon->scrutinyDate
+                    ));
+                $taxon->scrutinyId = $this->_dbh->lastInsertId();
+            } catch (PDOException $e) {
+                $this->_handleException("Store error taxon scrutiny", $e);
+            }
         }
         unset($storer, $specialist);
         return $taxon;
@@ -164,8 +186,8 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon implements Bs_Storer_Interfa
         $stmt = $this->_dbh->prepare(
             'INSERT INTO `taxon_detail` (`taxon_id`, `author_string_id`, `scientific_name_status_id`,
             `additional_data`, `scrutiny_id`, `taxon_guid`, `name_guid`) VALUES (?, ?, ?, ?, ?, ?, ?)');
-        $stmt->execute(
-            array(
+        try {
+            $stmt->execute(array(
                 $taxon->id,
                 $author->id,
                 $taxon->scientificNameStatusId,
@@ -174,6 +196,9 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon implements Bs_Storer_Interfa
                 $taxon->taxonGuid,
                 $taxon->nameGuid
             ));
+        } catch (PDOException $e) {
+            $this->_handleException("Store error taxon detail", $e);
+        }
         unset($storer, $author);
         return $taxon;
     }
@@ -189,10 +214,14 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon implements Bs_Storer_Interfa
         $storer->store($uri);
 
         $stmt = $this->_dbh->prepare('INSERT INTO `uri_to_taxon` (uri_id, taxon_id) VALUES (?, ?)');
-        $stmt->execute(array(
-            $uri->id,
-            $taxon->id
-        ));
+        try {
+            $stmt->execute(array(
+                $uri->id,
+                $taxon->id
+            ));
+        } catch (PDOException $e) {
+            $this->_handleException("Store error taxon uri", $e);
+        }
         unset($storer, $uri);
     }
 
@@ -200,20 +229,25 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon implements Bs_Storer_Interfa
     {
         $referenceIds = array();
         $storer = new Bs_Storer_Reference($this->_dbh, $this->_logger);
+        $stmt = $this->_dbh->prepare(
+            'INSERT INTO `reference_to_taxon` (`reference_id`, `taxon_id`, `reference_type_id`)
+            VALUES (?, ?, ?)'
+        );
         foreach ($taxon->references as $reference) {
             $storer->store($reference);
             if (!empty($reference->id) && !in_array($reference->id, $referenceIds)) {
                 $referenceIds[] = $reference->id;
-                $stmt = $this->_dbh->prepare(
-                    'INSERT INTO `reference_to_taxon` (`reference_id`, `taxon_id`, '.
-                    '`reference_type_id`) VALUES (?, ?, ?)');
-                $stmt->execute(
-                    array(
-                        $reference->id,
-                        $taxon->id,
-                        empty($reference->typeId) ? null : $reference->typeId
-                    )
-                );
+                try {
+                    $stmt->execute(
+                        array(
+                            $reference->id,
+                            $taxon->id,
+                            empty($reference->typeId) ? null : $reference->typeId
+                        )
+                    );
+                } catch (PDOException $e) {
+                    $this->_handleException("Store error taxon reference", $e);
+                }
             }
         }
         unset($storer, $referenceIds);

@@ -5,7 +5,7 @@ require_once 'Abstract.php';
 /**
  * Reference storer
  *
- * @author Nœria Torrescasana Aloy, Ruud Altenburg
+ * @author Nuria Torrescasana Aloy, Ruud Altenburg
  */
 class Bs_Storer_Reference extends Bs_Storer_Abstract implements Bs_Storer_Interface
 {
@@ -28,15 +28,19 @@ class Bs_Storer_Reference extends Bs_Storer_Abstract implements Bs_Storer_Interf
         }
         else {
             $stmt = $this->_dbh->prepare(
-                'INSERT INTO `reference` (`title`, `authors`, `year`, `text`) VALUES (?, ?, ?, ?)');
-            $stmt->execute(
-                array(
+                'INSERT INTO `reference` (`title`, `authors`, `year`, `text`) VALUES (?, ?, ?, ?)'
+            );
+            try {
+                $stmt->execute(array(
                     $reference->title,
                     $reference->authors,
                     $reference->year,
                     $reference->text
                 ));
-            $reference->id = $this->_dbh->lastInsertId();
+                $reference->id = $this->_dbh->lastInsertId();
+            } catch (PDOException $e) {
+                $this->_handleException("Store error reference", $e);
+            }
         }
         $this->_setReferenceTypeId($reference);
         return $reference;

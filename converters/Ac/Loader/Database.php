@@ -5,8 +5,8 @@ require_once 'model/AcToBs/Database.php';
 
 /**
  * Count and load methods for Database
- * 
- * @author N�ria Torrescasana Aloy, Ruud Altenburg
+ *
+ * @author Nuria Torrescasana Aloy, Ruud Altenburg
  *
  */
 class Ac_Loader_Database extends Ac_Loader_Abstract
@@ -14,7 +14,7 @@ class Ac_Loader_Database extends Ac_Loader_Abstract
 {
     /**
      * Count number of databases in Annual Checklist
-     * 
+     *
      * @return int
      */
     public function count()
@@ -23,12 +23,12 @@ class Ac_Loader_Database extends Ac_Loader_Abstract
         $stmt->execute();
         return $stmt->fetchColumn(0);
     }
-    
+
     /**
      * Load all databases from Annual Checklist
-     * 
+     *
      * Fetches databases all at once.
-     * 
+     *
      * @return array $res array of Database objects
      */
     public function load($offset, $limit)
