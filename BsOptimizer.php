@@ -98,9 +98,12 @@ $tables = array(
         'name',
         'rank',
         'name_status',
-        'accepted_taxon_id'
+        'accepted_taxon_id',
+        'is_extinct'
     ),
-    SEARCH_DISTRIBUTION => array(),
+    SEARCH_DISTRIBUTION => array(
+        'is_extinct'
+    ),
     SEARCH_SCIENTIFIC => array(
         'kingdom',
         'phylum',
@@ -118,7 +121,8 @@ $tables = array(
         'accepted_species_id[0], genus[10]',
         'accepted_species_id[0], infraspecies[10]',
         'accepted_species_id[0], species[10]',
-        'accepted_species_id[0], subgenus[10]'
+        'accepted_species_id[0], subgenus[10]',
+        'is_extinct'
     ),
     SOURCE_DATABASE_DETAILS => array(
         'id'
