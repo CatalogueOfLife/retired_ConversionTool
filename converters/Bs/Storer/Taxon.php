@@ -136,9 +136,6 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon implements Bs_Storer_Interfa
 
     protected function _setTaxonScrutiny (Model $taxon)
     {
-        if (empty($taxon->specialistId)) {
-            return $taxon;
-        }
         $specialist = new Specialist();
         $specialist->name = $taxon->specialistName;
         $storer = new Bs_Storer_Specialist($this->_dbh, $this->_logger);
@@ -184,8 +181,10 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon implements Bs_Storer_Interfa
         $storer->store($author);
 
         $stmt = $this->_dbh->prepare(
-            'INSERT INTO `taxon_detail` (`taxon_id`, `author_string_id`, `scientific_name_status_id`,
-            `additional_data`, `scrutiny_id`, `taxon_guid`, `name_guid`) VALUES (?, ?, ?, ?, ?, ?, ?)');
+            'INSERT INTO `taxon_detail` (`taxon_id`, `author_string_id`,
+            `scientific_name_status_id`, `additional_data`, `scrutiny_id`,
+            `taxon_guid`, `name_guid`, `is_extinct`, `has_modern`, `has_preholocene`)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
         try {
             $stmt->execute(array(
                 $taxon->id,
@@ -194,7 +193,10 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon implements Bs_Storer_Interfa
                 $taxon->additionalData,
                 $taxon->scrutinyId,
                 $taxon->taxonGuid,
-                $taxon->nameGuid
+                $taxon->nameGuid,
+                $taxon->isExtinct,
+                $taxon->hasModern,
+                $taxon->hasPreholocene
             ));
         } catch (PDOException $e) {
             $this->_handleException("Store error taxon detail", $e);

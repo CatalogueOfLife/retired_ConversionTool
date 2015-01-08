@@ -23,4 +23,7 @@ class Taxon implements Model
     public $specialistId;
     public $taxonGuid;
     public $nameGuid;
+    public $isExtinct;
+    public $hasModern;
+    public $hasPreholocene;
 }

@@ -54,7 +54,9 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
             `name`, `lsid`, `parent_id` AS parentId,
             `database_id` AS sourceDatabaseId,
             `name_code` AS originalId,
-            `sp2000_status_id` AS scientificNameStatusId
+            `sp2000_status_id` AS scientificNameStatusId,
+            `is_extinct` as isExtinct, `has_preholocene` as hasPreholocene,
+            `has_modern` as hasModern
             FROM `taxa`
             WHERE `is_accepted_name` = 1
             AND `parent_id` != 0

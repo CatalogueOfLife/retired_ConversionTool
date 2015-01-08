@@ -97,6 +97,7 @@ function checkDatabase () {
             }
         }
      }
+     mysql_query('UPDATE `families` SET `database_id` = 0 WHERE `database_id` IS NULL');
      return $errors_found;
 }
 
@@ -278,37 +279,41 @@ function createTaxaTable () {
     $link = mysqlConnect();
     $sql_result = mysql_query("DROP TABLE IF EXISTS `taxa`") or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
     $sql_query = "CREATE TABLE `taxa` (
-                      `record_id` int(10) unsigned NOT NULL,
-                      `lsid` varchar(87) DEFAULT NULL,
-                      `name` varchar(137) NOT NULL default '',
-                      `name_with_italics` varchar(151) NOT NULL default '',
-                      `taxon` varchar(12) NOT NULL default '',
-                      `name_code` varchar(42) default NULL,
-                      `parent_id` int(10) NOT NULL default '0',
-                      `sp2000_status_id` int(1) NOT NULL default '0',
-                      `database_id` int(2) NOT NULL default '0',
-                      `is_accepted_name` int(1) NOT NULL default '0',
-                      `is_species_or_nonsynonymic_higher_taxon` int(1) NOT NULL default '0',
-                      `HierarchyCode` varchar(1000) NOT NULL,
-                      PRIMARY KEY  (`record_id`),
-                      KEY `name` (`name`,`is_species_or_nonsynonymic_higher_taxon`,`database_id`,`sp2000_status_id`),
-                      KEY `sp2000_status_id` (`sp2000_status_id`),
-                      KEY `parent_id` (`parent_id`),
-                      KEY `database_id` (`database_id`),
-                      KEY `taxon` (`taxon`),
-                      KEY `lsid` (`lsid`),
-                      KEY `is_accepted_name` (`is_accepted_name`),
-                      KEY `name_code` (`name_code`),
-                      KEY `is_species_or_nonsynonymic_higher_taxon` (`is_species_or_nonsynonymic_higher_taxon`),
-                      KEY `HierarchyCode` (`HierarchyCode`(255))
-                    ) ENGINE=MyISAM DEFAULT CHARSET=latin1  ;";
+          `record_id` int(10) unsigned NOT NULL,
+          `lsid` varchar(87) DEFAULT NULL,
+          `name` varchar(137) NOT NULL default '',
+          `name_with_italics` varchar(151) NOT NULL default '',
+          `taxon` varchar(12) NOT NULL default '',
+          `name_code` varchar(42) default NULL,
+          `parent_id` int(10) NOT NULL default '0',
+          `sp2000_status_id` int(1) NOT NULL default '0',
+          `database_id` int(2) NOT NULL default '0',
+          `is_accepted_name` int(1) NOT NULL default '0',
+          `is_species_or_nonsynonymic_higher_taxon` int(1) NOT NULL default '0',
+          `HierarchyCode` varchar(1000) NOT NULL,
+          `is_extinct` smallint(1) default 0,
+          `has_preholocene` smallint(1) default 0,
+          `has_modern` smallint(1) default 1,
+          PRIMARY KEY  (`record_id`),
+          KEY `name` (`name`,`is_species_or_nonsynonymic_higher_taxon`,`database_id`,`sp2000_status_id`),
+          KEY `sp2000_status_id` (`sp2000_status_id`),
+          KEY `parent_id` (`parent_id`),
+          KEY `database_id` (`database_id`),
+          KEY `taxon` (`taxon`),
+          KEY `lsid` (`lsid`),
+          KEY `is_accepted_name` (`is_accepted_name`),
+          KEY `name_code` (`name_code`),
+          KEY `is_species_or_nonsynonymic_higher_taxon` (`is_species_or_nonsynonymic_higher_taxon`),
+          KEY `HierarchyCode` (`HierarchyCode`(255))
+        ) ENGINE=MyISAM DEFAULT CHARSET=latin1  ;";
     $sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
 }
 
 function startTaxaInsert () {
     return "INSERT INTO `taxa` (`record_id`, `name`, `name_with_italics`, `taxon`, `name_code`,
            `parent_id`, `sp2000_status_id`,`database_id`, `is_accepted_name`,
-           `is_species_or_nonsynonymic_higher_taxon`, `HierarchyCode`) VALUES ";
+           `is_species_or_nonsynonymic_higher_taxon`, `HierarchyCode`, `is_extinct`,
+           `has_preholocene`, `has_modern`) VALUES ";
 }
 
 function extendTaxaInsert ($data) {
@@ -420,14 +425,16 @@ function addHigherTaxaToTaxa () {
                 if (!$parent_id = getRecordIdInTaxa(array('HierarchyCode' => $parent_hierarchy))) {
                     $parent_id = 0;
                     if ($taxon_level != "Kingdom") {
-                         $errors_found[] = "No parent for $taxon_level $taxon (id: $record_id; hierarchy: $parent_hierarchy)";
+                         $errors_found[] = "No parent for $taxon_level $taxon (id: $record_id; hierarchy:
+                         $parent_hierarchy)";
                     }
                 }
 
                 // add taxon to 'taxa' table
                 $higher_taxon_record_id++;
                 taxaInsert(
-                    array($higher_taxon_record_id, $taxon, $taxon, $taxon_level, '', $parent_id, 0, 0, 0, 1, $hierarchy)
+                    array($higher_taxon_record_id, $taxon, $taxon, $taxon_level, '', $parent_id, 0, 0, 0, 1,
+                        $hierarchy, 0, 0, 1)
                 );
             }
         }
@@ -492,7 +499,7 @@ function addGeneraToTaxa () {
             $higher_taxon_record_id++;
             taxaInsert(
                 array($higher_taxon_record_id, $taxon, $taxon_with_italics, $taxon_level, '',
-                      $parent_id, 0, 0, 0, 1, $hierarchy)
+                      $parent_id, 0, 0, 0, 1, $hierarchy, 0, 0, 1)
             );
         }
     }
@@ -563,7 +570,7 @@ function addSubgeneraToTaxa () {
             $higher_taxon_record_id++;
             taxaInsert(
                 array($higher_taxon_record_id, $taxon, $taxon_with_italics, $taxon_level, '',
-                      $parent_id, 0, 0, 0, 1, $hierarchy)
+                      $parent_id, 0, 0, 0, 1, $hierarchy, 0, 0, 1)
             );
         }
     }
@@ -579,7 +586,8 @@ function addSpeciesToTaxa () {
 
     $sql_query = "SELECT t1.`record_id`, t1.`genus`, t1.`species`, t1.`name_code`, t1.`sp2000_status_id`,
                       t1.`accepted_name_code`, t1.`database_id`, t1.`family_id`, t2.`kingdom`,
-                      t2.`phylum`, t2.`class`, t2.`order`, t2.`superfamily`, t2.`family`, t1.`subgenus`
+                      t2.`phylum`, t2.`class`, t2.`order`, t2.`superfamily`, t2.`family`, t1.`subgenus`,
+                      t1.`is_extinct`, t1.`has_preholocene`, t1.`has_modern`
                   FROM `scientific_names` AS t1
                   LEFT JOIN `families` AS t2 ON t1.`family_id`= t2.`record_id`
                   WHERE (t1.`infraspecies` = '' OR t1.`infraspecies` IS NULL) AND t1.`family_id` IS NOT NULL";
@@ -615,6 +623,10 @@ function addSpeciesToTaxa () {
         $this_order = $row[11];
         $this_superfamily = $row[12];
         $this_family = $row[13];
+
+        $this_is_extinct = $row[15];
+        $this_has_preholocene = $row[16];
+        $this_has_modern = $row[17];
 
         if ($this_kingdom == "Viruses" || $this_kingdom == "Subviral agents") {
             $taxon = $taxon_with_italics = $this_species;
@@ -656,8 +668,11 @@ function addSpeciesToTaxa () {
         // add taxon to 'taxa' table
         $sql_query2 .= extendTaxaInsert(
             array($record_id, $taxon, $taxon_with_italics, $taxon_level, $this_name_code, $parent_id,
-                  $this_sp2000_status_id, $this_database_id, $is_accepted_name, 1, $hierarchy)
+                $this_sp2000_status_id, $this_database_id, $is_accepted_name, 1, $hierarchy,
+                $this_is_extinct, $this_has_preholocene, $this_has_modern
+            )
         );
+
         if ($i >= $recordsPerBatch || $n >= $number_of_records) {
         	//$link = mysqlConnect();
             mysql_query(endTaxaInsert($sql_query2)) or die("<p>Error: MySQL query failed: " . mysql_error() . "</p>");
@@ -674,9 +689,10 @@ function addInfraspeciesToTaxa() {
     $acceptedStatuses = getAcceptedStatuses();
 
     $sql_query = "SELECT t1.`record_id`, t1.`genus`, t1.`species`, t1.`infraspecies_marker`,
-        t1.`infraspecies`, t1.`name_code`, t1.`sp2000_status_id`,
-        t1.`accepted_name_code`, t1.`database_id`, t1.`family_id`, t2.`kingdom`, t2.`phylum`, t2.`class`,
-        t2.`order`, t2.`superfamily`, t2.`family`, t1.`subgenus`, t1.`infraspecies_parent_name_code`
+            t1.`infraspecies`, t1.`name_code`, t1.`sp2000_status_id`,
+            t1.`accepted_name_code`, t1.`database_id`, t1.`family_id`, t2.`kingdom`, t2.`phylum`, t2.`class`,
+            t2.`order`, t2.`superfamily`, t2.`family`, t1.`subgenus`, t1.`infraspecies_parent_name_code`,
+            t1.`is_extinct`, t1.`has_preholocene`, t1.`has_modern`
         FROM `scientific_names` AS t1
         LEFT JOIN `families` AS t2 ON t1.`family_id`= t2.`record_id`
         WHERE (t1.`infraspecies` != '' AND t1.`infraspecies` IS NOT NULL) AND t1.`family_id` IS NOT NULL";
@@ -714,6 +730,10 @@ function addInfraspeciesToTaxa() {
         $this_order = $row[13];
         $this_superfamily = $row[14];
         $this_family = $row[15];
+
+        $this_is_extinct = $row[18];
+        $this_has_preholocene = $row[19];
+        $this_has_modern = $row[20];
 
         if ($this_kingdom == "Viruses" || $this_kingdom == "Subviral agents") {
             $taxon = $this_species;
@@ -796,8 +816,11 @@ function addInfraspeciesToTaxa() {
         // add taxon to 'taxa' table
         $sql_query2 .= extendTaxaInsert(
             array($record_id, $taxon, $taxon_with_italics, $taxon_level, $this_name_code, $parent_id,
-                  $this_sp2000_status_id, $this_database_id, $is_accepted_name, 1, '')
+                $this_sp2000_status_id, $this_database_id, $is_accepted_name, 1, '',
+                $this_is_extinct, $this_has_preholocene, $this_has_modern
+            )
         );
+
         if ($i >= $recordsPerBatch || $n >= $number_of_records) {
         	//$link = mysqlConnect();
         	mysql_query(endTaxaInsert($sql_query2)) or die("<p>Error: MySQL query failed: " . mysql_error() . "</p>");
@@ -830,8 +853,9 @@ function setInfraspeciesSearch ($parent_hierarchy, $is_accepted_name) {
 
 function higherTaxaWithAcceptedNames () {
     $link = mysqlConnect();
-    $taxa = array("subgenera" => "Subgenus", "genera" => "Genus" , "families" => "Family" , "superfamilies" => "Superfamily" ,
-                  "orders" => "Order" , "classes" => "Class" , "phyla" => "Phylum" , "kingdoms" => "Kingdom");
+//    $taxa = array("subgenera" => "Subgenus", "genera" => "Genus" , "families" => "Family" , "superfamilies" => "Superfamily" ,
+//                  "orders" => "Order" , "classes" => "Class" , "phyla" => "Phylum" , "kingdoms" => "Kingdom");
+    $taxa = array("subgenera" => "Subgenus", "genera" => "Genus");
     foreach ($taxa as $label => $rank) {
         echo "Finding $label with accepted names...<br>";
         $sql_query = "UPDATE `taxa` parent, `taxa` child
@@ -841,6 +865,9 @@ function higherTaxaWithAcceptedNames () {
                       AND child.`is_accepted_name` = 1 ";
         $sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
     }
+    $q = 'UPDATE `taxa` SET `is_accepted_name` = 1
+          WHERE `taxon` in ("Family" "Superfamily", "Order", "Class", "Phylum", "Kingdom") AND `name` != ""';
+    mysql_query($q) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
 }
 
 function higherTaxaWithSynonyms () {

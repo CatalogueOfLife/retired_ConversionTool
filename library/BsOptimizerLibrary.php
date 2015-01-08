@@ -733,18 +733,18 @@ function insertNaturalKey ($d)
 function copyEstimates () {
    $pdo = DbHandler::getInstance('estimates');
    $q = 'SELECT * FROM `estimates`';
-    $stmt = $pdo->query($q);
-    while ($r = $stmt->fetch(PDO::FETCH_ASSOC)) {
+   $stmt = $pdo->query($q);
+   while ($r = $stmt->fetch(PDO::FETCH_ASSOC)) {
         $id = getTaxonTreeId(array($r['name'], $r['rank'], $r['kingdom']));
         if ($id) {
             updateTaxonTreeEstimates(array($r['estimate'], $r['source'], $id));
         }
-    }
+   }
 }
 
 function getTaxonTreeId ($p)
 {
-   $pdo = DbHandler::getInstance('target');
+    $pdo = DbHandler::getInstance('target');
     $q = 'SELECT t1.`taxon_id` AS `id` FROM `_taxon_tree` AS t1
         LEFT JOIN `_search_scientific` AS t2 ON t1.`taxon_id` = t2.`id`
         WHERE t1.`name` = ? AND t1.`rank` = ? AND t2.`kingdom` = ?';
@@ -756,10 +756,55 @@ function getTaxonTreeId ($p)
 
 function updateTaxonTreeEstimates ($p)
 {
-   $pdo = DbHandler::getInstance('target');
+    $pdo = DbHandler::getInstance('target');
     $q = 'UPDATE `_taxon_tree` SET `total_species_estimation` = ?,
         `estimate_source` = ? WHERE `taxon_id` = ?';
     $stmt = $pdo->prepare($q);
     $stmt->execute($p);
 }
 
+function getViruses ()
+{
+    $pdo = DbHandler::getInstance('source');
+    $q = 'SELECT t1.`record_id` AS `id`, t2.`name` AS `genus`, t1.`name` AS `species` FROM `taxa` AS t1
+        LEFT JOIN `taxa` AS t2 ON t1.`parent_id` = t2.`record_id`
+        WHERE t1.`HierarchyCode` LIKE "virus%" AND t1.`taxon` = "species"';
+    $stmt = $pdo->prepare($q);
+    $stmt->execute();
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+function updateViruses ($table, $viruses)
+{
+    $pdo = DbHandler::getInstance('target');
+    switch ($table) {
+        case SEARCH_ALL:
+            $q = 'UPDATE ' . SEARCH_ALL . ' SET `name` = ? WHERE `id` = ?';
+            $stmt = $pdo->prepare($q);
+            foreach ($viruses as $row) {
+                $stmt->execute(array($row['genus'] . ' ' . $row['species'], $row['id']));
+            }
+            break;
+        case SEARCH_SCIENTIFIC:
+            $q = 'UPDATE ' . SEARCH_SCIENTIFIC . ' SET `species` = ? WHERE `id` = ?';
+            $stmt = $pdo->prepare($q);
+            foreach ($viruses as $row) {
+                $stmt->execute(array($row['species'], $row['id']));
+            }
+            break;
+        case SPECIES_DETAILS:
+            $q = 'UPDATE ' . SPECIES_DETAILS . ' SET `species_name` = ? WHERE `taxon_id` = ?';
+            $stmt = $pdo->prepare($q);
+            foreach ($viruses as $row) {
+                $stmt->execute(array($row['species'], $row['id']));
+            }
+            break;
+        case TAXON_TREE:
+            $q = 'UPDATE ' . TAXON_TREE . ' SET `name` = ? WHERE `taxon_id` = ?';
+            $stmt = $pdo->prepare($q);
+            foreach ($viruses as $row) {
+                 $stmt->execute(array($row['genus'] . ' ' . $row['species'], $row['id']));
+            }
+            break;
+    }
+}
