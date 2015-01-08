@@ -1,5 +1,4 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-
 <html>
 <head>
 <meta http-equiv="content-type" content="text/html; charset=utf-8">
@@ -20,7 +19,8 @@ require_once 'library/Zend/Log.php';
 alwaysFlush();
 
 // Path to sql files
-define('PATH', realpath('.') . '/docs_and_dumps/dumps/base_scheme/ac/');
+//define('PATH', realpath('.') . '/docs_and_dumps/dumps/base_scheme/ac/');
+define('PATH', '/Users/ruud/ETI/Zend workbenches/Current/4D4Life Base Scheme (github)/ac/');
 define('DENORMALIZED_TABLES_PATH', 'denormalized_tables/');
 
 // SQL for denormalized tables, .sql omitted!
@@ -49,42 +49,42 @@ $files = array(
     array(
         'path' => PATH . DENORMALIZED_TABLES_PATH,
         'dumpFile' => SEARCH_ALL,
-        'message' => 'Filling ' . SEARCH_ALL . ' table'
+        'message' => 'Populating ' . SEARCH_ALL . ' table'
     ),
     array(
         'path' => PATH . DENORMALIZED_TABLES_PATH,
         'dumpFile' => SEARCH_DISTRIBUTION,
-        'message' => 'Filling ' . SEARCH_DISTRIBUTION . ' table'
+        'message' => 'Populating ' . SEARCH_DISTRIBUTION . ' table'
     ),
     array(
         'path' => PATH . DENORMALIZED_TABLES_PATH,
         'dumpFile' => SEARCH_SCIENTIFIC,
-        'message' => 'Filling ' . SEARCH_SCIENTIFIC . ' table'
+        'message' => 'Populating ' . SEARCH_SCIENTIFIC . ' table'
     ),
     array(
         'path' => PATH . DENORMALIZED_TABLES_PATH,
         'dumpFile' => SEARCH_FAMILY,
-        'message' => 'Filling ' . SEARCH_FAMILY . ' table'
+        'message' => 'Populating ' . SEARCH_FAMILY . ' table'
     ),
     array(
         'path' => PATH . DENORMALIZED_TABLES_PATH,
         'dumpFile' => SOURCE_DATABASE_DETAILS,
-        'message' => 'Filling ' . SOURCE_DATABASE_DETAILS . ' table'
+        'message' => 'Populating ' . SOURCE_DATABASE_DETAILS . ' table'
     ),
     array(
         'path' => PATH . DENORMALIZED_TABLES_PATH,
         'dumpFile' => SPECIES_DETAILS,
-        'message' => 'Filling ' . SPECIES_DETAILS . ' table'
+        'message' => 'Populating ' . SPECIES_DETAILS . ' table'
     ),
     array(
         'path' => PATH . DENORMALIZED_TABLES_PATH,
         'dumpFile' => TAXON_TREE,
-        'message' => 'Filling ' . TAXON_TREE . ' table'
+        'message' => 'Populating ' . TAXON_TREE . ' table'
     ),
     array(
         'path' => PATH . DENORMALIZED_TABLES_PATH,
         'dumpFile' => TOTALS,
-        'message' => 'Filling ' . TOTALS . ' table'
+        'message' => 'Populating ' . TOTALS . ' table'
     )
 );
 
@@ -102,6 +102,7 @@ $tables = array(
         'is_extinct'
     ),
     SEARCH_DISTRIBUTION => array(
+        'accepted_species_id',
         'is_extinct'
     ),
     SEARCH_SCIENTIFIC => array(
@@ -125,10 +126,8 @@ $tables = array(
         'is_extinct'
     ),
     SOURCE_DATABASE_DETAILS => array(
-        'id'
     ),
     SPECIES_DETAILS => array(
-        'taxon_id',
         'kingdom_id',
         'phylum_id',
         'class_id',
@@ -140,9 +139,31 @@ $tables = array(
         'source_database_id'
     ),
     TAXON_TREE => array(
-        'taxon_id',
         'name',
         'rank'
+    )
+);
+
+// Indices that should be removed when ready
+$tempIndices = array(
+    SPECIES_DETAILS => array(
+        'kingdom_id',
+        'phylum_id',
+        'class_id',
+        'order_id',
+        'superfamily_id',
+        'family_id',
+        'genus_id',
+        'source_database_id'
+    ),
+    SEARCH_DISTRIBUTION => array(
+        'accepted_species_id'
+    ),
+    SEARCH_ALL => array(
+        'temp'
+    ),
+    SEARCH_SCIENTIFIC => array(
+        'subgenus'
     )
 );
 
@@ -208,6 +229,10 @@ $indicator = new Indicator();
 $scriptStart = microtime(true);
 
 
+
+
+
+
 echo '<p>First denormalized tables are created and indices are created for the denormalized tables.
         Taxonomic coverage is processed from free text field to a dedicated database table to determine
         points of attachment for each GSD sector. Finally species estimates and source databases
@@ -229,6 +254,13 @@ $runningTime = round(microtime(true) - $start);
 echo "Script took $runningTime seconds to complete<br></p>";
 
 $start = microtime(true);
+echo '<p>Setting fossil flags to higher taxa in ' . TAXON_TREE . ' table...<br>';
+//
+$runningTime = round(microtime(true) - $start);
+echo "Script took $runningTime seconds to complete<br></p>";
+
+
+$start = microtime(true);
 echo '<p>Adding common name elements to ' . SEARCH_ALL . ' table...<br>';
 $sql = file_get_contents(PATH . DENORMALIZED_TABLES_PATH . SEARCH_ALL_COMMON_NAMES . '.sql');
 $stmt = $pdo->prepare($sql);
@@ -242,6 +274,7 @@ echo "Script took $runningTime seconds to complete<br></p>";
 echo '<p><br>Indices are created for denormalized tables.</p>';
 foreach ($tables as $table => $indices) {
     echo "<p><b>Processing table $table...</b><br>";
+    $pdo->query('ALTER TABLE `' . $table . '` DISABLE KEYS');
     foreach ($indices as $index) {
         $indexParameters = getOptimizedIndex($table, $index);
         $query = 'ALTER TABLE `' . $table . '` ADD INDEX (';
@@ -279,6 +312,7 @@ foreach ($tables as $table => $indices) {
         $stmt2 = $pdo->prepare($query);
         $stmt2->execute();
     }
+    $pdo->query('ALTER TABLE `' . $table . '` ENABLE KEYS');
     echo '</p>';
 }
 
@@ -305,7 +339,11 @@ $stmt->execute(array(
 ));
 
 echo '&nbsp;&nbsp;&nbsp; Splitting ' . $stmt->rowCount() . ' rows...<br>';
-$query = 'SELECT * FROM `' . SEARCH_ALL . '` WHERE `delete_me` = 1';
+$query = 'SELECT `id`, `name_element`, `name`, `name_suffix`, `rank`, `name_status`,
+             `name_status_suffix`, `name_status_suffix_suffix`, `group`,
+             `source_database_name`, `source_database_id`, `accepted_taxon_id`
+          FROM `' . SEARCH_ALL . '`
+          WHERE `delete_me` = 1';
 $stmt = $pdo->prepare($query);
 $stmt->execute();
 while ($ne = $stmt->fetch(PDO::FETCH_ASSOC)) {
@@ -324,13 +362,13 @@ $query = 'ALTER TABLE `' . SEARCH_ALL . '` DROP `delete_me`';
 $stmt = $pdo->prepare($query);
 $stmt->execute();
 
-
 $pdo->query("SET SESSION sql_mode = '';");
 echo '&nbsp;&nbsp;&nbsp; Creating common name entries without spaces...<br>';
 $query = 'INSERT INTO `' . SEARCH_ALL . '` (
   		SELECT DISTINCT NULL, LOWER(REPLACE(`name`, " ", "")) AS `name_element`,
   		`name`, `name_suffix`, `rank`, 6, `name_status_suffix`, `name_status_suffix_suffix`,
-  		`group`, `source_database_name`, `source_database_id`, `accepted_taxon_id`
+  		`group`, `source_database_name`, `source_database_id`, `accepted_taxon_id`,
+        `has_preholocene`, `has_modern`, `is_extinct`
   		FROM `' . SEARCH_ALL . '`
   		WHERE `name_status` = 6 AND `name` LIKE "% %"
   	)';
@@ -396,12 +434,25 @@ foreach ($queries as $query) {
 
 echo 'Updating ' . TAXON_TREE . '...<br>';
 $query = 'SELECT `taxon_id` FROM `' . TAXON_TREE . '`
-            WHERE `rank` NOT IN ("kingdom", "phylum", "class", "order", "family", "superfamily", "genus", "species")';
+    WHERE `rank` NOT IN ("kingdom", "phylum", "class", "order", "family", "superfamily", "genus", "species")';
 $stmt = $pdo->prepare($query);
 $stmt->execute();
 while ($id = $stmt->fetchColumn()) {
     updateTaxonTreeName($id);
 }
+
+echo '</p><p><b>Fixing virus names</b><br/>';
+echo 'Getting viruses from source database...<br/>';
+$viruses = getViruses();
+echo 'Updating ' . SEARCH_ALL . '...<br>';
+updateViruses(SEARCH_ALL, $viruses);
+echo 'Updating ' . SEARCH_SCIENTIFIC . '...<br>';
+updateViruses(SEARCH_SCIENTIFIC, $viruses);
+echo 'Updating ' . SEARCH_SCIENTIFIC . '...<br>';
+updateViruses(SPECIES_DETAILS, $viruses);
+echo 'Updating ' . TAXON_TREE . '...<br>';
+updateViruses(TAXON_TREE, $viruses);
+
 
 echo '</p><p><b>Converting taxonomic coverage column to database table</b><br>';
 echo 'Converting text to table...<br>';
@@ -442,21 +493,6 @@ while ($row = $stmt->fetch(PDO::FETCH_NUM)) {
         setPointsOfAttachment($row[0], $taxon_id);
     }
 }
-echo 'Deleting temporary indices from ' . SPECIES_DETAILS . '...<br>';
-foreach (array(
-    'kingdom_id',
-    'phylum_id',
-    'class_id',
-    'order_id',
-    'superfamily_id',
-    'family_id',
-    'genus_id',
-    'source_database_id'
-) as $index) {
-    $stmt = $pdo->prepare('ALTER TABLE ' . SPECIES_DETAILS . ' DROP INDEX ' . $index);
-    $stmt->execute();
-}
-
 echo '</p><p>Adding source databases to ' . TAXON_TREE . '...<br>';
 $query = 'SELECT t1.`taxon_id`,
               t1.`rank`,
@@ -473,21 +509,6 @@ while ($tt = $stmt->fetch(PDO::FETCH_ASSOC)) {
     $source_database_ids = getSourceDatabaseIds($tt);
     updateTaxonTree($tt['taxon_id'], $source_database_ids);
     $indicator->iterate();
-}
-
-echo '</p><p>Deleting subgenus from ' . TAXON_TREE . ' AND ' . SEARCH_SCIENTIFIC . '...<br>';
-$queries = array(
-    'UPDATE `' . TAXON_TREE . '` AS t1
-        LEFT JOIN `' . TAXON_TREE . '` AS t2 ON t1.`parent_id` = t2.`taxon_id`
-        SET t1.`parent_id` = t2.`parent_id`
-        WHERE t2.`rank` = "subgenus";',
-    'DELETE FROM `' . TAXON_TREE . '` WHERE `rank` = "subgenus";',
-    'DELETE FROM `' . SEARCH_SCIENTIFIC . '` WHERE `subgenus` != "" AND `species` = "";',
-    'DELETE FROM `' . SEARCH_ALL . '` WHERE `rank` = "subgenus";'
-);
-foreach ($queries as $query) {
-    $stmt = $pdo->prepare($query);
-    $stmt->execute();
 }
 
 echo '</p><p><b>Capitalizing valid hybrids in denormalized tables</b><br>';
@@ -561,9 +582,11 @@ $query = 'SELECT `id`, `family`, `genus`, `subgenus`, `species`, `infraspecies`,
 $stmt = $pdo->prepare($query);
 $stmt->execute();
 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-    $name = $row['genus'] . (!empty($row['subgenus']) ? ' (' . $row['subgenus'] . ')' : '') . ' ' . $row['species'] . (!empty($row['infraspecies']) ? ' ' . $row['infraspecies'] : '');
+    $name = $row['genus'] . (!empty($row['subgenus']) ? ' (' . $row['subgenus'] . ')' : '') .
+        ' ' . $row['species'] . (!empty($row['infraspecies']) ? ' ' . $row['infraspecies'] : '');
     // hash is combination of kingdom, name, status, author, infraspecific marker, accepted name and author
-    $hash = md5($row['family'] . $name . $row['author'] . $row['infraspecific_marker'] . $row['status'] . $row['accepted_species_name'] . $row['accepted_species_author']);
+    $hash = md5($row['family'] . $name . $row['author'] . $row['infraspecific_marker'] .
+        $row['status'] . $row['accepted_species_name'] . $row['accepted_species_author']);
     insertNaturalKey(array(
         $row['id'],
         $hash,
@@ -626,11 +649,67 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     ));
 }
 
+/*
+	$ht = array('kingdom', 'phylum', 'class', 'order', 'superfamily', 'family', 'genus');
+	$c = mysql_connect('localhost', 'root', 'root');
+	mysql_select_db('bs_latest', $c);
+	mysql_query('SET NAMES "utf8"');
+
+	$q = 'select count(`hash`), `hash`, `name` from `_natural_keys`
+		where `name` != "Not assigned" group by `hash` having count(`hash`) > 1';
+	$r = mysql_query($q);
+	while ($row = mysql_fetch_assoc($r)) {
+		echo '<p>' . $row['name'] . ', hash: ' . $row['hash'] . "<br>\n";
+		$q2 = 'SELECT `id`, `name_code` FROM `_natural_keys` WHERE `hash` = "' . $row['hash'] . '"';
+		$r2 = mysql_query($q2) or die(mysql_error() . $q2);
+		while ($row2 = mysql_fetch_assoc($r2)) {
+			$q3 = 'select * from `_search_scientific` WHERE `id` = ' . $row2['id'];
+			$r3 = mysql_query($q3) or die(mysql_error() . $q3);
+			$row3 = mysql_fetch_assoc($r3);
+			$header = !empty($row2['name_code']) ? 'Name code ' . $row2['name_code'] . ', classification: ' :
+				'Classification: ';
+			$path = '';
+			foreach ($ht as $rank) {
+				if ((strpos($row['name'], ' ') === false && $rank == 'genus') || empty($row3[$rank])) {
+					continue;
+				}
+				$path .= $row3[$rank] . ' &gt; ';
+			}
+			echo $header . (!empty($path) ? substr($path, 0, -6) : '- (common name)') . "<br>\n";
+		}
+		echo "</p>\n";
+	}
+*/
+
+
 echo '</p><p>Adding tree estimates...<br>';
 copyEstimates();
 
+echo '</p><p><b>Final housecleaning</b>
+    Deleting subgenus from ' . TAXON_TREE . ' AND ' . SEARCH_SCIENTIFIC . '...<br>';
+$queries = array(
+    'UPDATE `' . TAXON_TREE . '` AS t1
+        LEFT JOIN `' . TAXON_TREE . '` AS t2 ON t1.`parent_id` = t2.`taxon_id`
+        SET t1.`parent_id` = t2.`parent_id`
+        WHERE t2.`rank` = "subgenus";',
+    'DELETE FROM `' . TAXON_TREE . '` WHERE `rank` = "subgenus";',
+    'DELETE FROM `' . SEARCH_SCIENTIFIC . '` WHERE `subgenus` != "" AND `species` = "";',
+    'DELETE FROM `' . SEARCH_ALL . '` WHERE `rank` = "subgenus";'
+);
+foreach ($queries as $query) {
+    $stmt = $pdo->prepare($query);
+    $stmt->execute();
+}
+echo 'Deleting temporary indices...<br>';
+foreach ($tempIndices as $table => $indices) {
+    foreach ($indices as $index) {
+        $stmt = $pdo->prepare('ALTER TABLE ' . $table . ' DROP INDEX IF EXISTS ' . $index);
+        $stmt->execute();
+    }
+}
 
-echo '</p><p><b>Analyzing denormalized tables</b><br>';
+
+echo '</p><p><b>Optimizing denormalized tables</b><br>';
 foreach ($tables as $table => $indices) {
     echo "Analyzing table $table...<br>";
     $pdo->query('ANALYZE TABLE `' . $table . '`');
