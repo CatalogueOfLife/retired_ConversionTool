@@ -853,9 +853,11 @@ function setInfraspeciesSearch ($parent_hierarchy, $is_accepted_name) {
 
 function higherTaxaWithAcceptedNames () {
     $link = mysqlConnect();
-//    $taxa = array("subgenera" => "Subgenus", "genera" => "Genus" , "families" => "Family" , "superfamilies" => "Superfamily" ,
-//                  "orders" => "Order" , "classes" => "Class" , "phyla" => "Phylum" , "kingdoms" => "Kingdom");
-    $taxa = array("subgenera" => "Subgenus", "genera" => "Genus");
+    $taxa = array("subgenera" => "Subgenus", "genera" => "Genus" , "families" => "Family" , "superfamilies" => "Superfamily" ,
+                  "orders" => "Order" , "classes" => "Class" , "phyla" => "Phylum" , "kingdoms" => "Kingdom");
+
+    // Change line below to include dead ends in the tree!
+    // $taxa = array("subgenera" => "Subgenus", "genera" => "Genus");
     foreach ($taxa as $label => $rank) {
         echo "Finding $label with accepted names...<br>";
         $sql_query = "UPDATE `taxa` parent, `taxa` child
