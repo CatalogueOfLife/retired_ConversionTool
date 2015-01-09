@@ -34,6 +34,10 @@ taxon_ids = 1
 synonym_ids = 1
 infraspecies_parent_ids = 1
 
+[schema]
+; path to directory including base scheme and denormalized tables dumps
+path = /var/www/path
+
 [settings]
 version = @VERSION@
 revision = @REVISION@
