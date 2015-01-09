@@ -188,4 +188,27 @@ class Bs_Storer
         ));
         unset($stmt);
     }
+
+    // @TODO: doesn't work yet!
+    public function createDb ()
+    {
+        $config = parse_ini_file('config/AcToBs.ini', true);
+        $files = array(
+            'schema' => $config['schema']['path'] . 'baseschema-schema.sql',
+            'data' => $config['schema']['path'] . 'baseschema-data.sql'
+        );
+
+        $this->_dbh->query('DROP DATABASE '. $config['target']['dbname']);
+        $this->_dbh->query('CREATE DATABASE '. $config['target']['dbname']);
+
+        foreach ($files as $file) {
+            $sql = file_get_contents($file);
+            $stmt = $this->_dbh->prepare($sql);
+            try {
+                $stmt->execute();
+            } catch (PDOException $e) {
+                handleException("Cannot write sql dump", $e);
+            }
+        }
+    }
 }
