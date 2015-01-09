@@ -1,4 +1,5 @@
 <?php
+require_once 'library/bootstrap.php';
 $config = parse_ini_file('config/AcToBs.ini', true);
 $table = '<table style="margin: 25px 0;"><tr>';
 foreach ($config as $k => $v) {

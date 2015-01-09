@@ -11,6 +11,7 @@
 ini_set('memory_limit', '1024M');
 set_include_path('library' . PATH_SEPARATOR . get_include_path());
 
+require_once 'library/bootstrap.php';
 require_once 'library/BsOptimizerLibrary.php';
 require_once 'DbHandler.php';
 require_once 'Indicator.php';
@@ -18,9 +19,14 @@ require_once 'library/Zend/Log/Writer/Stream.php';
 require_once 'library/Zend/Log.php';
 alwaysFlush();
 
+$config = isset($argv) && isset($argv[1]) ?
+    parse_ini_file($argv[1], true) : parse_ini_file('config/AcToBs.ini', true);
+
+
+
 // Path to sql files
 //define('PATH', realpath('.') . '/docs_and_dumps/dumps/base_scheme/ac/');
-define('PATH', '/Users/ruud/ETI/Zend workbenches/Current/4D4Life Base Scheme (github)/ac/');
+define('PATH', $config['schema']['path'] . 'ac/');
 define('DENORMALIZED_TABLES_PATH', 'denormalized_tables/');
 
 // SQL for denormalized tables, .sql omitted!
@@ -202,14 +208,6 @@ $higherTaxa = array(
 );
 
 
-
-if (isset($argv) && isset($argv[1])) {
-    $config = parse_ini_file($argv[1], true);
-}
-else {
-    $config = parse_ini_file('config/AcToBs.ini', true);
-}
-
 foreach ($config as $k => $v) {
     $o = array();
     if (isset($v["options"])) {
@@ -227,10 +225,6 @@ $logger = new Zend_Log($writer);
 $indicator = new Indicator();
 
 $scriptStart = microtime(true);
-
-
-
-
 
 
 echo '<p>First denormalized tables are created and indices are created for the denormalized tables.
@@ -273,7 +267,10 @@ echo "Script took $runningTime seconds to complete<br></p>";
 
 echo '<p><br>Indices are created for denormalized tables.</p>';
 foreach ($tables as $table => $indices) {
-    echo "<p><b>Processing table $table...</b><br>";
+    if (empty($indices)) {
+        continue;
+    }
+    echo "<p><b>Processing table $table</b><br>";
     $pdo->query('ALTER TABLE `' . $table . '` DISABLE KEYS');
     foreach ($indices as $index) {
         $indexParameters = getOptimizedIndex($table, $index);
@@ -441,6 +438,21 @@ while ($id = $stmt->fetchColumn()) {
     updateTaxonTreeName($id);
 }
 
+echo 'Deleting subgenus from ' . TAXON_TREE . ' AND ' . SEARCH_SCIENTIFIC . '...<br>';
+$queries = array(
+    'UPDATE `' . TAXON_TREE . '` AS t1
+        LEFT JOIN `' . TAXON_TREE . '` AS t2 ON t1.`parent_id` = t2.`taxon_id`
+        SET t1.`parent_id` = t2.`parent_id`
+        WHERE t2.`rank` = "subgenus";',
+    'DELETE FROM `' . TAXON_TREE . '` WHERE `rank` = "subgenus";',
+    'DELETE FROM `' . SEARCH_SCIENTIFIC . '` WHERE `subgenus` != "" AND `species` = "";',
+    'DELETE FROM `' . SEARCH_ALL . '` WHERE `rank` = "subgenus";'
+);
+foreach ($queries as $query) {
+    $stmt = $pdo->prepare($query);
+    $stmt->execute();
+}
+
 echo '</p><p><b>Fixing virus names</b><br/>';
 echo 'Getting viruses from source database...<br/>';
 $viruses = getViruses();
@@ -493,6 +505,7 @@ while ($row = $stmt->fetch(PDO::FETCH_NUM)) {
         setPointsOfAttachment($row[0], $taxon_id);
     }
 }
+
 echo '</p><p>Adding source databases to ' . TAXON_TREE . '...<br>';
 $query = 'SELECT t1.`taxon_id`,
               t1.`rank`,
@@ -685,31 +698,14 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
 echo '</p><p>Adding tree estimates...<br>';
 copyEstimates();
 
-echo '</p><p><b>Final housecleaning</b>
-    Deleting subgenus from ' . TAXON_TREE . ' AND ' . SEARCH_SCIENTIFIC . '...<br>';
-$queries = array(
-    'UPDATE `' . TAXON_TREE . '` AS t1
-        LEFT JOIN `' . TAXON_TREE . '` AS t2 ON t1.`parent_id` = t2.`taxon_id`
-        SET t1.`parent_id` = t2.`parent_id`
-        WHERE t2.`rank` = "subgenus";',
-    'DELETE FROM `' . TAXON_TREE . '` WHERE `rank` = "subgenus";',
-    'DELETE FROM `' . SEARCH_SCIENTIFIC . '` WHERE `subgenus` != "" AND `species` = "";',
-    'DELETE FROM `' . SEARCH_ALL . '` WHERE `rank` = "subgenus";'
-);
-foreach ($queries as $query) {
-    $stmt = $pdo->prepare($query);
-    $stmt->execute();
-}
+echo '</p><p><b>Final housecleaning</b><br>';
 echo 'Deleting temporary indices...<br>';
 foreach ($tempIndices as $table => $indices) {
     foreach ($indices as $index) {
-        $stmt = $pdo->prepare('ALTER TABLE ' . $table . ' DROP INDEX IF EXISTS ' . $index);
+        $stmt = $pdo->prepare('ALTER TABLE ' . $table . ' DROP INDEX ' . $index);
         $stmt->execute();
     }
 }
-
-
-echo '</p><p><b>Optimizing denormalized tables</b><br>';
 foreach ($tables as $table => $indices) {
     echo "Analyzing table $table...<br>";
     $pdo->query('ANALYZE TABLE `' . $table . '`');

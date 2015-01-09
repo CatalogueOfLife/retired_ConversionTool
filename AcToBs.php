@@ -9,8 +9,10 @@
 
 <?php
 ini_set('memory_limit', '1024M');
+ini_set('display_errors', 1);
 set_include_path('library' . PATH_SEPARATOR . get_include_path());
 
+require_once 'library/bootstrap.php';
 require_once 'library/BsOptimizerLibrary.php';
 require_once 'DbHandler.php';
 require_once 'Dictionary.php';
@@ -50,6 +52,12 @@ $storer = new Bs_Storer(DbHandler::getInstance('target'), $logger, $ind);
 echo '<p>Clearing old data...<br>';
 $storer->clearDb();
 echo 'Done!</p>';
+
+/*
+echo '<p>Creating database...<br>';
+$storer->createDb();
+echo 'Done!</p>';
+*/
 
 echo '<p>Logging invalid taxa...<br>';
 logInvalidRecords($logger);

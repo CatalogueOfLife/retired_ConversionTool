@@ -568,6 +568,9 @@ function getSourceDatabaseIds ($tt)
         );
         // Extend for any rank but top level
         if ($tt['parent_id'] != 0) {
+            if (empty($tt['parent_rank'])) {
+                throw new Exception($tt['rank'] . ' ' . $tt['name'] . ' has no parent.');
+            }
             $query .= 'AND `' . strtolower($tt['parent_rank']) . '` = ? ';
             $params[] = $tt['parent_name'];
         }
@@ -609,6 +612,7 @@ function getSourceDatabaseIds ($tt)
     }
     catch (Exception $e) {
         echo $e->getMessage() . '<br>' . $query;
+        return array();
     }
 }
 
