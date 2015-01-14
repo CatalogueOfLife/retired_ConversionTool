@@ -26,7 +26,11 @@
     require 'taxonmatcher/LogEventListener.php';
     alwaysFlush();
 
-    $writer = new Zend_Log_Writer_Stream('logs/' . date("Y-m-d") . '-assembly-optimizer.log');
+    $logFile = 'logs/' . date("Y-m-d") . '-assembly-optimizer.log';
+    if (file_exists($logFile)) {
+        unlnik($logFile);
+    }
+    $writer = new Zend_Log_Writer_Stream($logFile);
     $logger = new Zend_Log($writer);
     $indicator = new Indicator();
 

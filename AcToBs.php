@@ -26,7 +26,11 @@ alwaysFlush();
 /**
  * Logger initialization
  */
-$writer = new Zend_Log_Writer_Stream('logs/' . date("Y-m-d") . '-converter.log');
+$logFile = 'logs/' . date("Y-m-d") . '-converter.log';
+if (file_exists($logFile)) {
+    unlnik($logFile);
+}
+$writer = new Zend_Log_Writer_Stream($logFile);
 $logger = new Zend_Log($writer);
 $ind = new Indicator();
 

@@ -728,8 +728,9 @@ function createTaxonTreeFunction ()
 function insertNaturalKey ($d)
 {
     $pdo = DbHandler::getInstance('target');
-    $insert = 'INSERT INTO `' . NATURAL_KEYS . '` (`id`, `hash`, `name`, `author`, `name_code`, `accepted`)
-        VALUES (?, ?, ?, ?, ?, ?)';
+    $insert = 'INSERT INTO `' . NATURAL_KEYS .
+        '` (`id`, `hash`, `name`, `author`, `name_code`, `accepted`, `status`)
+        VALUES (?, ?, ?, ?, ?, ?, ?)';
     $stmt = $pdo->prepare($insert);
     $stmt->execute($d);
 }
@@ -811,4 +812,54 @@ function updateViruses ($table, $viruses)
             }
             break;
     }
+}
+
+function updateFossilParents ()
+{
+    $pdo = DbHandler::getInstance('target');
+    for ($i = 0; $i < 10; $i++) {
+        $q = 'SELECT t2.`taxon_id`, COUNT(t1.`is_extinct`), t2.`number_of_children`
+            FROM ' . TAXON_TREE . ' AS t1
+            LEFT JOIN ' . TAXON_TREE . ' AS t2 ON t1.`parent_id` = t2.`taxon_id`
+            WHERE t1.`is_extinct` = 1 AND t1.`temp` = ?
+            GROUP BY t2.`taxon_id`
+            HAVING COUNT(t1.`is_extinct`) = t2.`number_of_children`';
+        $stmt = $pdo->prepare($q);
+        $stmt->execute(array($i));
+        while ($row = $stmt->fetch(PDO::FETCH_NUM)) {
+            $ids[] = $row[0];
+        }
+
+        if (!isset($ids)) {
+            return;
+        }
+
+        $q = 'UPDATE ' . TAXON_TREE . ' SET `has_modern` = ?, `has_preholocene` = ?,
+                `is_extinct` = ?, `temp` = ?
+            WHERE `taxon_id` IN (' . implode(',', $ids) . ')';
+        $stmt = $pdo->prepare($q);
+        $stmt->execute(array(0, 1, 1, ($i + 1)));
+
+        unset($ids);
+    }
+}
+
+function getNameStatuses ()
+{
+    $pdo = DbHandler::getInstance('target');
+    $stmt = $pdo->query('SELECT * FROM `scientific_name_status`');
+    $d[0] = 'higher taxon';
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $d[$row['id']] = $row['name_status'];
+    }
+     $d[6] = 'common name';
+    return $d;
+}
+
+function getSynonymNameCode ($id)
+{
+    $pdo = DbHandler::getInstance('target');
+    $stmt = $pdo->prepare('SELECT `original_id` FROM `synonym` WHERE `id` = ?');
+    $stmt->execute(array($id));
+    return $stmt->fetchColumn();
 }
