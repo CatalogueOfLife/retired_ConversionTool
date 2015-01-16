@@ -44,13 +44,14 @@ as  additional tables or columns may be required that were not yet present in
 previous editions. A new database can be created by importing the
 'baseschema-schema.sql' and 'baseschema-data.sql' SQL
 dump files at docs_and_dumps/dumps/base-scheme.</p>
-<p>The conversion is a three-step process:
+<p>The conversion is a four-step process:
 <ol>
 <li>the Assembly Database is post-processed: foreign keys are converted,
 a denormalized table is created and LSIDs are generated</li>
 <li>the data is imported into the new database</li>
 <li>several denormalized tables are created for the new database that
 speed up searching and browsing in the Annual Checklist interface</li>
+<li>the sitemap files for Google are updated</li>
 </ol></p>
 <p>Due to the nature of the base scheme database, the conversion is a
 lengthy process that will take several hours. Please refer to INSTALL.TXT

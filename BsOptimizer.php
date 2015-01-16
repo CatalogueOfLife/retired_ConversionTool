@@ -227,7 +227,7 @@
 
 
     $scriptStart = microtime(true);
-/*
+
     echo '<p>First denormalized tables are created and indices are created for the denormalized tables.
             Taxonomic coverage is processed from free text field to a dedicated database table to determine
             points of attachment for each GSD sector. Finally species estimates and source databases
@@ -446,16 +446,16 @@
         $stmt = $pdo->prepare($query);
         $stmt->execute();
     }
-*/
+
     echo '</p><p>Setting fossil flags to higher taxa in ' . TAXON_TREE . ' table...<br>';
     echo 'Creating temporary table...<br>';
-    $pdo->query("ALTER TABLE `" . TAXON_TREE . "` ADD `temp` SMALLINT NOT NULL DEFAULT '0'");
-    $pdo->query("ALTER TABLE `" . TAXON_TREE . "` ADD INDEX `temp` (`is_extinct`, `temp`, `number_of_children`)");
+    $pdo->query("ALTER TABLE `" . TAXON_TREE . "` ADD `delete_me` SMALLINT NOT NULL DEFAULT '0'");
+    $pdo->query("ALTER TABLE `" . TAXON_TREE . "` ADD INDEX `delete_me` (`is_extinct`, `temp`, `number_of_children`)");
     echo 'Setting fossil parents...<br>';
     updateFossilParents();
     echo 'Deleting temporary table...<br>';
-    $pdo->query("ALTER TABLE `" . TAXON_TREE . "` DROP INDEX `temp`");
-    $pdo->query("ALTER TABLE `" . TAXON_TREE . "` DROP COLUMN `temp`");
+    $pdo->query("ALTER TABLE `" . TAXON_TREE . "` DROP INDEX `delete_me`");
+    $pdo->query("ALTER TABLE `" . TAXON_TREE . "` DROP COLUMN `delete_me`");
 
     echo '</p><p><b>Fixing virus names</b><br/>';
     echo 'Getting viruses from source database...<br/>';
@@ -565,7 +565,6 @@
         ));
     }
 
-
     // Natural keys for accepted (infra)species
     echo '</p><p><b>Creating natural keys</b><br>Creating keys for valid (infra)species...<br>';
     $query = 'SELECT t1.`id`, t1.`family`, t1.`genus`, t1.`subgenus`, t1.`species`,
@@ -577,7 +576,7 @@
     $stmt->execute();
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         $name = $row['genus'] . (!empty($row['subgenus']) ? ' (' . $row['subgenus'] . ')' : '') . ' ' . $row['species'] . (!empty($row['infraspecies']) ? ' ' . $row['infraspecies'] : '');
-        // hash is combination of kingdom, name, status, author and infraspecific marker
+        // hash is combination of family, name, status, author and infraspecific marker
         $hash = md5($row['family'] . $name . $row['author'] . $row['infraspecific_marker'] . $row['status']);
         insertNaturalKey(array(
             $row['id'],
@@ -625,7 +624,7 @@
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         foreach ($higherTaxa as $rank) {
             if (!empty($row[$rank])) {
-                // hash is combination of kingdom, rank and taxon fro family and up
+                // hash is combination of kingdom, rank and taxon from family and up
                 // and family, rank and taxon for genera
                 $topLevel = $rank == 'genus' ? $row['family'] : $row['kingdom'];
                 $hash = md5($topLevel . $rank . $row[$rank]);
@@ -644,7 +643,6 @@
             }
         }
     }
-
 
     // Natural keys for common names
     echo 'Creating keys for common names...<br>';
@@ -668,17 +666,19 @@
             6
         ));
     }
-    $dupesLogFile = 'logs/' . date("Y-m-d") . '-duplicates.log';
+
+    // Create log of duplicates
+    $dupesLogFile = 'logs/' . date("Y-m-d") . '-duplicate-natural-keys.log';
     if (file_exists($dupesLogFile)) {
         unlink($dupesLogFile);
     }
-    $dupesWriter = new Zend_Log_Writer_Stream('logs/' . date("Y-m-d") . '-duplicates.log');
+    $dupesWriter = new Zend_Log_Writer_Stream($dupesLogFile);
     $dupesLogger = new Zend_Log($dupesWriter);
 
     $nameStatuses = getNameStatuses();
     $rHigherTaxa = array_reverse($higherTaxa);
 
-    echo 'Logging duplicate natural keys...';
+    echo 'Logging duplicate natural keys...<br>';
     $q = 'SELECT COUNT(`hash`) AS x, `hash`, `name`, `status`
         FROM `_natural_keys`
     	WHERE `name` != "Not assigned"
@@ -687,30 +687,57 @@
     	ORDER BY FIELD(`status`, 1, 4, 2, 3, 5, 6), `name`';
     $stmt = $pdo->query($q);
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-    	$m = "\n" . ucfirst($nameStatuses[$row['status']]) . ": " . $row['name'] . "\n" .
-    	   'Hash: ' . $row['hash'] . "\n";
     	$q2 = 'SELECT `id`, `name_code`, `accepted` FROM `_natural_keys` WHERE `hash` = ?';
     	$stmt2 = $pdo->prepare($q2);
     	$stmt2->execute(array($row['hash']));
+
     	$codes = $paths = array();
+    	$i = 0;
     	while ($row2 = $stmt2->fetch(PDO::FETCH_ASSOC)) {
-    		$q3 = 'SELECT `' . implode('`, `', $rHigherTaxa) . '` FROM `_search_scientific` WHERE `id` = ?';
+    		$q3 = 'SELECT `' . implode('`, `', $rHigherTaxa) . '`, `subgenus`, `species`, `infraspecies`,
+                `infraspecific_marker`, `author`, `accepted_species_name`, `accepted_species_author`
+                FROM `_search_scientific` WHERE `id` = ?';
     		$stmt3 = $pdo->prepare($q3);
     		$stmt3->execute(array($row2['id']));
     		$row3 = $stmt3->fetchAll(PDO::FETCH_ASSOC);
+    	    if ($i == 0) {
+                $name = $row['name'];
+                // Add infraspecific marker to infraspecies
+                if (!empty($row3[0]['infraspecific_marker'])) {
+                    $name = trim($row3[0]['genus'] . ' ' .
+                        (!empty($row3[0]['subgenus']) ? '(' . $row3[0]['subgenus'] . ') ' : '') .
+                        $row3[0]['species'] . ' ' .
+                        $row3[0]['infraspecific_marker'] . ' ' . $row3[0]['infraspecies'] . ' ' .
+                        $row3[0]['author']);
+                }
+                // Add rank to higher taxa
+                if ($row['status'] == 0) {
+                     $name = trim(ucfirst(getTaxonRank($row2['id'])) . ' ' . $name . $row3[0]['author']);
+                // Add accepted name to synonym
+                } else if (in_array($row['status'], array(2, 3, 5))) {
+                    $name .= "\nSynonym for: " . $row3[0]['accepted_species_name'] . ' ' .
+                        $row3[0]['accepted_species_author'];
+    	        // Add scientific name and name code to common name
+                } else if ($row['status'] == 6) {
+                    $name .= "\nCommon name for: " . getAcceptedNameForCommonName($row2['id']);
+                }
+                $m = "\n" . ucfirst($nameStatuses[$row['status']]) . ": $name\n" .
+            	   'Hash: ' . $row['hash'] . "\n";
+            }
     		if (!empty($row2['name_code'])) {
     		    $codes[] = $row2['name_code'];
     		}
     		if (in_array($row['status'], array(0, 1, 4))) {
         		$path = '';
         		foreach ($rHigherTaxa as $rank) {
-        			if ((strpos($row['name'], ' ') === false && $rank == 'genus') || empty($row3[0][$rank])) {
-        				continue;
+        			if (!empty($row3[0][$rank])) {
+        				$path .= $row3[0][$rank] . ' > ';
         			}
-        			$path .= $row3[0][$rank] . ' > ';
         		}
-        		$paths[] = $path;
+        		$paths[] = substr($path, 0, -3) .
+                    (!empty($row2['name_code']) ? ' (' . $row2['name_code'] . ')' : '');
     		}
+    		$i++;
     	}
     	if (isset($codes) && !empty($codes)) {
             $m .= 'Name code(s): ' . implode(', ', array_unique($codes)) . "\n";
@@ -718,12 +745,104 @@
         if (isset($paths) && !empty($paths)) {
             $m .= "Classifications:\n";
         	foreach ($paths as $path) {
-    	       $m .= substr($path, 0, -3) . "\n";
+    	       $m .=  $path . "\n";
             }
     	}
     	$dupesLogger->err($m);
     }
 
+
+    // Create log of duplicates
+    echo 'Logging duplicate accepted taxa and synonyms...<br>';
+    $dupesLogFile = 'logs/' . date("Y-m-d") . '-duplicate-names.log';
+    if (file_exists($dupesLogFile)) {
+        unlink($dupesLogFile);
+    }
+    $dupesWriter = new Zend_Log_Writer_Stream($dupesLogFile);
+    $dupesLogger = new Zend_Log($dupesWriter);
+
+    $nameStatuses = getNameStatuses();
+    $rHigherTaxa = array_reverse($higherTaxa);
+
+    $pdo->query('ALTER TABLE `_search_scientific`
+        ADD INDEX `delete_me` (`genus`(20), `subgenus`(20), `species`(30),
+        `infraspecific_marker`(5), `infraspecies`(30), `author`(50), `status`(1),
+        `accepted_species_name`(100), `accepted_species_author`(50))');
+    echo 'Logging duplicate accepted taxa and synonyms...';
+    $q = 'SELECT COUNT(*), `genus`, `subgenus`, `species`, `infraspecific_marker`, `infraspecies`,
+            `author`, `status`, `accepted_species_name`, `accepted_species_author`
+        FROM `_search_scientific`
+        WHERE `genus` != "" AND `species` != ""
+        GROUP BY `genus`, `subgenus`, `species`, `infraspecific_marker`, `infraspecies`, `author`,
+            `status`, `accepted_species_name`, `accepted_species_author`
+        HAVING COUNT(*) > 1
+        ORDER BY FIELD(`status`, 1, 4, 2, 3, 5), `genus`, `species`, `infraspecies`';
+    $stmt = $pdo->query($q);
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+    	$q2 = 'SELECT t2.`name_code`, t1.`' . implode('`, t1.`', $rHigherTaxa) . '`
+            FROM `_search_scientific` AS t1
+            LEFT JOIN `_natural_keys` AS t2 ON t1.`id` = t2.`id`
+ 	        WHERE t1.`genus` = ? AND t1.`subgenus` = ? AND t1.`species` = ? AND t1.`infraspecific_marker` = ? AND
+	           t1.`infraspecies` = ? AND t1.`author` = ? AND t1.`status` = ? AND t1.`accepted_species_name` = ? AND
+	           t1.`accepted_species_author` = ?';
+    	$stmt2 = $pdo->prepare($q2);
+    	$stmt2->execute(array(
+            $row['genus'],
+        	$row['subgenus'],
+        	$row['species'],
+        	$row['infraspecific_marker'],
+        	$row['infraspecies'],
+        	$row['author'],
+            $row['status'],
+        	$row['accepted_species_name'],
+        	$row['accepted_species_author']
+    	));
+
+    	$codes = $paths = array();
+    	$i = 0;
+    	while ($row2 = $stmt2->fetch(PDO::FETCH_ASSOC)) {
+    	    if ($i == 0) {
+                $name = trim($row['genus'] . ' ' .
+                    (!empty($row['subgenus']) ? '(' . $row['subgenus'] . ') ' : '') .
+                    $row['species'] . ' ' .
+                    (!empty($row['infraspecific_marker']) ? $row['infraspecific_marker'] . ' ' : '') .
+                    (!empty($row['infraspecies']) ? $row['infraspecies'] . ' ' : '') .
+                    (!empty($row['author']) ? $row['author'] : ''));
+
+                // Add accepted name to synonym
+                if (in_array($row['status'], array(2, 3, 5))) {
+                    $name .= "\nSynonym for: " . $row['accepted_species_name'] . ' ' .
+                        $row['accepted_species_author'];
+                }
+                $m = "\n" . ucfirst($nameStatuses[$row['status']]) . ": $name\n";
+            }
+    		if (!empty($row2['name_code'])) {
+    		    $codes[] = $row2['name_code'];
+    		}
+    		if (in_array($row['status'], array(1, 4))) {
+        		$path = '';
+        		foreach ($rHigherTaxa as $rank) {
+        			if (!empty($row2[$rank])) {
+        				$path .= $row2[$rank] . ' > ';
+        			}
+        		}
+        		$paths[] = substr($path, 0, -3) .
+                    (!empty($row2['name_code']) ? ' (' . $row2['name_code'] . ')' : '');
+    		}
+    		$i++;
+    	}
+    	if (isset($codes) && !empty($codes)) {
+            $m .= 'Name code(s): ' . implode(', ', array_unique($codes)) . "\n";
+    	}
+        if (isset($paths) && !empty($paths)) {
+            $m .= "Classifications:\n";
+        	foreach ($paths as $path) {
+    	       $m .=  $path . "\n";
+            }
+    	}
+    	$dupesLogger->err($m);
+    }
+    $pdo->query('ALTER TABLE `_search_scientific` DROP INDEX `delete_me`');
 
     echo '</p><p><b>Tree estimates</b><br>Copying tree estimates...<br>';
     copyEstimates();
@@ -742,7 +861,8 @@
     }
 
     $totalTime = round(microtime(true) - $scriptStart);
-    echo '</p><p>Ready! Optimalization took ' . $indicator->formatTime($totalTime) . '.</p>';
+    echo '</p><p>Optimalization took ' . $indicator->formatTime($totalTime) . '.
+        As a final step, <a href="sitemaps.php">update the sitemap files</a>.</p>';
 
 ?>
 </body>

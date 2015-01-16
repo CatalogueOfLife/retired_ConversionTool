@@ -1,3 +1,4 @@
+<?php require_once 'library/BsOptimizerLibrary.php'; ?>
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
 <head>
@@ -6,8 +7,6 @@
 </head>
 <body style="font: 11px verdana; width: 600px;">
 <h3>Annual Checklist sitemaps</h3>
-<p style="font-size: 10px; margin-bottom: 20px;">
-<p>Creating sitemaps...</p>
 
 <?php
 set_time_limit(0);
@@ -35,10 +34,13 @@ $writer = new Zend_Log_Writer_Stream('logs/' . date("Y-m-d") . '-sitemap-creator
 $logger = new Zend_Log($writer);
 $indicator = new Indicator();
 
+
 $batchSize = 45000;
 $file = $config['sitemaps']['sitemapPath'] . 'sitemap_';
 $baseUrl = $config['sitemaps']['sitemapBaseUrl'];
 
+echo "Deleting old sitemap files...<br>";
+clearSiteMaps();
 
 // Write sitemap files
 $xmlWriter = new XMLWriter();
@@ -49,6 +51,9 @@ $xmlWriter->setIndentString("   ");
 $r = $pdo->query('SELECT COUNT(DISTINCT `id`)
 	FROM `_search_all` WHERE `rank` IN ("species", "infraspecies")');
 $total = $r->fetchColumn();
+echo "Writing sitemap files for $total urls...</p><p>";
+$indicator->init($total, 75, 1000);
+
 $stmt = $config['sitemaps']['naturalKeys'] == 0 ?
     $pdo->prepare(
     	'SELECT DISTINCT `id`, `name_status`, `accepted_taxon_id`
@@ -80,6 +85,7 @@ for ($offset = 0; $offset < $total; $offset += $batchSize) {
 	$stmt->execute();
 
 	while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+		$indicator->iterate();
 		switch ($row['name_status']) {
 			case 1:
 			case 4:
@@ -106,6 +112,7 @@ for ($offset = 0; $offset < $total; $offset += $batchSize) {
 }
 
 // Write index
+echo "</p><p>Writing sitemap index file...";
 $file = 'sitemaps/sitemap_index.xml';
 if (file_exists($file)) {
 	unlink($file);
@@ -125,5 +132,5 @@ for ($i = 1; $i <= $fileNr; $i++) {
 $xmlWriter->endElement();
 file_put_contents($file, $xmlWriter->flush(true), FILE_APPEND);
 
-echo 'done!';
+echo 'Done!</p>';
 ?>

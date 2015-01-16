@@ -863,3 +863,65 @@ function getSynonymNameCode ($id)
     $stmt->execute(array($id));
     return $stmt->fetchColumn();
 }
+
+function getLogs ()
+{
+    $files = array();
+    $dir = dirname(__FILE__) . '/../logs';
+    isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] ? $http = 'https://' : $http = 'http://';
+    $d = dir($dir);
+    while (false !== ($file = $d->read())) {
+        if (is_numeric(substr($file, 0, 4)) && !is_dir($file)) {
+            list($year, $month, $day) = explode('-', $file);
+            $files[$year.$month.$day] = "<a href='logs/$file'>$file</a> (" .
+                getDownloadSize("logs/$file") . ')';
+        }
+    }
+    $d->close();
+    krsort($files);
+    return $files;
+}
+
+function clearSiteMaps ()
+{
+    $files = array();
+    $dir = dirname(__FILE__) . '/../sitemaps';
+    $d = dir($dir);
+    while (false !== ($file = $d->read())) {
+        if (!is_dir($file) && file_exists($dir . '/' . $file)) {
+            unlink($dir . '/' . $file);
+        }
+    }
+    $d->close();
+}
+
+
+function getDownloadSize ($path)
+{
+    $sizeKb = filesize($path) / 1024;
+    $size = round($sizeKb, 1) . ' KB';
+    if ($sizeKb > 999) {
+        $size = round($sizeKb / 1024, 1) . ' MB';
+    }
+    return $size;
+}
+
+function getTaxonRank ($id) {
+    $pdo = DbHandler::getInstance('target');
+    $stmt = $pdo->prepare('SELECT `rank` FROM `' . SEARCH_ALL . '` WHERE `id` = ?');
+    $stmt->execute(array($id));
+    return $stmt->fetchColumn();
+}
+
+function getAcceptedNameForCommonName ($id)
+{
+    $pdo = DbHandler::getInstance('target');
+    $stmt = $pdo->prepare('SELECT `name_status_suffix`, `name_status_suffix_suffix`
+        FROM `' . SEARCH_ALL . '` WHERE `id` = ?');
+    $stmt->execute(array($id));
+    $row = $stmt->fetchAll(PDO::FETCH_NUM);
+    if ($row) {
+        return $row[0][0] . ' ' . html_entity_decode($row[0][1]);
+    }
+    return null;
+}
