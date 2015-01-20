@@ -821,7 +821,7 @@ function updateFossilParents ()
         $q = 'SELECT t2.`taxon_id`, COUNT(t1.`is_extinct`), t2.`number_of_children`
             FROM ' . TAXON_TREE . ' AS t1
             LEFT JOIN ' . TAXON_TREE . ' AS t2 ON t1.`parent_id` = t2.`taxon_id`
-            WHERE t1.`is_extinct` = 1 AND t1.`temp` = ?
+            WHERE t1.`is_extinct` = 1 AND t1.`delete_me` = ?
             GROUP BY t2.`taxon_id`
             HAVING COUNT(t1.`is_extinct`) = t2.`number_of_children`';
         $stmt = $pdo->prepare($q);
@@ -835,7 +835,7 @@ function updateFossilParents ()
         }
 
         $q = 'UPDATE ' . TAXON_TREE . ' SET `has_modern` = ?, `has_preholocene` = ?,
-                `is_extinct` = ?, `temp` = ?
+                `is_extinct` = ?, `delete_me` = ?
             WHERE `taxon_id` IN (' . implode(',', $ids) . ')';
         $stmt = $pdo->prepare($q);
         $stmt->execute(array(0, 1, 1, ($i + 1)));

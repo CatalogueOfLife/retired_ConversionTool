@@ -104,12 +104,18 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
             'WHERE `record_id` = ? '
         );
         //$stmt->setFetchMode(PDO::FETCH_INTO);
-        $stmt->execute(array($taxon->id));
-        $data = $stmt->fetch(PDO::FETCH_ASSOC);
-        foreach ($data as $propName => $propValue) {
-            $taxon->{$propName} = $propValue;
+
+        try {
+            $stmt->execute(array($taxon->id));
+            $data = $stmt->fetch(PDO::FETCH_ASSOC);
+            foreach ($data as $propName => $propValue) {
+                $taxon->{$propName} = $propValue;
+            }
+            unset($stmt);
+         }
+        catch (PDOException $e) {
+            $logger->err("\nNo taxon details for $taxon->id");
         }
-        unset($stmt);
         return $taxon;
     }
 

@@ -163,7 +163,7 @@
             'accepted_species_id'
         ),
         SEARCH_ALL => array(
-            'temp'
+            'delete_me'
         ),
         SEARCH_SCIENTIFIC => array(
             'subgenus'
@@ -450,7 +450,7 @@
     echo '</p><p>Setting fossil flags to higher taxa in ' . TAXON_TREE . ' table...<br>';
     echo 'Creating temporary table...<br>';
     $pdo->query("ALTER TABLE `" . TAXON_TREE . "` ADD `delete_me` SMALLINT NOT NULL DEFAULT '0'");
-    $pdo->query("ALTER TABLE `" . TAXON_TREE . "` ADD INDEX `delete_me` (`is_extinct`, `temp`, `number_of_children`)");
+    $pdo->query("ALTER TABLE `" . TAXON_TREE . "` ADD INDEX `delete_me` (`is_extinct`, `delete_me`, `number_of_children`)");
     echo 'Setting fossil parents...<br>';
     updateFossilParents();
     echo 'Deleting temporary table...<br>';
@@ -577,7 +577,8 @@
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         $name = $row['genus'] . (!empty($row['subgenus']) ? ' (' . $row['subgenus'] . ')' : '') . ' ' . $row['species'] . (!empty($row['infraspecies']) ? ' ' . $row['infraspecies'] : '');
         // hash is combination of family, name, status, author and infraspecific marker
-        $hash = md5($row['family'] . $name . $row['author'] . $row['infraspecific_marker'] . $row['status']);
+        //$hash = md5($row['family'] . $name . $row['author'] . $row['infraspecific_marker'] . $row['status']);
+        $hash = md5($row['family'] . $name . $row['infraspecific_marker'] . $row['status']);
         insertNaturalKey(array(
             $row['id'],
             $hash,
