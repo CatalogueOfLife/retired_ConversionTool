@@ -925,3 +925,38 @@ function getAcceptedNameForCommonName ($id)
     }
     return null;
 }
+
+function fputcsv2 ($fh, array $fields, $del = ',', $sep = '"', $mysql_null = false)
+{
+    $del_esc = preg_quote($del, '/');
+    $sep_esc = preg_quote($sep, '/');
+
+    $output = array();
+    foreach ($fields as $field) {
+        if ($field === null && $mysql_null) {
+            $output[] = 'NULL';
+            continue;
+        }
+        $field = cleanString($field);
+        $output[] = preg_match("/(?:${del_esc}|${sep_esc}|\s)/", $field) ? ($sep . str_replace(
+            $sep, $sep . $sep, $field) . $sep) : $field;
+    }
+
+    fwrite($fh, join($del, $output) . "\n");
+}
+
+function cleanString ($str)
+{
+    // Characters to remove
+    $delete = array("\r", "\n", "\r\n", "\\");
+    // Characters to transfer to space
+    $space = array("\t" );
+    // Characters to find...
+    $find = array('""');
+    //... and replace with...
+    $replace = array('"');
+    return str_replace($find, $replace,
+        str_replace($space, ' ',
+        str_replace($delete, '', $str)
+    ));
+}
