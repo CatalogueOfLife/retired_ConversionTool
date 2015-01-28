@@ -960,3 +960,7 @@ function cleanString ($str)
         str_replace($delete, '', $str)
     ));
 }
+
+function hashCoL ($s) {
+    return md5(strtolower(str_replace(' ', '_', normalizer_normalize($s))));
+}

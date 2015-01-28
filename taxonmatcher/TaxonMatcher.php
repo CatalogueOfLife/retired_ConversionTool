@@ -301,6 +301,7 @@ class TaxonMatcher {
 		$table = $this->_getStagingTable($dbName);
 
 		$this->_exec("ALTER TABLE {$table} DISABLE KEYS");
+		$this->_exec("SET group_concat_max_len=50000");
 
 		$whereClause = $this->_taxonNameFilter === null ? "" : "WHERE genus LIKE '{$this->_taxonNameFilter}'";
 

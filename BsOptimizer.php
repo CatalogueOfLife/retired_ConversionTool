@@ -119,7 +119,6 @@
             'species',
             'infraspecies',
             'genus, species, infraspecies',
-            'status',
             'accepted_species_id',
             'accepted_species_id[0], genus[15], subgenus[10], species[10], infraspecies[10]',
             'accepted_species_id[0], genus[10]',
@@ -319,7 +318,7 @@
     }
 
     echo '&nbsp;&nbsp;&nbsp; Creating temporary column to mark rows that should be processed...<br>';
-    $query = 'ALTER TABLE `' . SEARCH_ALL . '` ADD `delete_me` TINYINT( 1 ) NOT NULL , ADD INDEX ( `delete_me` ) ';
+    $query = 'ALTER TABLE `' . SEARCH_ALL . '` ADD `delete_me` TINYINT( 1 ) NOT NULL, ADD INDEX ( `delete_me` ) ';
     $stmt = $pdo->prepare($query);
     $stmt->execute();
     echo '&nbsp;&nbsp;&nbsp; Marking rows with name elements containing spaces...<br>';
@@ -454,7 +453,6 @@
     echo 'Setting fossil parents...<br>';
     updateFossilParents();
     echo 'Deleting temporary table...<br>';
-    //$pdo->query("ALTER TABLE `" . TAXON_TREE . "` DROP INDEX `delete_me`");
     $pdo->query("ALTER TABLE `" . TAXON_TREE . "` DROP COLUMN `delete_me`");
 
     echo '</p><p><b>Fixing virus names</b><br/>';
@@ -577,8 +575,7 @@
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         $name = $row['genus'] . (!empty($row['subgenus']) ? ' (' . $row['subgenus'] . ')' : '') . ' ' . $row['species'] . (!empty($row['infraspecies']) ? ' ' . $row['infraspecies'] : '');
         // hash is combination of family, name, status, author and infraspecific marker
-        //$hash = md5($row['family'] . $name . $row['author'] . $row['infraspecific_marker'] . $row['status']);
-        $hash = md5($row['family'] . $name . $row['infraspecific_marker'] . $row['status']);
+        $hash = hashCoL($row['family'] . $name . $row['author'] . $row['infraspecific_marker'] . $row['status']);
         insertNaturalKey(array(
             $row['id'],
             $hash,
@@ -602,7 +599,7 @@
         $name = $row['genus'] . (!empty($row['subgenus']) ? ' (' . $row['subgenus'] . ')' : '') .
             ' ' . $row['species'] . (!empty($row['infraspecies']) ? ' ' . $row['infraspecies'] : '');
         // hash is combination of kingdom, name, status, author, infraspecific marker, accepted name and author
-        $hash = md5($row['family'] . $name . $row['author'] . $row['infraspecific_marker'] .
+        $hash = hashCoL($row['family'] . $name . $row['author'] . $row['infraspecific_marker'] .
             $row['status'] . $row['accepted_species_name'] . $row['accepted_species_author']);
         insertNaturalKey(array(
             $row['id'],
@@ -627,8 +624,8 @@
             if (!empty($row[$rank])) {
                 // hash is combination of kingdom, rank and taxon from family and up
                 // and family, rank and taxon for genera
-                $topLevel = $rank == 'genus' ? $row['family'] : $row['kingdom'];
-                $hash = md5($topLevel . $rank . $row[$rank]);
+                $topLevel = $rank == 'genus' ? $row['family'] : $row['phylum'];
+                $hash = hashCoL($topLevel . $rank . $row[$rank]);
                 if ($row[$rank] != 'Not assigned') {
                     insertNaturalKey(array(
                         $row['id'],
@@ -656,7 +653,7 @@
     $stmt = $pdo->prepare($query);
     $stmt->execute();
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        $hash = md5($row['family'] . $row['common_name'] . $row['language'] . $row['scientific_name'] . $row['author']);
+        $hash = hashCoL($row['family'] . $row['common_name'] . $row['language'] . $row['scientific_name'] . $row['author']);
         insertNaturalKey(array(
             $row['id'],
             $hash,
@@ -743,10 +740,6 @@
 
     $fp = fopen($dupesCsvFile2, 'w');
     fputcsv2($fp, array('Status', 'Name', 'Name code', 'Info', 'Classification'), chr(9), '');
-    $pdo->query('ALTER TABLE `_search_scientific`
-        ADD INDEX `delete_me` (`genus`(20), `subgenus`(20), `species`(30),
-        `infraspecific_marker`(5), `infraspecies`(30), `author`(50), `status`(1),
-        `accepted_species_name`(100), `accepted_species_author`(50))');
     $q = 'SELECT COUNT(*), `genus`, `subgenus`, `species`, `infraspecific_marker`, `infraspecies`,
             `author`, `status`, `accepted_species_name`, `accepted_species_author`
         FROM `_search_scientific`
@@ -811,8 +804,13 @@
     foreach ($tempIndices as $table => $indices) {
         $pdo->prepare('ALTER TABLE `' . $table . '` DISABLE KEYS');
         foreach ($indices as $index) {
-            $stmt = $pdo->prepare('ALTER TABLE `' . $table . '` DROP INDEX ' . $index);
-            $stmt->execute();
+            try {
+                $stmt = $pdo->prepare('ALTER TABLE `' . $table . '` DROP INDEX ' . $index);
+                $stmt->execute();
+            }
+            catch (PDOException $e) {
+                $logger->err("Cannot drop index $index in $table");
+            }
         }
         $pdo->prepare('ALTER TABLE `' . $table . '` ENABLE KEYS');
     }
