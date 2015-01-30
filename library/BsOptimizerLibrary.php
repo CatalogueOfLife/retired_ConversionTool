@@ -876,7 +876,7 @@ function getLogs ()
         if (is_numeric(substr($file, 0, 4)) && !is_dir($file)) {
             $size = getDownloadSize("logs/$file");
             if ($size > 0) {
-                $files[substr($file, 0, 10) . $i] = "<a href='logs/$file'>$file</a> (" . $size . ')';
+                $files[substr($file, 0, 13) . $i] = "<a href='logs/$file'>$file</a> (" . $size . ')';
             }
         }
     }
