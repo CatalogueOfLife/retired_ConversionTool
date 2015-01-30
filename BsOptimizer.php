@@ -165,8 +165,7 @@
             'delete_me'
         ),
         SEARCH_SCIENTIFIC => array(
-            'subgenus',
-            'delete_me'
+            'subgenus'
         )
     );
 
@@ -653,7 +652,8 @@
     $stmt = $pdo->prepare($query);
     $stmt->execute();
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        $hash = hashCoL($row['family'] . $row['common_name'] . $row['language'] . $row['scientific_name'] . $row['author']);
+        $hash = hashCoL($row['family'] . $row['common_name'] . $row['language'] .
+            $row['scientific_name'] . $row['author'], false);
         insertNaturalKey(array(
             $row['id'],
             $hash,

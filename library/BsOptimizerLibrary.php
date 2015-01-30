@@ -870,11 +870,14 @@ function getLogs ()
     $dir = dirname(__FILE__) . '/../logs';
     isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] ? $http = 'https://' : $http = 'http://';
     $d = dir($dir);
+    $i = 0;
     while (false !== ($file = $d->read())) {
+        $i++;
         if (is_numeric(substr($file, 0, 4)) && !is_dir($file)) {
-            list($year, $month, $day) = explode('-', $file);
-            $files[$year.$month.$day] = "<a href='logs/$file'>$file</a> (" .
-                getDownloadSize("logs/$file") . ')';
+            $size = getDownloadSize("logs/$file");
+            if ($size > 0) {
+                $files[substr($file, 0, 10) . $i] = "<a href='logs/$file'>$file</a> (" . $size . ')';
+            }
         }
     }
     $d->close();
@@ -961,6 +964,9 @@ function cleanString ($str)
     ));
 }
 
-function hashCoL ($s) {
-    return md5(strtolower(str_replace(' ', '_', normalizer_normalize($s))));
+function hashCoL ($s, $removeDiacritical = true) {
+    if ($removeDiacritical) {
+        $s = iconv('UTF-8', 'ASCII//TRANSLIT', $s);
+    }
+    return md5(strtolower(str_replace(' ', '_', $s)));
 }
