@@ -572,9 +572,10 @@
     $stmt = $pdo->prepare($query);
     $stmt->execute();
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        $name = $row['genus'] . (!empty($row['subgenus']) ? ' (' . $row['subgenus'] . ')' : '') . ' ' . $row['species'] . (!empty($row['infraspecies']) ? ' ' . $row['infraspecies'] : '');
+        $name = $row['genus'] . (!empty($row['subgenus']) ? ' (' . $row['subgenus'] . ')' : '') .
+            ' ' . $row['species'] . (!empty($row['infraspecies']) ? ' ' . $row['infraspecies'] : '');
         // hash is combination of family, name, status, author and infraspecific marker
-        $hash = hashCoL($row['family'] . $name . $row['author'] . $row['infraspecific_marker'] . $row['status']);
+        $hash = hashCoL($row['family'] . $name . $row['author'] . $row['infraspecific_marker']);
         insertNaturalKey(array(
             $row['id'],
             $hash,
@@ -598,8 +599,7 @@
         $name = $row['genus'] . (!empty($row['subgenus']) ? ' (' . $row['subgenus'] . ')' : '') .
             ' ' . $row['species'] . (!empty($row['infraspecies']) ? ' ' . $row['infraspecies'] : '');
         // hash is combination of kingdom, name, status, author, infraspecific marker, accepted name and author
-        $hash = hashCoL($row['family'] . $name . $row['author'] . $row['infraspecific_marker'] .
-            $row['status'] . $row['accepted_species_name'] . $row['accepted_species_author']);
+        $hash = hashCoL($row['family'] . $name . $row['author'] . $row['infraspecific_marker']);
         insertNaturalKey(array(
             $row['id'],
             $hash,
