@@ -4,7 +4,7 @@
 <meta http-equiv="content-type" content="text/html; charset=utf-8">
 <title>Annual Checklist to Base Scheme</title>
 </head>
-<body style="font: 11px verdana;">
+<body style="font: 12px verdana; width: 800px;">
 <h3>Annual Checklist to Base Scheme</h3>
 
 <?php
@@ -53,15 +53,9 @@ foreach ($config as $k => $v) {
 $loader = new Ac_Loader(DbHandler::getInstance('source'), $logger);
 $storer = new Bs_Storer(DbHandler::getInstance('target'), $logger, $ind);
 
-echo '<p>Clearing old data...<br>';
-$storer->clearDb();
+echo '<p>Recreating database...<br>';
+$storer->recreateDb();
 echo 'Done!</p>';
-
-/*
-echo '<p>Creating database...<br>';
-$storer->createDb();
-echo 'Done!</p>';
-*/
 
 echo '<p>Logging invalid taxa...<br>';
 logInvalidRecords($logger);

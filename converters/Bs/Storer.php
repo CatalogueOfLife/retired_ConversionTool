@@ -189,18 +189,19 @@ class Bs_Storer
         unset($stmt);
     }
 
-    // @TODO: doesn't work yet!
-    public function createDb ()
+    public function recreateDb ()
     {
         $config = parse_ini_file('config/AcToBs.ini', true);
         $files = array(
             'schema' => $config['schema']['path'] . 'baseschema-schema.sql',
             'data' => $config['schema']['path'] . 'baseschema-data.sql'
         );
-
-        $this->_dbh->query('DROP DATABASE '. $config['target']['dbname']);
-        $this->_dbh->query('CREATE DATABASE '. $config['target']['dbname']);
-
+        $this->_dbh->query('SET FOREIGN_KEY_CHECKS = 0');
+        $stmt = $this->_dbh->query('SHOW TABLES');
+        $tables = $stmt->fetchAll(PDO::FETCH_NUM);
+        foreach ($tables as $table) {
+            $this->_dbh->query('DROP TABLE IF EXISTS `' . $table[0] . '`');
+        }
         foreach ($files as $file) {
             $sql = file_get_contents($file);
             $stmt = $this->_dbh->prepare($sql);
@@ -210,5 +211,7 @@ class Bs_Storer
                 handleException("Cannot write sql dump", $e);
             }
         }
+        $stmt->closeCursor();
+        $this->_dbh->query('SET FOREIGN_KEY_CHECKS = 1');
     }
 }

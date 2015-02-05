@@ -5,7 +5,7 @@
   <meta http-equiv="content-type" content="text/html; charset=utf-8">
   <title>Assembly Database Optimizer</title>
   <style>
-     body {font: 11px verdana; width: 700px;}
+     body {font: 12px verdana; width: 800px;}
      p.taxon-matcher-msg-8 {margin:0;}
   </style>
 </head>

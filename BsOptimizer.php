@@ -5,7 +5,7 @@
 <title>Base Scheme Optimizer</title>
 </head>
 
-<body style="font: 12px verdana; width: 700px;">
+<body style="font: 12px verdana; width: 80 0px;">
     <h3>Base Scheme Optimizer</h3>
 <?php
     ini_set('memory_limit', '1024M');
@@ -445,9 +445,9 @@
         $stmt->execute();
     }
 
-    echo '</p><p>Setting fossil flags to higher taxa in ' . TAXON_TREE . ' table...<br>';
-    echo 'Creating temporary table...<br>';
-    $pdo->query("ALTER TABLE `" . TAXON_TREE . "` ADD `delete_me` SMALLINT NOT NULL DEFAULT '0'");
+    echo '</p><p><b>Fossil flags to higher taxa</b><br>';
+    echo 'Creating temporary column...<br>';
+    $pdo->query("ALTER TABLE `" . TAXON_TREE . "` ADD `delete_me` SMALLINT(1) NOT NULL DEFAULT 0");
     $pdo->query("ALTER TABLE `" . TAXON_TREE . "` ADD INDEX `delete_me` (`is_extinct`, `delete_me`, `number_of_children`)");
     echo 'Setting fossil parents...<br>';
     updateFossilParents();
@@ -527,7 +527,7 @@
     echo '</p><p><b>Capitalizing valid hybrids in denormalized tables</b><br>';
     echo 'Updating ' . SEARCH_ALL . '...<br>';
     $query = 'SELECT `id`, `name` FROM `' . SEARCH_ALL . '`
-          		WHERE `name` REGEXP "^[^A-Za-z]+([A-Za-z])" AND `name_status` IN (0,1,4)';
+        WHERE `name` REGEXP "^[^A-Za-z]+([A-Za-z])" AND `name_status` IN (0,1,4)';
     $stmt = $pdo->prepare($query);
     $stmt->execute();
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
@@ -574,7 +574,7 @@
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         $name = $row['genus'] . (!empty($row['subgenus']) ? ' (' . $row['subgenus'] . ')' : '') .
             ' ' . $row['species'] . (!empty($row['infraspecies']) ? ' ' . $row['infraspecies'] : '');
-        $hash = hashCoL($row['family'] . $name . $row['author'] . $row['infraspecific_marker']);
+        $hash = hashCoL($row['family'] . $name . $row['author'] . $row['infraspecific_marker'] . $row['status']);
         insertNaturalKey(array(
             $row['id'],
             $hash,
@@ -597,7 +597,7 @@
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         $name = $row['genus'] . (!empty($row['subgenus']) ? ' (' . $row['subgenus'] . ')' : '') .
             ' ' . $row['species'] . (!empty($row['infraspecies']) ? ' ' . $row['infraspecies'] : '');
-        $hash = hashCoL($row['family'] . $name . $row['author'] . $row['infraspecific_marker']);
+        $hash = hashCoL($row['family'] . $name . $row['author'] . $row['infraspecific_marker'] . $row['status']);
         insertNaturalKey(array(
             $row['id'],
             $hash,
@@ -680,7 +680,7 @@
 
     echo 'Logging duplicate natural keys...<br>';
     $q = 'SELECT COUNT(`hash`) AS x, `hash`, `name`, `status`
-        FROM `_natural_keys`
+        FROM `' . NATURAL_KEYS . '`
     	WHERE `name` != "Not assigned"
         GROUP BY `hash`
         HAVING COUNT(`hash`) > 1
@@ -693,7 +693,7 @@
     	while ($row2 = $stmt2->fetch(PDO::FETCH_ASSOC)) {
     		$q3 = 'SELECT `' . implode('`, `', $rHigherTaxa) . '`, `subgenus`, `species`, `infraspecies`,
                 `infraspecific_marker`, `author`, `accepted_species_name`, `accepted_species_author`
-                FROM `_search_scientific` WHERE `id` = ?';
+                FROM `' . SEARCH_SCIENTIFIC . '` WHERE `id` = ?';
     		$stmt3 = $pdo->prepare($q3);
     		$stmt3->execute(array($row2['id']));
     		$row3 = $stmt3->fetchAll(PDO::FETCH_ASSOC);
@@ -740,7 +740,7 @@
     fputcsv2($fp, array('Status', 'Name', 'Name code', 'Info', 'Classification'), chr(9), '');
     $q = 'SELECT COUNT(*), `genus`, `subgenus`, `species`, `infraspecific_marker`, `infraspecies`,
             `author`, `status`, `accepted_species_name`, `accepted_species_author`
-        FROM `_search_scientific`
+        FROM `' . SEARCH_SCIENTIFIC . '`
         WHERE `genus` != "" AND `species` != ""
         GROUP BY `genus`, `subgenus`, `species`, `infraspecific_marker`, `infraspecies`, `author`,
             `status`, `accepted_species_name`, `accepted_species_author`
@@ -750,7 +750,7 @@
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     	$q2 = 'SELECT t2.`name_code`, t1.`' . implode('`, t1.`', $rHigherTaxa) . '`
             FROM `_search_scientific` AS t1
-            LEFT JOIN `_natural_keys` AS t2 ON t1.`id` = t2.`id`
+            LEFT JOIN `' . NATURAL_KEYS . '` AS t2 ON t1.`id` = t2.`id`
  	        WHERE t1.`genus` = ? AND t1.`subgenus` = ? AND t1.`species` = ? AND t1.`infraspecific_marker` = ? AND
 	           t1.`infraspecies` = ? AND t1.`author` = ? AND t1.`status` = ? AND t1.`accepted_species_name` = ? AND
 	           t1.`accepted_species_author` = ?';

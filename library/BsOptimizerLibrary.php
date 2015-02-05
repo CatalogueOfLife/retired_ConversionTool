@@ -817,30 +817,57 @@ function updateViruses ($table, $viruses)
 function updateFossilParents ()
 {
     $pdo = DbHandler::getInstance('target');
+    echo '&nbsp;&nbsp;&nbsp; Updating ' . TAXON_TREE . '...<br>';
     for ($i = 0; $i < 10; $i++) {
-        $q = 'SELECT t2.`taxon_id`, COUNT(t1.`is_extinct`), t2.`number_of_children`
-            FROM ' . TAXON_TREE . ' AS t1
-            LEFT JOIN ' . TAXON_TREE . ' AS t2 ON t1.`parent_id` = t2.`taxon_id`
+        $q = 'SELECT t2.`taxon_id`, t1.`has_preholocene`, t1.`has_modern`,
+            COUNT(t1.`is_extinct`), t2.`number_of_children`
+            FROM `' . TAXON_TREE . '` AS t1
+            LEFT JOIN `' . TAXON_TREE . '` AS t2 ON t1.`parent_id` = t2.`taxon_id`
             WHERE t1.`is_extinct` = 1 AND t1.`delete_me` = ?
             GROUP BY t2.`taxon_id`
             HAVING COUNT(t1.`is_extinct`) = t2.`number_of_children`';
         $stmt = $pdo->prepare($q);
         $stmt->execute(array($i));
-        while ($row = $stmt->fetch(PDO::FETCH_NUM)) {
-            $ids[] = $row[0];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $ids[$row['taxon_id']] = array(
+                'ph' => $row['has_preholocene'],
+                'm' => $row['has_modern']
+            );
         }
-
         if (!isset($ids)) {
-            return;
+            break;
         }
-
         $q = 'UPDATE ' . TAXON_TREE . ' SET `has_modern` = ?, `has_preholocene` = ?,
-                `is_extinct` = ?, `delete_me` = ?
-            WHERE `taxon_id` IN (' . implode(',', $ids) . ')';
+             `is_extinct` = ?, `delete_me` = ? WHERE `taxon_id` = ?';
         $stmt = $pdo->prepare($q);
-        $stmt->execute(array(0, 1, 1, ($i + 1)));
-
+        foreach ($ids as $id => $d) {
+            $stmt->execute(array($d['m'], $d['ph'], 1, ($i + 1), $id));
+        }
         unset($ids);
+    }
+
+    $stmt = $pdo->query(
+        'SELECT `taxon_id`, `has_preholocene`, `has_modern` FROM `' . TAXON_TREE . '` WHERE `delete_me` > 0'
+    );
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $ids[$row['taxon_id']] = array(
+            'ph' => $row['has_preholocene'],
+            'm' => $row['has_modern']
+        );
+    }
+    $tables = array (
+        SEARCH_ALL => 'id',
+        SEARCH_DISTRIBUTION => 'accepted_species_id',
+        SEARCH_SCIENTIFIC => 'id'
+    );
+    foreach ($tables AS $table => $column) {
+        echo '&nbsp;&nbsp;&nbsp; Updating ' . $table . '...<br>';
+        $q = 'UPDATE `' . $table . '` SET `has_modern` = ?, `has_preholocene` = ?,
+             `is_extinct` = ? WHERE `' . $column . '` = ?';
+        $stmt = $pdo->prepare($q);
+        foreach ($ids as $id => $d) {
+            $stmt->execute(array($d['m'], $d['ph'], 1, $id));
+        }
     }
 }
 

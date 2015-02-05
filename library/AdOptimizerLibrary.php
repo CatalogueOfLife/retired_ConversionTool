@@ -900,26 +900,44 @@ function buildTaxaTable () {
     echo "Finding higher taxa containing only synonyms...<br>";
     higherTaxaWithSynonyms();
     echo "Verifying accepted status...<br>";
-    verifyAcceptedStatus();
+    $errors_found['Verify'] = verifyAcceptedStatus();
     return $errors_found;
 }
 
 function verifyAcceptedStatus () {
+    $errors_found = array() ;
+
     $link = mysqlConnect();
     $sql_query = "SELECT t1.`record_id` FROM `taxa` t1
                   LEFT JOIN `scientific_names` AS t2 ON t1.`record_id` = t2.`record_id`
                   WHERE t1.`is_accepted_name` != t2.`is_accepted_name` AND
                   t1.`is_accepted_name` = 1";
     $sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
-    if (mysql_num_rows($sql_result) == 0) {
-        return;
+    if (mysql_num_rows($sql_result) > 0) {
+        $ids = array();
+        while ($row = mysql_fetch_array($sql_result)) {
+            $ids[] = $row[0];
+        }
+        $sql_query = "UPDATE `taxa` SET `is_accepted_name` = 0 WHERE `record_id` IN (" . implode(',', $ids) . ")";
+        $sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
     }
-    $ids = array();
-    while ($row = mysql_fetch_array($sql_result)) {
-        $ids[] = $row[0];
+
+    // Ruud 05-02-15: delete taxa with conflicting flags
+    $q = 'SELECT `record_id`, `name` from `taxa` WHERE `sp2000_status_id` IN (1,4) AND `is_accepted_name` = 0
+          UNION DISTINCT
+          SELECT `record_id`, `name` FROM `taxa` WHERE `sp2000_status_id` IN (2,3,5) AND `is_accepted_name` = 1';
+    $r = mysql_query($q) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
+    if (mysql_num_rows($r) > 0) {
+        $ids = array();
+        while ($row = mysql_fetch_array($r)) {
+            $ids[$row[0]] = $row[1];
+            $errors_found[] = 'Taxon deleted: conflicting status for ' . $row[1] . ' (id: ' . $row[0] . ')';
+
+        }
+        $sql_query = "DELETE FROM `taxa` WHERE `record_id` IN (" . implode(',', array_keys($ids)) . ")";
+        $sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
     }
-    $sql_query = "UPDATE `taxa` SET `is_accepted_name` = 0 WHERE `record_id` IN (" . implode(',', $ids) . ")";
-    $sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
+    return $errors_found;
 }
 
 
