@@ -5,7 +5,7 @@
 <meta http-equiv="content-type" content="text/html; charset=utf-8">
 <title>Annual Checklist sitemaps</title>
 </head>
-<body style="font: 11px verdana; width: 600px;">
+<body style="font: 12px verdana; width: 800px;">
 <h3>Annual Checklist sitemaps</h3>
 
 <?php

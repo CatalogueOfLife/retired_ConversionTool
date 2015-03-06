@@ -5,7 +5,7 @@
 <title>Base Scheme Optimizer</title>
 </head>
 
-<body style="font: 12px verdana; width: 80 0px;">
+<body style="font: 12px verdana; width: 800px;">
     <h3>Base Scheme Optimizer</h3>
 <?php
     ini_set('memory_limit', '1024M');
