@@ -143,7 +143,7 @@
         TAXON_TREE => array(
             'name',
             'rank',
-            'parent_id', 'is_extinct'
+            'parent_id, is_extinct'
         )
     );
 
