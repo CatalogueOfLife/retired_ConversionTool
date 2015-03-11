@@ -725,6 +725,26 @@ function createTaxonTreeFunction ()
 	$pdo->query($sql);
 }
 
+function updateNumberOfChildrenTaxonTree () {
+    $pdo = DbHandler::getInstance('target');
+    $stmt = $pdo->query('SELECT DISTINCT `parent_id` FROM `' . TAXON_TREE . '` WHERE `rank` = "subgenus"');
+    $ids = $stmt->fetchAll(PDO::FETCH_NUM);
+
+    $stmt = $pdo->prepare('SELECT SUM(`number_of_children`) FROM `' . TAXON_TREE . '` WHERE `parent_id` = :id');
+    foreach ($ids as $id) {
+        $stmt->bindValue(':id', $id[0], PDO::PARAM_INT);
+        $stmt->execute();
+        $update[$id[0]] = $stmt->fetchColumn();
+    }
+
+    $stmt = $pdo->prepare('UPDATE `' . TAXON_TREE . '` SET `number_of_children` = :nr WHERE `taxon_id` = :id');
+    foreach ($update as $id => $nr) {
+        $stmt->bindValue(':nr', $nr, PDO::PARAM_INT);
+        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+        $stmt->execute();
+    }
+}
+
 function insertNaturalKey ($d)
 {
     $pdo = DbHandler::getInstance('target');

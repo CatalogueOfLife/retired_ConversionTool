@@ -239,14 +239,6 @@
     }
 
     $start = microtime(true);
-    createTaxonTreeFunction();
-    echo '<p>Adding species totals to ' . TAXON_TREE . ' table...<br>';
-    $sql = file_get_contents(PATH . DENORMALIZED_TABLES_PATH . TAXON_TREE_SPECIES_TOTALS . '.sql');
-    $stmt = $pdo->query($sql);
-    $runningTime = round(microtime(true) - $start);
-    echo "Script took $runningTime seconds to complete<br></p>";
-
-    $start = microtime(true);
     echo '<p>Adding common name elements to ' . SEARCH_ALL . ' table...<br>';
     $sql = file_get_contents(PATH . DENORMALIZED_TABLES_PATH . SEARCH_ALL_COMMON_NAMES . '.sql');
     $stmt = $pdo->prepare($sql);
@@ -431,6 +423,7 @@
     }
 
     echo 'Deleting subgenus from ' . TAXON_TREE . ' AND ' . SEARCH_SCIENTIFIC . '...<br>';
+    updateNumberOfChildrenTaxonTree();
     $queries = array(
         'UPDATE `' . TAXON_TREE . '` AS t1
             LEFT JOIN `' . TAXON_TREE . '` AS t2 ON t1.`parent_id` = t2.`taxon_id`
@@ -444,6 +437,11 @@
         $stmt = $pdo->prepare($query);
         $stmt->execute();
     }
+
+    createTaxonTreeFunction();
+    echo 'Adding species totals to ' . TAXON_TREE . ' table...';
+    $sql = file_get_contents(PATH . DENORMALIZED_TABLES_PATH . TAXON_TREE_SPECIES_TOTALS . '.sql');
+    $stmt = $pdo->query($sql);
 
     echo '</p><p><b>Fossil flags to higher taxa</b><br>';
     echo 'Creating temporary column...<br>';
