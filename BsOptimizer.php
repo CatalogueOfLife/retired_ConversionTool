@@ -142,7 +142,8 @@
         ),
         TAXON_TREE => array(
             'name',
-            'rank'
+            'rank',
+            'parent_id', 'is_extinct'
         )
     );
 
@@ -795,7 +796,10 @@
     echo '</p><p><b>Tree estimates</b><br>Copying tree estimates...<br>';
     copyEstimates();
 
-    echo '</p><p><b>Final housecleaning</b><br>';
+    echo '</p><p><b>Final housecleaning</b><br>Applying WoRMS source database update...<br>';
+
+    writeSql(realpath(dirname(__FILE__)) . '/library', 'worms_metadata_restore_baseschema');
+
     echo 'Deleting temporary indices...<br>';
     foreach ($tempIndices as $table => $indices) {
         $pdo->prepare('ALTER TABLE `' . $table . '` DISABLE KEYS');

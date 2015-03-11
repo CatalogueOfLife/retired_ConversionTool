@@ -149,10 +149,12 @@ function writeToErrorTable ($id, $name, $message, $nameCode = null)
 /**
  * Writes data from sql dump to database
  */
-function writeSql ($path, $dumpFile, $message)
+function writeSql ($path, $dumpFile, $message = false)
 {
     $pdo = DbHandler::getInstance('target');
-    echo '<p>' . $message . '...<br>';
+    if ($message) {
+        echo '<p>' . $message . '...<br>';
+    }
     $sql = file_get_contents($path . $dumpFile . '.sql');
     $stmt = $pdo->prepare($sql);
     try {
@@ -730,13 +732,33 @@ function updateNumberOfChildrenTaxonTree () {
     $stmt = $pdo->query('SELECT DISTINCT `parent_id` FROM `' . TAXON_TREE . '` WHERE `rank` = "subgenus"');
     $ids = $stmt->fetchAll(PDO::FETCH_NUM);
 
-    $stmt = $pdo->prepare('SELECT SUM(`number_of_children`) FROM `' . TAXON_TREE . '` WHERE `parent_id` = :id');
+    // First determine how many children are already present for the parent genus...
+    $stmt = $pdo->prepare('SELECT `number_of_children` FROM `' . TAXON_TREE . '_bak` WHERE `taxon_id` = :id');
     foreach ($ids as $id) {
         $stmt->bindValue(':id', $id[0], PDO::PARAM_INT);
         $stmt->execute();
         $update[$id[0]] = $stmt->fetchColumn();
     }
 
+    // ...subtract the number of subgenera...
+    $stmt = $pdo->prepare('SELECT COUNT(*) FROM `' . TAXON_TREE . '` WHERE `parent_id` = :id AND `rank` = "subgenus"');
+    foreach ($ids as $id) {
+        $stmt->bindValue(':id', $id[0], PDO::PARAM_INT);
+        $stmt->execute();
+        $c = $update[$id[0]];
+        $update[$id[0]] = $c - $stmt->fetchColumn();
+    }
+
+    // ...and add children of subgenera
+    $stmt = $pdo->prepare('SELECT SUM(`number_of_children`) FROM `' . TAXON_TREE . '` WHERE `parent_id` = :id');
+    foreach ($ids as $id) {
+        $stmt->bindValue(':id', $id[0], PDO::PARAM_INT);
+        $stmt->execute();
+        $c = $update[$id[0]];
+        $update[$id[0]] = $c + $stmt->fetchColumn();
+    }
+
+    // Update the lot
     $stmt = $pdo->prepare('UPDATE `' . TAXON_TREE . '` SET `number_of_children` = :nr WHERE `taxon_id` = :id');
     foreach ($update as $id => $nr) {
         $stmt->bindValue(':nr', $nr, PDO::PARAM_INT);
@@ -1017,3 +1039,5 @@ function hashCoL ($s, $removeDiacritical = true) {
     }
     return md5(strtolower(str_replace(' ', '_', $s)));
 }
+
+
