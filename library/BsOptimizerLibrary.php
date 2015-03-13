@@ -704,17 +704,18 @@ function updateHybrid ($table, array $name, array $id)
 	));
 }
 
-function createTaxonTreeFunction ()
+function createTaxonTreeFunction ($function = 'getTotalSpeciesFromChildren',
+    $column = 'total_species')
 {
 	// show function status
 	$pdo = DbHandler::getInstance('target');
 	$sql =
-		'DROP FUNCTION IF EXISTS getTotalSpeciesFromChildren;
-		CREATE FUNCTION getTotalSpeciesFromChildren(
+		'DROP FUNCTION IF EXISTS ' . $function . ';
+		CREATE FUNCTION ' . $function . '(
 			X INT( 10 )
 		) RETURNS INT( 10 ) READS SQL DATA BEGIN DECLARE tot INT;
 
-		SELECT SUM( total_species )
+		SELECT SUM(' . $column . ')
 		INTO tot
 		FROM _taxon_tree
 		WHERE parent_id = X;
@@ -727,43 +728,26 @@ function createTaxonTreeFunction ()
 	$pdo->query($sql);
 }
 
-function updateNumberOfChildrenTaxonTree () {
+function updateSubgeneraTaxonTree () {
     $pdo = DbHandler::getInstance('target');
-    $stmt = $pdo->query('SELECT DISTINCT `parent_id` FROM `' . TAXON_TREE . '` WHERE `rank` = "subgenus"');
-    $ids = $stmt->fetchAll(PDO::FETCH_NUM);
+    $stmt = $pdo->query('SELECT `taxon_id` AS id, `parent_id` AS pid, `number_of_children` AS nr
+        FROM `' . TAXON_TREE . '_bak` WHERE `rank` = "subgenus"');
+    $subgenera = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // First determine how many children are already present for the parent genus...
-    $stmt = $pdo->prepare('SELECT `number_of_children` FROM `' . TAXON_TREE . '_bak` WHERE `taxon_id` = :id');
-    foreach ($ids as $id) {
-        $stmt->bindValue(':id', $id[0], PDO::PARAM_INT);
-        $stmt->execute();
-        $update[$id[0]] = $stmt->fetchColumn();
-    }
+    $stmt1 = $pdo->prepare('UPDATE `' . TAXON_TREE . '_bak`
+        SET `number_of_children` = (`number_of_children` + :nr - 1) WHERE `taxon_id` = :pid');
+    $stmt2 = $pdo->prepare('UPDATE `' . TAXON_TREE . '_bak`
+        SET `parent_id` = :pid WHERE `parent_id` = :id');
 
-    // ...subtract the number of subgenera...
-    $stmt = $pdo->prepare('SELECT COUNT(*) FROM `' . TAXON_TREE . '` WHERE `parent_id` = :id AND `rank` = "subgenus"');
-    foreach ($ids as $id) {
-        $stmt->bindValue(':id', $id[0], PDO::PARAM_INT);
-        $stmt->execute();
-        $c = $update[$id[0]];
-        $update[$id[0]] = $c - $stmt->fetchColumn();
-    }
-
-    // ...and add children of subgenera
-    $stmt = $pdo->prepare('SELECT SUM(`number_of_children`) FROM `' . TAXON_TREE . '` WHERE `parent_id` = :id');
-    foreach ($ids as $id) {
-        $stmt->bindValue(':id', $id[0], PDO::PARAM_INT);
-        $stmt->execute();
-        $c = $update[$id[0]];
-        $update[$id[0]] = $c + $stmt->fetchColumn();
-    }
-
-    // Update the lot
-    $stmt = $pdo->prepare('UPDATE `' . TAXON_TREE . '` SET `number_of_children` = :nr WHERE `taxon_id` = :id');
-    foreach ($update as $id => $nr) {
-        $stmt->bindValue(':nr', $nr, PDO::PARAM_INT);
-        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
-        $stmt->execute();
+    foreach ($subgenera as $sg) {
+        // Update number of children of associated genus
+        $stmt1->bindValue(':pid', $sg['pid'], PDO::PARAM_INT);
+        $stmt1->bindValue(':nr', $sg['nr'], PDO::PARAM_INT);
+        $stmt1->execute();
+        // Attach subgenus children to genus
+        $stmt2->bindValue(':pid', $sg['pid'], PDO::PARAM_INT);
+        $stmt2->bindValue(':id', $sg['id'], PDO::PARAM_INT);
+        $stmt2->execute();
     }
 }
 
@@ -913,6 +897,67 @@ function updateFossilParents ()
     }
 }
 
+function setTaxonTreeExtantTotals () {
+    $pdo = DbHandler::getInstance('target');
+    $hierarchy = array(
+        'species',
+        'genus',
+        'family',
+        'superfamily',
+        'order',
+        'class',
+        'phylum',
+        'kingdom'
+    );
+    // Set number_of_children_extant to extinct children
+    // First infraspecies, which may have several rank labels
+    $q = 'SELECT `parent_id` FROM ' . TAXON_TREE . ' WHERE `is_extinct` = 1 AND
+        `rank` NOT IN ("' . implode('", "', $hierarchy) . '") ';
+    $stmt = $pdo->query($q);
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        updateExtant($row['id'], $row['ct']);
+    }
+    // Species to kingdom
+    foreach ($hierarchy as $rank) {
+        $q = 'SELECT `parent_id` AS id, COUNT(`parent_id`) AS ct FROM ' . TAXON_TREE . '
+              WHERE `is_extinct` = 1
+              AND `rank` = "' . $rank . '" GROUP BY `parent_id`';
+        $stmt = $pdo->query($q);
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            updateExtant($row['id'], $row['ct']);
+        }
+    }
+    // Reset number_of_children_extant to number_of_children minus number_of_children_extant
+    $pdo->query('UPDATE ' . TAXON_TREE . ' SET `number_of_children_extant` =
+        `number_of_children` - `number_of_children_extant`');
+    // Redo _taxon_tree_species_totals.sql script for extant taxa
+    $pdo->query(
+       'UPDATE ' . TAXON_TREE . '
+        SET `total_species_extant` = `number_of_children_extant`
+        WHERE `rank` = "genus"'
+    );
+    // Create MySQL function
+    createTaxonTreeFunction('getTotalExtantSpeciesFromChildren', 'total_species_extant');
+    $pdo->query('SET SESSION sql_mode = ""');
+    // Script loop should not include species and genus
+    unset($hierarchy[0], $hierarchy[1]);
+    foreach ($hierarchy as $rank) {
+        $pdo->query(
+           'UPDATE ' . TAXON_TREE . '
+            SET `total_species_extant` = getTotalExtantSpeciesFromChildren(taxon_id)
+            WHERE `rank` = "' . $rank . '"'
+        );
+    }
+    $pdo->query('DROP FUNCTION IF EXISTS getTotalExtantSpeciesFromChildren;');
+}
+
+function updateExtant ($id, $count) {
+    $pdo = DbHandler::getInstance('target');
+    $stmt = $pdo->prepare('UPDATE ' . TAXON_TREE . ' SET `number_of_children_extant` = ?
+        WHERE `taxon_id` = ?');
+    $stmt->execute(array($count, $id));
+}
+
 function getNameStatuses ()
 {
     $pdo = DbHandler::getInstance('target');
@@ -1039,5 +1084,3 @@ function hashCoL ($s, $removeDiacritical = true) {
     }
     return md5(strtolower(str_replace(' ', '_', $s)));
 }
-
-

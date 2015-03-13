@@ -105,7 +105,6 @@
             'is_extinct'
         ),
         SEARCH_DISTRIBUTION => array(
-            'accepted_species_id',
             'is_extinct'
         ),
         SEARCH_SCIENTIFIC => array(
@@ -142,8 +141,7 @@
         ),
         TAXON_TREE => array(
             'name',
-            'rank',
-            'parent_id, is_extinct'
+            'rank'
         )
     );
 
@@ -167,6 +165,9 @@
         ),
         SEARCH_SCIENTIFIC => array(
             'subgenus'
+        ),
+        TAXON_TREE => array(
+            'delete_me'
         )
     );
 
@@ -360,7 +361,8 @@
 
     echo 'Updating ' . SEARCH_DISTRIBUTION . '...<br>';
     $query = 'UPDATE `' . SEARCH_DISTRIBUTION . '` AS sd, `' . SEARCH_ALL . '` AS sa
-        SET sd.`name` = sa.`name`, sd.`kingdom` = sa.`group` WHERE sd.`accepted_species_id` = sa.`id`';
+        SET sd.`name` = sa.`name`, sd.`kingdom` = sa.`group`
+        WHERE sd.`accepted_species_id` = sa.`id`';
     $stmt = $pdo->prepare($query);
     $stmt->execute();
 
@@ -423,8 +425,8 @@
         updateTaxonTreeName($id);
     }
 
-    echo 'Deleting subgenus from ' . TAXON_TREE . ' AND ' . SEARCH_SCIENTIFIC . '...<br>';
-    updateNumberOfChildrenTaxonTree();
+    echo 'Deleting subgenus from ' . TAXON_TREE . ' and ' . SEARCH_SCIENTIFIC . '...<br>';
+    updateSubgeneraTaxonTree();
     $queries = array(
         'UPDATE `' . TAXON_TREE . '` AS t1
             LEFT JOIN `' . TAXON_TREE . '` AS t2 ON t1.`parent_id` = t2.`taxon_id`
@@ -440,17 +442,21 @@
     }
 
     createTaxonTreeFunction();
-    echo 'Adding species totals to ' . TAXON_TREE . ' table...';
+    echo 'Adding species totals to ' . TAXON_TREE . ' table...<br>';
     $sql = file_get_contents(PATH . DENORMALIZED_TABLES_PATH . TAXON_TREE_SPECIES_TOTALS . '.sql');
     $stmt = $pdo->query($sql);
 
-    echo '</p><p><b>Fossil flags to higher taxa</b><br>';
+    echo '</p><p><b>Fossil flags to higher taxa in tree</b><br>';
     echo 'Creating temporary column...<br>';
-    $pdo->query("ALTER TABLE `" . TAXON_TREE . "` ADD `delete_me` SMALLINT(1) NOT NULL DEFAULT 0");
-    $pdo->query("ALTER TABLE `" . TAXON_TREE . "` ADD INDEX `delete_me` (`is_extinct`, `delete_me`, `number_of_children`)");
+    $pdo->query("ALTER TABLE `" . TAXON_TREE . "`
+        ADD `delete_me` SMALLINT(1) NOT NULL DEFAULT 0");
+    $pdo->query("ALTER TABLE `" . TAXON_TREE . "`
+        ADD INDEX `delete_me` (`is_extinct`, `delete_me`, `number_of_children`)");
     echo 'Setting fossil parents...<br>';
     updateFossilParents();
-    echo 'Deleting temporary table...<br>';
+    echo 'Adding extant species totals to ' . TAXON_TREE . ' table...<br>';
+    setTaxonTreeExtantTotals();
+    echo 'Deleting temporary column...<br>';
     $pdo->query("ALTER TABLE `" . TAXON_TREE . "` DROP COLUMN `delete_me`");
 
     echo '</p><p><b>Fixing virus names</b><br/>';
@@ -797,8 +803,7 @@
     copyEstimates();
 
     echo '</p><p><b>Final housecleaning</b><br>Applying WoRMS source database update...<br>';
-
-    writeSql(realpath(dirname(__FILE__)) . '/library', 'worms_metadata_restore_baseschema');
+    writeSql(realpath(dirname(__FILE__)) . '/library/', 'worms_metadata_restore_baseschema');
 
     echo 'Deleting temporary indices...<br>';
     foreach ($tempIndices as $table => $indices) {
