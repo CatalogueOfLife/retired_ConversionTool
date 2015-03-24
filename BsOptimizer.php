@@ -428,10 +428,6 @@
     echo 'Deleting subgenus from ' . TAXON_TREE . ' and ' . SEARCH_SCIENTIFIC . '...<br>';
     updateSubgeneraTaxonTree();
     $queries = array(
-        'UPDATE `' . TAXON_TREE . '` AS t1
-            LEFT JOIN `' . TAXON_TREE . '` AS t2 ON t1.`parent_id` = t2.`taxon_id`
-            SET t1.`parent_id` = t2.`parent_id`
-            WHERE t2.`rank` = "subgenus";',
         'DELETE FROM `' . TAXON_TREE . '` WHERE `rank` = "subgenus";',
         'DELETE FROM `' . SEARCH_SCIENTIFIC . '` WHERE `subgenus` != "" AND `species` = "";',
         'DELETE FROM `' . SEARCH_ALL . '` WHERE `rank` = "subgenus";'

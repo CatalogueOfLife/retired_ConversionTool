@@ -731,12 +731,12 @@ function createTaxonTreeFunction ($function = 'getTotalSpeciesFromChildren',
 function updateSubgeneraTaxonTree () {
     $pdo = DbHandler::getInstance('target');
     $stmt = $pdo->query('SELECT `taxon_id` AS id, `parent_id` AS pid, `number_of_children` AS nr
-        FROM `' . TAXON_TREE . '_bak` WHERE `rank` = "subgenus"');
+        FROM `' . TAXON_TREE . '` WHERE `rank` = "subgenus"');
     $subgenera = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    $stmt1 = $pdo->prepare('UPDATE `' . TAXON_TREE . '_bak`
+    $stmt1 = $pdo->prepare('UPDATE `' . TAXON_TREE . '`
         SET `number_of_children` = (`number_of_children` + :nr - 1) WHERE `taxon_id` = :pid');
-    $stmt2 = $pdo->prepare('UPDATE `' . TAXON_TREE . '_bak`
+    $stmt2 = $pdo->prepare('UPDATE `' . TAXON_TREE . '`
         SET `parent_id` = :pid WHERE `parent_id` = :id');
 
     foreach ($subgenera as $sg) {
