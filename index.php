@@ -33,7 +33,7 @@ if ($config['settings']['revision'] != '') {
 <meta http-equiv="content-type" content="text/html; charset=utf-8">
 <title>4D4Life Conversion Tool</title>
 </head>
-<body style="font: 11px verdana; width: 600px;">
+<body style="font: 12px verdana; width: 600px;">
 <h3>4D4Life Conversion Tool</h3>
 <p style="font-size: 10px; margin-bottom: 20px;">
 <?php echo $version; ?></p>
@@ -63,7 +63,8 @@ echo $table;
 ?>
 <p>Proceed to <b>Step 1</b>: <a href="AdOptimizer.php">Post-process the Assembly
 Database</a>.
-<p>(In case the Assembly Database has already been post-processed using the
-old scripts, you can <a href="AcToBs.php">proceed to the import script</a>.)</p>
+<p>Alternatively, you can <a href="AcToBs.php">proceed to the import script</a>,
+<a href="sitemaps.php">create sitemap files</a>,
+or create a <a href="taylor.php">csv mapping file</a> for Taylor &amp; Francis.</p>
 </body>
 </html>

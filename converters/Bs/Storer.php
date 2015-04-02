@@ -208,7 +208,7 @@ class Bs_Storer
             try {
                 $stmt->execute();
             } catch (PDOException $e) {
-                handleException("Cannot write sql dump", $e);
+                handleException("Cannot write sql dump " . $file, $e);
             }
         }
         $stmt->closeCursor();

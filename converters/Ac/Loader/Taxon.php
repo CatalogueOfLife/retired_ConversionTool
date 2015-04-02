@@ -223,9 +223,11 @@ class Ac_Loader_Taxon extends Ac_Loader_Abstract
 				   IF (
 				   		(t1.`infraspecies` = "" OR t1.`infraspecies` IS NULL) AND (t1.`species` = "" OR t1.`species` IS NULL), "Subgenus",
 						IF(t1.`infraspecies` = "" OR t1.`infraspecies` IS NULL, "Species",  "Infraspecies")
-					) AS taxonomicRank
-			FROM `scientific_names` t1,
-			       `sp2000_statuses` t2
+				   ) AS taxonomicRank,
+   	               t1.`GSDTaxonGUID` AS taxonGuid,
+    	   	       t1.`GSDNameGUID` AS nameGuid
+			FROM `scientific_names` AS t1,
+			     `sp2000_statuses` AS t2
 			WHERE t1.`sp2000_status_id` = t2.`record_id` AND
 				  t1.`accepted_name_code` = ? AND
 				  t1.`is_accepted_name` = 0 AND

@@ -97,10 +97,7 @@
     // Use [0] for int columns in partial indices, so these are properly parsed
     $tables = array(
         SEARCH_ALL => array(
-            'name_element',
-            'name',
             'rank',
-            'name_status',
             'accepted_taxon_id',
             'is_extinct'
         ),
@@ -108,22 +105,7 @@
             'is_extinct'
         ),
         SEARCH_SCIENTIFIC => array(
-            'kingdom',
-            'phylum',
-            'class',
-            'order',
-            'superfamily',
-            'family',
-            'subgenus',
-            'species',
-            'infraspecies',
-            'genus, species, infraspecies',
             'accepted_species_id',
-            'accepted_species_id[0], genus[15], subgenus[10], species[10], infraspecies[10]',
-            'accepted_species_id[0], genus[10]',
-            'accepted_species_id[0], infraspecies[10]',
-            'accepted_species_id[0], species[10]',
-            'accepted_species_id[0], subgenus[10]',
             'is_extinct'
         ),
         SOURCE_DATABASE_DETAILS => array(
@@ -265,7 +247,7 @@
             if (empty($indexParameters)) {
                 $indexType = 'int';
                 $query .= '`' . $index . '`';
-                // Index on single varchar column
+            // Index on single varchar column
             }
             else if (count($indexParameters) == 1) {
                 $indexType = 'varchar (' . $indexParameters[$index] . ')';
@@ -462,7 +444,7 @@
     updateViruses(SEARCH_ALL, $viruses);
     echo 'Updating ' . SEARCH_SCIENTIFIC . '...<br>';
     updateViruses(SEARCH_SCIENTIFIC, $viruses);
-    echo 'Updating ' . SEARCH_SCIENTIFIC . '...<br>';
+    echo 'Updating ' . SPECIES_DETAILS . '...<br>';
     updateViruses(SPECIES_DETAILS, $viruses);
     echo 'Updating ' . TAXON_TREE . '...<br>';
     updateViruses(TAXON_TREE, $viruses);

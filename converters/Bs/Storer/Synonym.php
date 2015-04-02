@@ -68,7 +68,7 @@ class Bs_Storer_Synonym extends Bs_Storer_TaxonAbstract implements Bs_Storer_Int
 
         $stmt = $this->_dbh->prepare(
             'INSERT INTO `synonym` (`id`, `taxon_id`, `author_string_id`, `scientific_name_status_id`,
-        	`original_id`) VALUES (?, ?, ?, ?, ?)'
+        	`original_id`, `taxon_guid`, `name_guid`) VALUES (?, ?, ?, ?, ?, ?, ?)'
         );
         try {
             $stmt->execute(
@@ -77,7 +77,9 @@ class Bs_Storer_Synonym extends Bs_Storer_TaxonAbstract implements Bs_Storer_Int
                     $synonym->taxonId,
                     $author->id,
                     $synonym->scientificNameStatusId,
-                    $synonym->originalId
+                    $synonym->originalId,
+                    $synonym->taxonGuid,
+                    $synonym->nameGuid
                 ));
             $synonym->id = $this->_dbh->lastInsertId();
         } catch (PDOException $e) {
