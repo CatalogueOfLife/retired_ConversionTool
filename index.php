@@ -62,9 +62,14 @@ the <i>AcToBs.ini</i> file in the config directory.</p>
 echo $table;
 ?>
 <p>Proceed to <b>Step 1</b>: <a href="AdOptimizer.php">Post-process the Assembly
-Database</a>.
-<p>Alternatively, you can <a href="AcToBs.php">proceed to the import script</a>,
-<a href="sitemaps.php">create sitemap files</a>,
-or create a <a href="taylor.php">csv mapping file</a> for Taylor &amp; Francis.</p>
+Database</a>. Alternatively, you can:</p>
+<ul>
+<li><a href="AcToBs.php">proceed to the import script</a> (<b>step 2</b>)</li>
+<li><a href="sitemaps.php">optimize the database</a> (<b>step 3</b>)</li>
+<li><a href="sitemaps.php">create the sitemap files</a> (<b>step 4</b>)</li>
+<li><a href="logs.php">check the conversion logs</a></li>
+<li><a href="taylor.php">create a csv mapping file for Taylor &amp; Francis</a></li>
+</ul>
+
 </body>
 </html>
