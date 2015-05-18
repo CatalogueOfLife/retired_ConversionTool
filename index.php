@@ -65,7 +65,7 @@ echo $table;
 Database</a>. Alternatively, you can:</p>
 <ul>
 <li><a href="AcToBs.php">proceed to the import script</a> (<b>step 2</b>)</li>
-<li><a href="sitemaps.php">optimize the database</a> (<b>step 3</b>)</li>
+<li><a href="BsOptimizer.php">optimize the database</a> (<b>step 3</b>)</li>
 <li><a href="sitemaps.php">create the sitemap files</a> (<b>step 4</b>)</li>
 <li><a href="logs.php">check the conversion logs</a></li>
 <li><a href="taylor.php">create a csv mapping file for Taylor &amp; Francis</a></li>

@@ -61,3 +61,6 @@ sitemapBaseUrl = http://www.catalogueoflife.org/col/details/species/id/
 ; use natural keys (1) or numerical ids (0)
 naturalKeys = 1
 
+[dead_ends]
+; copy dead ends in tree from source database?
+deadEnds = 1

@@ -777,8 +777,22 @@
     }
     fclose($fp);
 
-    echo '</p><p><b>Tree estimates</b><br>Copying tree estimates...<br>';
+    echo '</p><p><b>Tree updates</b><br>Copying tree estimates...<br>';
     copyEstimates();
+
+    if (isset($config['dead_ends']['deadEnds']) && $config['dead_ends']['deadEnds'] == 1) {
+        echo 'Adding dead ends to ' . TAXON_TREE . '<br>';
+        echo 'Getting branches...<br>';
+        $deadEnds = getDeadEnds();
+        echo 'Checking branches...<br>';
+        foreach ($deadEnds as $row) {
+            //setBranch($row);
+        }
+        echo 'Updating child count for modified branches...<br>';
+        //updateChildCount();
+        echo 'Copying newly created taxa to search tables...<br>';
+        copyDeadEndsToSearch();
+    }
 
     echo '</p><p><b>Final housecleaning</b><br>Applying WoRMS source database update...<br>';
     writeSql(realpath(dirname(__FILE__)) . '/library/', 'worms_metadata_restore_baseschema');

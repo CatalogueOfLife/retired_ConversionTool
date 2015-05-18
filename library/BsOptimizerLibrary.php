@@ -805,6 +805,175 @@ function getViruses ()
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
+function getDeadEnds ()
+{
+    $pdo = DbHandler::getInstance('source');
+    $q = 'SELECT t1.`family`, t1.`superfamily`, t1.`order`, t1.`class`, t1.`phylum`, t1.`kingdom`, t1.`database_id`
+        FROM `families` AS t1
+        LEFT JOIN `scientific_names` t2 ON t2.`family_id` = t1.`record_id`
+        WHERE t2.`record_id` IS NULL';
+    $stmt = $pdo->prepare($q);
+    $stmt->execute();
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+function setBranch ($row)
+{
+	$ranks = array('family', 'superfamily', 'order', 'class', 'phylum', 'kingdom');
+	$insert = array();
+	foreach ($ranks as $rank) {
+		if ($row[$rank] == '') {
+			continue;
+		}
+		$id = $row[$rank] == 'Not assigned' ?
+			getNotAssignedTaxonTreeId($row, $rank) :
+			getTaxonTreeId(array($row[$rank], $rank, $row['kingdom']));
+		if (!$id) {
+			$insert[$rank] = $row[$rank];
+		}
+	}
+	if (!rejectBranch($insert)) {
+		$insert = array_reverse($insert);
+
+		$previousParentId = null;
+        foreach ($insert as $rank => $name) {
+			$parentId = insertDeadEnd($row, $rank, $name, $previousParentId);
+            $previousParentId = $parentId;
+		}
+	}
+}
+
+function rejectBranch ($insert)
+{
+    if (empty($insert)) {
+        return true;
+    }
+    $test = array_values($insert);
+    if (count($test == 1) && $test[0] == 'Not assigned') {
+        return true;
+    }
+    return false;
+}
+
+function insertDeadEnd ($row, $rank, $name, $parentId)
+{
+    $pdo = DbHandler::getInstance('target');
+    $id = getNextTaxonId();
+    $parentId = is_null($parentId) ? getParentTaxonId($row, $rank) : $parentId;
+	$q = 'INSERT INTO ' . TAXON_TREE . ' (`taxon_id`, `name`, `rank`, `parent_id`, `dead_end`)
+		 VALUES (?, ?, ?, ?, ?)';
+	$stmt = $pdo->prepare($q);
+	$stmt->execute(array($id, $name, $rank, $parentId, 1));
+	$q = 'INSERT INTO ' . SOURCE_DATABASE_TO_TAXON_TREE_BRANCH .
+	   ' (`source_database_id`, `taxon_tree_id`) VALUES (?, ?)';
+	$stmt = $pdo->prepare($q);
+	$stmt->execute(array($row['database_id'], $id));
+	return $id;
+}
+
+function getNotAssignedTaxonTreeId ($row, $rank)
+{
+	$pdo = DbHandler::getInstance('target');
+	$parent = getNextNonEmptyValue($row, $rank);
+	$parentId = getParentTaxonId($row, $rank);
+	$q = 'SELECT `taxon_id` FROM `' . TAXON_TREE . '` WHERE `name` = ? AND `parent_id` = ?';
+	$stmt = $pdo->prepare($q);
+	$stmt->execute(array($parent, $parentId));
+	return $stmt->fetchColumn();
+}
+
+function getParentTaxonId ($row, $rank)
+{
+	$parent = getNextNonEmptyValue($row, $rank);
+	return getTaxonTreeId(array($parent, array_search($parent, $row), $row['kingdom']));
+}
+
+function getNextNonEmptyValue ($array, $key) {
+	$array = array_filter($array);
+	$currentKey = key($array);
+	$currentValue = null;
+	while ($currentKey !== null && $currentKey != $key) {
+		next($array);
+		$currentKey = key($array);
+	}
+	return next($array);
+}
+
+function getNextTaxonId ()
+{
+    $pdo = DbHandler::getInstance('target');
+    $stmt = $pdo->query('SELECT MAX(`taxon_id`) FROM `' . TAXON_TREE . '`');
+    return $stmt->fetchColumn() + 1;
+}
+
+function updateChildCount ()
+{
+    $pdo = DbHandler::getInstance('target');
+    $q = 'SELECT `parent.taxon_id` FROM `' . TAXON_TREE . '` AS child
+        LEFT JOIN  `' . TAXON_TREE . '` AS parent ON child.`parent_id` = parent.`taxon_id`
+        WHERE child.`dead_end` = 1';
+    $stmt = $pdo->query($q);
+    $parents = $stmt->fetchAll(PDO::FETCH_NUM);
+    foreach ($parents as $parent) {
+        $q = 'UPDATE ' . TAXON_TREE . ' SET `number_of_children` = ? WHERE `taxon_id` = ?';
+        $stmt = $pdo->prepare($q);
+        $stmt->execute(array(getChildCount($parent[0]), $parent[0]));
+    }
+}
+
+function copyDeadEndsToSearch ()
+{
+    $pdo = DbHandler::getInstance('target');
+    $q = 'SELECT `taxon_id`, `name`, `rank`, `parent_id` FROM `' . TAXON_TREE . '`
+        WHERE `dead_end` = 1';
+    $stmt = $pdo->query($q);
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    die (print_r($rows));
+    foreach ($rows as $i => $row) {
+        $id = $row['parent_id'];
+        while (getHierarchyForDeadEnd($id)) {
+
+        }
+    }
+}
+
+function getHierarchyForDeadEnd ($id)
+{
+    $pdo = DbHandler::getInstance('target');
+    $q = 'SELECT `rank`, `name`, `parent_id` FROM `' . TAXON_TREE . '`
+        WHERE `taxon_id` = ?';
+    $stmt = $pdo->prepare($q);
+    while ($id) {
+        $stmt->execute(array($id));
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row) {
+            $id = $row['parent_id'];
+            $hierarchy[$row['rank']] = $row['name'];
+        } else {
+            unset($id);
+        }
+    }
+}
+
+function copyDeadEndsToSearchAll ($rows)
+{
+    if (!empty($rows)) {
+        $q = 'INSERT INTO '. SEARCH_ALL . ' () VALUES (?, ?, ?, ?, ?)';
+        foreach ($rows as $row) {
+
+        }
+    }
+}
+
+function getChildCount ($id)
+{
+    $pdo = DbHandler::getInstance('target');
+    $q = 'SELECT COUNT(`taxon_id`) FROM ' . TAXON_TREE . ' WHERE `parent_id` = ?';
+    $stmt = $pdo->prepare($q);
+    $stmt->execute(array($id));
+    return $stmt->fetchColumn();
+}
+
 function updateViruses ($table, $viruses)
 {
     $pdo = DbHandler::getInstance('target');
