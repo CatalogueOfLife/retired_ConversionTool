@@ -343,11 +343,11 @@
     $pdo->query("SET SESSION sql_mode = 'TRADITIONAL';");
 
     echo 'Updating ' . SEARCH_DISTRIBUTION . '...<br>';
-    $query = 'UPDATE `' . SEARCH_DISTRIBUTION . '` AS sd, `' . SEARCH_ALL . '` AS sa
-        SET sd.`name` = sa.`name`, sd.`kingdom` = sa.`group`
-        WHERE sd.`accepted_species_id` = sa.`id`';
-    $stmt = $pdo->prepare($query);
+    $stmt = $pdo->prepare('SELECT DISTINCT `accepted_species_id` AS id FROM `' . SEARCH_DISTRIBUTION . '`');
     $stmt->execute();
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+    	updateNameAndGroup(getNameAndGroup($row['id']));
+    }
 
     echo 'Updating ' . SEARCH_SCIENTIFIC . '...<br>';
     $queries = array(

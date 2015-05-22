@@ -767,6 +767,7 @@ function copyEstimates () {
    $stmt = $pdo->query($q);
    while ($r = $stmt->fetch(PDO::FETCH_ASSOC)) {
         $id = getTaxonTreeId(array($r['name'], $r['rank'], $r['kingdom']));
+        $r['estimate'] = empty($r['estimate']) ? 0 : $r['estimate'];
         if ($id) {
             updateTaxonTreeEstimates(array($r['estimate'], $r['source'], $id));
         }
@@ -909,7 +910,7 @@ function getNextTaxonId ()
 function updateChildCount ()
 {
     $pdo = DbHandler::getInstance('target');
-    $q = 'SELECT `parent.taxon_id` FROM `' . TAXON_TREE . '` AS child
+    $q = 'SELECT parent.`taxon_id` FROM `' . TAXON_TREE . '` AS child
         LEFT JOIN  `' . TAXON_TREE . '` AS parent ON child.`parent_id` = parent.`taxon_id`
         WHERE child.`dead_end` = 1';
     $stmt = $pdo->query($q);
@@ -936,7 +937,7 @@ function copyDeadEndsToSearch ()
         }
     }
 }
-*/
+
 function getHierarchyForDeadEnd ($id)
 {
     $pdo = DbHandler::getInstance('target');
@@ -954,7 +955,7 @@ function getHierarchyForDeadEnd ($id)
         }
     }
 }
-/*
+
 function copyDeadEndsToSearchAll ($rows)
 {
     if (!empty($rows)) {
@@ -1253,3 +1254,17 @@ function hashCoL ($s, $removeDiacritical = true) {
     }
     return md5(strtolower(str_replace(' ', '_', $s)));
 }
+
+function getNameAndGroup ($id) {
+	$pdo = DbHandler::getInstance('target');
+	$stmt = $pdo->prepare('SELECT `name`, `group`, `id`  FROM `' . SEARCH_ALL . '` WHERE `id` = ?');
+	$stmt->execute(array($id));
+	return $stmt->fetch(PDO::FETCH_NUM);
+}
+
+function updateNameAndGroup ($row) {
+	$pdo = DbHandler::getInstance('target');
+	$stmt = $pdo->prepare('UPDATE`' . SEARCH_DISTRIBUTION . '` SET `name` = ?, `kingdom` = ? WHERE `accepted_species_id` = ?');
+	$stmt->execute($row);
+}
+
