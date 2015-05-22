@@ -15,6 +15,7 @@
 <?php
     set_include_path('library' . PATH_SEPARATOR . get_include_path());
     ini_set('memory_limit', '1024M');
+    set_time_limit(86400);
 
     require_once 'library/AdOptimizerLibrary.php';
     require_once 'DbHandler.php';

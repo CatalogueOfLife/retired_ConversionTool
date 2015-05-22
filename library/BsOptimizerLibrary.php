@@ -920,7 +920,7 @@ function updateChildCount ()
         $stmt->execute(array(getChildCount($parent[0]), $parent[0]));
     }
 }
-
+/*
 function copyDeadEndsToSearch ()
 {
     $pdo = DbHandler::getInstance('target');
@@ -936,7 +936,7 @@ function copyDeadEndsToSearch ()
         }
     }
 }
-
+*/
 function getHierarchyForDeadEnd ($id)
 {
     $pdo = DbHandler::getInstance('target');
@@ -954,7 +954,7 @@ function getHierarchyForDeadEnd ($id)
         }
     }
 }
-
+/*
 function copyDeadEndsToSearchAll ($rows)
 {
     if (!empty($rows)) {
@@ -964,7 +964,7 @@ function copyDeadEndsToSearchAll ($rows)
         }
     }
 }
-
+*/
 function getChildCount ($id)
 {
     $pdo = DbHandler::getInstance('target');

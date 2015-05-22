@@ -10,6 +10,7 @@
 <?php
     ini_set('memory_limit', '1024M');
     set_include_path('library' . PATH_SEPARATOR . get_include_path());
+    set_time_limit(86400);
 
     require_once 'library/bootstrap.php';
     require_once 'library/BsOptimizerLibrary.php';
@@ -786,12 +787,12 @@
         $deadEnds = getDeadEnds();
         echo 'Checking branches...<br>';
         foreach ($deadEnds as $row) {
-            //setBranch($row);
+            setBranch($row);
         }
         echo 'Updating child count for modified branches...<br>';
-        //updateChildCount();
-        echo 'Copying newly created taxa to search tables...<br>';
-        copyDeadEndsToSearch();
+        updateChildCount();
+        //echo 'Copying newly created taxa to search tables...<br>';
+        //copyDeadEndsToSearch();
     }
 
     echo '</p><p><b>Final housecleaning</b><br>Applying WoRMS source database update...<br>';

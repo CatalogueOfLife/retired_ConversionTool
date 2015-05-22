@@ -10,6 +10,7 @@
 <?php
 ini_set('memory_limit', '1024M');
 ini_set('display_errors', 1);
+set_time_limit(86400);
 set_include_path('library' . PATH_SEPARATOR . get_include_path());
 
 require_once 'library/bootstrap.php';
