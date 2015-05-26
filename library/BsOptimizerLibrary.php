@@ -916,9 +916,12 @@ function updateChildCount ()
     $stmt = $pdo->query($q);
     $parents = $stmt->fetchAll(PDO::FETCH_NUM);
     foreach ($parents as $parent) {
-        $q = 'UPDATE ' . TAXON_TREE . ' SET `number_of_children` = ? WHERE `taxon_id` = ?';
+        $childCount = getChildCount($parent[0]);
+        $q = 'UPDATE ' . TAXON_TREE . '
+            SET `number_of_children` = ?, `number_of_children_extant` = ?
+            WHERE `taxon_id` = ?';
         $stmt = $pdo->prepare($q);
-        $stmt->execute(array(getChildCount($parent[0]), $parent[0]));
+        $stmt->execute(array($childCount, $childCount, $parent[0]));
     }
 }
 /*
