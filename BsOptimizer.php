@@ -223,6 +223,7 @@
         echo "Script took $runningTime seconds to complete</p>";
     }
 
+
     $start = microtime(true);
     echo '<p>Adding common name elements to ' . SEARCH_ALL . ' table...<br>';
     $sql = file_get_contents(PATH . DENORMALIZED_TABLES_PATH . SEARCH_ALL_COMMON_NAMES . '.sql');
@@ -791,8 +792,8 @@
         }
         echo 'Updating child count for modified branches...<br>';
         updateChildCount();
-        //echo 'Copying newly created taxa to search tables...<br>';
-        //copyDeadEndsToSearch();
+        echo 'Copying newly created taxa to search tables...<br>';
+        copyDeadEndsToSearch();
     }
 
     echo '</p><p><b>Final housecleaning</b><br>Applying WoRMS source database update...<br>';
