@@ -156,6 +156,9 @@ function writeSql ($path, $dumpFile, $message = false)
         echo '<p>' . $message . '...<br>';
     }
     $sql = file_get_contents($path . $dumpFile . '.sql');
+    if (!$sql) {
+       die('Cannot read dump file ' . $path . $dumpFile . '.sql');
+    }
     $stmt = $pdo->prepare($sql);
     try {
         $stmt->execute();
@@ -810,8 +813,7 @@ function getViruses ()
 function getDeadEnds ()
 {
     $pdo = DbHandler::getInstance('source');
-    $q = 'SELECT t1.`family`, t1.`superfamily`, t1.`order`, t1.`class`, t1.`phylum`,
-        t1.`kingdom`, t1.`database_id`
+    $q = 'SELECT t1.`family`, t1.`superfamily`, t1.`order`, t1.`class`, t1.`phylum`, t1.`kingdom`
         FROM `families` AS t1
         LEFT JOIN `scientific_names` t2 ON t2.`family_id` = t1.`record_id`
         WHERE t2.`record_id` IS NULL';
@@ -838,24 +840,20 @@ function setBranch ($row)
             $id = getDeadEndTaxonTreeId($row[$rank], $rank, $parentId);
             if (!$id) {
                 $id = getNextTaxonId();
-                insertDeadEnd($id, $rank, ucfirst($row[$rank]), $parentId, $row['database_id']);
+                insertDeadEnd($id, $rank, ucfirst($row[$rank]), $parentId);
             }
             $parentId = $id;
 	   }
 	}
 }
 
-function insertDeadEnd ($id, $rank, $name, $parentId, $databaseId)
+function insertDeadEnd ($id, $rank, $name, $parentId)
 {
     $pdo = DbHandler::getInstance('target');
 	$q = 'INSERT INTO ' . TAXON_TREE . ' (`taxon_id`, `name`, `rank`, `parent_id`, `dead_end`)
 		 VALUES (?, ?, ?, ?, ?)';
 	$stmt = $pdo->prepare($q);
 	$stmt->execute(array($id, $name, $rank, $parentId, 1));
-	$q = 'INSERT INTO ' . SOURCE_DATABASE_TO_TAXON_TREE_BRANCH .
-	   ' (`source_database_id`, `taxon_tree_id`) VALUES (?, ?)';
-	$stmt = $pdo->prepare($q);
-	$stmt->execute(array($databaseId, $id));
 	return $id;
 }
 

@@ -782,6 +782,7 @@
     echo '</p><p><b>Tree updates</b><br>Copying tree estimates...<br>';
     copyEstimates();
 
+    // Dead ends
     if (isset($config['dead_ends']['deadEnds']) && $config['dead_ends']['deadEnds'] == 1) {
         echo 'Adding dead ends to ' . TAXON_TREE . '<br>';
         echo 'Getting branches...<br>';
