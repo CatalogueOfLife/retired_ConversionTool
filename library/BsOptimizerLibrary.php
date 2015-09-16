@@ -556,7 +556,7 @@ function setPointsOfAttachment ($source_database_id, $taxon_id)
 
 function getSourceDatabaseIds ($tt)
 {
-    global $higherTaxa;
+    global $higherTaxa, $logger;
     $pdo = DbHandler::getInstance('target');
     $name_elements = explode(' ', $tt['name']);
     $nr_elements = count($name_elements);
@@ -574,7 +574,7 @@ function getSourceDatabaseIds ($tt)
         // Extend for any rank but top level
         if ($tt['parent_id'] != 0) {
             if (empty($tt['parent_rank'])) {
-                throw new Exception($tt['rank'] . ' ' . $tt['name'] . ' has no parent.');
+                $logger->err($tt['rank'] . ' ' . $tt['name'] . ' has no parent.');
             }
             $query .= 'AND `' . strtolower($tt['parent_rank']) . '` = ? ';
             $params[] = $tt['parent_name'];
