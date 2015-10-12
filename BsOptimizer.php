@@ -342,6 +342,10 @@
     $stmt = $pdo->prepare($query);
     $stmt->execute();
     $pdo->query("SET SESSION sql_mode = 'TRADITIONAL';");
+    echo '&nbsp;&nbsp;&nbsp; Fixing infraspecies ranks...<br>';
+    $pdo->query('UPDATE `' . SEARCH_ALL . '` SET `rank` = "infraspecies" WHERE `rank` NOT IN
+        ("species", "genus", "family", "superfamily", "order", "class", "phylum", "kingdom")');
+
 
     echo 'Updating ' . SEARCH_DISTRIBUTION . '...<br>';
     $stmt = $pdo->prepare('SELECT DISTINCT `accepted_species_id` AS id FROM `' . SEARCH_DISTRIBUTION . '`');
@@ -349,6 +353,7 @@
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     	updateNameAndGroup(getNameAndGroup($row['id']));
     }
+
 
     echo 'Updating ' . SEARCH_SCIENTIFIC . '...<br>';
     $queries = array(
