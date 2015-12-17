@@ -298,12 +298,13 @@
     $query = 'ALTER TABLE `' . SEARCH_ALL . '` ADD `delete_me` TINYINT( 1 ) NOT NULL, ADD INDEX ( `delete_me` ) ';
     $stmt = $pdo->prepare($query);
     $stmt->execute();
-    echo '&nbsp;&nbsp;&nbsp; Marking rows with name elements containing spaces...<br>';
-    $query = 'UPDATE `' . SEARCH_ALL . '` SET `delete_me` = ? WHERE `name_element` LIKE "% %" and `name_element` != "not assigned"';
+    echo '&nbsp;&nbsp;&nbsp; Marking rows with name elements containing spaces or hyphens...<br>';
+    $query = 'UPDATE `' . SEARCH_ALL . '`
+              SET `delete_me` = 1
+              WHERE (`name_element` LIKE "% %" OR `name_element` LIKE "%-%")
+              AND `name_element` != "not assigned"';
     $stmt = $pdo->prepare($query);
-    $stmt->execute(array(
-        1
-    ));
+    $stmt->execute();
 
     echo '&nbsp;&nbsp;&nbsp; Splitting ' . $stmt->rowCount() . ' rows...<br>';
     $query = 'SELECT `id`, `name_element`, `name`, `name_suffix`, `rank`, `name_status`,
@@ -353,7 +354,6 @@
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     	updateNameAndGroup(getNameAndGroup($row['id']));
     }
-
 
     echo 'Updating ' . SEARCH_SCIENTIFIC . '...<br>';
     $queries = array(
@@ -509,8 +509,7 @@
     $stmt->execute();
     $indicator->init($stmt->rowCount(), 75, 1000);
     while ($tt = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        $source_database_ids = getSourceDatabaseIds($tt);
-        updateTaxonTree($tt['taxon_id'], $source_database_ids);
+        updateTaxonTree($tt['taxon_id'], getSourceDatabaseIds($tt));
         $indicator->iterate();
     }
 
