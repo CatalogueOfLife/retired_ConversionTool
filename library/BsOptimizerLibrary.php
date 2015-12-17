@@ -355,7 +355,7 @@ function insertCommonNameElements ($cn)
     }
 }
 
-function splitAndInsertNameElements ($ne)
+function splitAndInsertNameElements ($ne, $delimiter = ' ')
 {
     $pdo = DbHandler::getInstance('target');
     $insert = 'INSERT INTO `' . SEARCH_ALL . '`
@@ -365,7 +365,8 @@ function splitAndInsertNameElements ($ne)
             VALUES
             (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
     $ne['delete_me'] = 2;
-    $elements = explode(' ', $ne['name_element']);
+    $elements = array_unique(explode($delimiter, $ne['name_element']));
+
     $stmt = $pdo->prepare($insert);
     foreach ($elements as $nameElement) {
         $ne['name_element'] = $nameElement;
@@ -596,14 +597,14 @@ function getSourceDatabaseIds ($tt)
     }
     // Infraspecies; query _search_all for this
     else {
-        $query = 'SELECT `source_database_id`
+        $query = 'SELECT DISTINCT `source_database_id`
                   FROM `' . SEARCH_ALL . '`
                   WHERE `name` = ?
                   AND `rank` = ?
                   AND `name_status` IN (1,4)';
         $params = array(
             $tt['name'],
-            $tt['rank']
+            'infraspecies'
         );
     }
     try {

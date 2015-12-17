@@ -295,15 +295,17 @@
     }
 
     echo '&nbsp;&nbsp;&nbsp; Creating temporary column to mark rows that should be processed...<br>';
-    $query = 'ALTER TABLE `' . SEARCH_ALL . '` ADD `delete_me` TINYINT( 1 ) NOT NULL, ADD INDEX ( `delete_me` ) ';
+    $query = 'ALTER TABLE `' . SEARCH_ALL . '` ADD `delete_me` TINYINT(1) NOT NULL, ADD INDEX (`delete_me`)';
     $stmt = $pdo->prepare($query);
     $stmt->execute();
+
     echo '&nbsp;&nbsp;&nbsp; Marking rows with name elements containing spaces...<br>';
-    $query = 'UPDATE `' . SEARCH_ALL . '` SET `delete_me` = ? WHERE `name_element` LIKE "% %" and `name_element` != "not assigned"';
+    $query = 'UPDATE `' . SEARCH_ALL . '`
+              SET `delete_me` = 1
+              WHERE `name_element` LIKE "% %"
+              AND `name_element` != "not assigned"';
     $stmt = $pdo->prepare($query);
-    $stmt->execute(array(
-        1
-    ));
+    $stmt->execute();
 
     echo '&nbsp;&nbsp;&nbsp; Splitting ' . $stmt->rowCount() . ' rows...<br>';
     $query = 'SELECT `id`, `name_element`, `name`, `name_suffix`, `rank`, `name_status`,
@@ -314,15 +316,22 @@
     $stmt = $pdo->prepare($query);
     $stmt->execute();
     while ($ne = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        splitAndInsertNameElements($ne);
+        splitAndInsertNameElements($ne, ' ');
     }
 
-    echo '&nbsp;&nbsp;&nbsp; Deleting original rows...<br>';
-    $query = 'DELETE FROM `' . SEARCH_ALL . '` WHERE `delete_me` = ?';
+    echo '&nbsp;&nbsp;&nbsp; Finding rows with name elements containing hyphen...<br>';
+    $query = 'SELECT `id`, `name_element`, `name`, `name_suffix`, `rank`, `name_status`,
+                 `name_status_suffix`, `name_status_suffix_suffix`, `group`,
+                 `source_database_name`, `source_database_id`, `accepted_taxon_id`
+              FROM `' . SEARCH_ALL . '`
+              WHERE `name_element` LIKE "%-%"';;
     $stmt = $pdo->prepare($query);
-    $stmt->execute(array(
-        1
-    ));
+    $stmt->execute();
+
+    echo '&nbsp;&nbsp;&nbsp; Splitting ' . $stmt->rowCount() . ' rows...<br>';
+    while ($ne = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        splitAndInsertNameElements($ne, '-');
+    }
 
     echo '&nbsp;&nbsp;&nbsp; Dropping temporary column...<br>';
     $query = 'ALTER TABLE `' . SEARCH_ALL . '` DROP `delete_me`';
@@ -353,7 +362,6 @@
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     	updateNameAndGroup(getNameAndGroup($row['id']));
     }
-
 
     echo 'Updating ' . SEARCH_SCIENTIFIC . '...<br>';
     $queries = array(
@@ -509,8 +517,7 @@
     $stmt->execute();
     $indicator->init($stmt->rowCount(), 75, 1000);
     while ($tt = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        $source_database_ids = getSourceDatabaseIds($tt);
-        updateTaxonTree($tt['taxon_id'], $source_database_ids);
+        updateTaxonTree($tt['taxon_id'], getSourceDatabaseIds($tt));
         $indicator->iterate();
     }
 
