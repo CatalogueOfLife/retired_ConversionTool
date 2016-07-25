@@ -742,16 +742,24 @@ function updateSubgeneraTaxonTree () {
         SET `number_of_children` = (`number_of_children` + :nr - 1) WHERE `taxon_id` = :pid');
     $stmt2 = $pdo->prepare('UPDATE `' . TAXON_TREE . '`
         SET `parent_id` = :pid WHERE `parent_id` = :id');
+    $stmt3 = $pdo->prepare('UPDATE `taxon_name_element`
+        SET `parent_id` = :pid WHERE `parent_id` = :id');
 
     foreach ($subgenera as $sg) {
         // Update number of children of associated genus
         $stmt1->bindValue(':pid', $sg['pid'], PDO::PARAM_INT);
         $stmt1->bindValue(':nr', $sg['nr'], PDO::PARAM_INT);
         $stmt1->execute();
-        // Attach subgenus children to genus
+
+        // Attach subgenus children to genus in _tree_taxon
         $stmt2->bindValue(':pid', $sg['pid'], PDO::PARAM_INT);
         $stmt2->bindValue(':id', $sg['id'], PDO::PARAM_INT);
         $stmt2->execute();
+
+        // Do the same for taxon_name_element (for DCA export)
+        $stmt3->bindValue(':pid', $sg['pid'], PDO::PARAM_INT);
+        $stmt3->bindValue(':id', $sg['id'], PDO::PARAM_INT);
+        $stmt3->execute();
     }
 }
 
@@ -1294,3 +1302,37 @@ function updateNameAndGroup ($row) {
 	$stmt->execute($row);
 }
 
+function setCredits () {
+	$pdo = DbHandler::getInstance('target');
+    $ini = parse_ini_file('config/credits.ini', true);
+    $credits = array(
+        array(
+            'organisation' => $ini['organisation'],
+            'authors_editors' => $ini['authors_editors'],
+            'title' => $ini['monthly']['title'],
+            'issn' => $ini['monthly']['issn'],
+            'current' => ($ini['current_edition'] == 'monthly' ||
+                !in_array($ini['current_edition'], array('monthly', 'annual', 'dvd')) ? 1 : 0)
+        ),
+        array(
+            'organisation' => $ini['organisation'],
+            'authors_editors' => $ini['authors_editors'],
+            'title' => $ini['annual']['title'],
+            'issn' => $ini['annual']['issn'],
+            'current' => ($ini['current_edition'] == 'annual' ? 1 : 0)
+        ),
+       array(
+            'organisation' => $ini['organisation'],
+            'authors_editors' => $ini['authors_editors'],
+            'title' => $ini['dvd']['title'],
+            'issn' => $ini['dvd']['issn'],
+            'current' => ($ini['current_edition'] == 'dvd' ? 1 : 0)
+        ),
+    );
+
+    $pdo->query('TRUNCATE TABLE `_credits`');
+	$stmt = $pdo->prepare('INSERT INTO `_credits` VALUES (null, ?, ?, ?, ?, ?)');
+    foreach ($credits as $row) {
+        $stmt->execute(array_values($row));
+    }
+}
