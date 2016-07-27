@@ -56,7 +56,8 @@ class Bs_Storer_Reference extends Bs_Storer_Abstract implements Bs_Storer_Interf
             'taxaccref' => 'Taxonomic Acceptance Reference',
             'comnameref' => 'Common Name Reference'
         );
-        $type = $lookup[strtolower($reference->type)];
+        $type = isset($lookup[strtolower($reference->type)]) ?
+            $lookup[strtolower($reference->type)] : null;
         if ($reference->typeId = Dictionary::get('reference_types', $type)) {
             return $reference;
         }
@@ -64,7 +65,7 @@ class Bs_Storer_Reference extends Bs_Storer_Abstract implements Bs_Storer_Interf
             array(
                 'type' => $type
             ));
-        if ($reference->typeId) {
+        if (!is_null($reference->typeId)) {
             Dictionary::add('reference_types', $type, $reference->typeId);
             return $reference;
         }

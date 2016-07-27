@@ -209,8 +209,6 @@
     $logger = new Zend_Log($writer);
     $indicator = new Indicator();
 
-    setCredits();
-
     $scriptStart = microtime(true);
     echo '<p>First denormalized tables are created and indices are created for the denormalized tables.
             Taxonomic coverage is processed from free text field to a dedicated database table to determine
@@ -223,6 +221,8 @@
         $runningTime = round(microtime(true) - $start);
         echo "Script took $runningTime seconds to complete</p>";
     }
+
+    setCredits();
 
     $start = microtime(true);
     echo '<p>Adding common name elements to ' . SEARCH_ALL . ' table...<br>';

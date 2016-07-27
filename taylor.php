@@ -17,7 +17,7 @@ set_include_path('library' . PATH_SEPARATOR . get_include_path());
 $in = 'taylor/input.csv';
 $out = 'taylor/matches.csv';
 $ex = 'taylor/excluded.csv';
-$rootUrl = 'http://www.catalogueoflife.org/annual-checklist/2015/';
+$rootUrl = 'http://www.catalogueoflife.org/annual-checklist/2016/';
 
 require_once 'library/bootstrap.php';
 require_once 'library/BsOptimizerLibrary.php';
