@@ -1,3 +1,6 @@
+; CoL edition; previously edited in application.xml
+edition = "27th July 2016"
+
 ; Adapt the config by setting the appropriate edition under current_edition
 ; The complete citation is compiled as such:
 ; [organisation], [edition (from /application/configs/application.xml)] ([authors_editors]). [title]. ISSN [issn].
