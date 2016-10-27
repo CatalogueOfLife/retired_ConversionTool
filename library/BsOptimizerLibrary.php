@@ -1309,6 +1309,7 @@ function setCredits () {
 
     $credits = array(
         array(
+            'type' => 'monthly',
             'organisation' => $ini['organisation'],
             'authors_editors' => $ini['authors_editors'],
             'title' => $ini['monthly']['title'],
@@ -1318,6 +1319,7 @@ function setCredits () {
             'edition' => $edition
         ),
         array(
+            'type' => 'annual',
             'organisation' => $ini['organisation'],
             'authors_editors' => $ini['authors_editors'],
             'title' => $ini['annual']['title'],
@@ -1326,6 +1328,7 @@ function setCredits () {
             'edition' => $edition
         ),
        array(
+            'type' => 'dvd',
             'organisation' => $ini['organisation'],
             'authors_editors' => $ini['authors_editors'],
             'title' => $ini['dvd']['title'],
@@ -1336,7 +1339,7 @@ function setCredits () {
     );
 
     $pdo->query('TRUNCATE TABLE `_credits`');
-	$stmt = $pdo->prepare('INSERT INTO `_credits` VALUES (null, ?, ?, ?, ?, ?, ?)');
+	$stmt = $pdo->prepare('INSERT INTO `_credits` VALUES (null, ?, ?, ?, ?, ?, ?, ?)');
     foreach ($credits as $row) {
         $stmt->execute(array_values($row));
     }
