@@ -1095,8 +1095,10 @@ function updateFossilParents ()
         $q = 'UPDATE `' . $table . '` SET `has_modern` = ?, `has_preholocene` = ?,
              `is_extinct` = ? WHERE `' . $column . '` = ?';
         $stmt = $pdo->prepare($q);
-        foreach ($ids as $id => $d) {
-            $stmt->execute(array($d['m'], $d['ph'], 1, $id));
+        if (isset($ids) && !empty($ids)) {
+            foreach ($ids as $id => $d) {
+                $stmt->execute(array($d['m'], $d['ph'], 1, $id));
+            }
         }
     }
 }
