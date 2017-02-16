@@ -1308,43 +1308,33 @@ function updateNameAndGroup ($row) {
 
 function setCredits () {
 	$pdo = DbHandler::getInstance('target');
-    $ini = parse_ini_file('config/credits.ini', true);
-    $edition = isset($ini['edition']) ? $ini['edition'] : null;
+	$ini = parse_ini_file('config/credits.ini', true);
 
-    $credits = array(
-        array(
-            'type' => 'monthly',
-            'organisation' => $ini['organisation'],
-            'authors_editors' => $ini['authors_editors'],
-            'title' => $ini['monthly']['title'],
-            'issn' => $ini['monthly']['issn'],
-            'current' => ($ini['current_edition'] == 'monthly' ||
-                !in_array($ini['current_edition'], array('monthly', 'annual', 'dvd')) ? 1 : 0),
-            'edition' => $edition
-        ),
-        array(
-            'type' => 'annual',
-            'organisation' => $ini['organisation'],
-            'authors_editors' => $ini['authors_editors'],
-            'title' => $ini['annual']['title'],
-            'issn' => $ini['annual']['issn'],
-            'current' => ($ini['current_edition'] == 'annual' ? 1 : 0),
-            'edition' => $edition
-        ),
-       array(
-            'type' => 'dvd',
-            'organisation' => $ini['organisation'],
-            'authors_editors' => $ini['authors_editors'],
-            'title' => $ini['dvd']['title'],
-            'issn' => $ini['dvd']['issn'],
-            'current' => ($ini['current_edition'] == 'dvd' ? 1 : 0),
-            'edition' => $edition
-        ),
-    );
+	$credits = array(
+			array(
+					'type' => 'monthly',
+					'current' => ($ini['current_edition'] == 'monthly' ||
+							!in_array($ini['current_edition'], array('monthly', 'annual', 'dvd')) ? 1 : 0),
+					'edition' => $ini['monthly']['edition'],
+					'citation' => $ini['monthly']['citation']
+			),
+			array(
+					'type' => 'annual',
+					'current' => ($ini['current_edition'] == 'annual' ? 1 : 0),
+					'edition' => $ini['annual']['edition'],
+					'citation' => $ini['annual']['citation']
+			),
+			array(
+					'type' => 'dvd',
+					'current' => ($ini['current_edition'] == 'dvd' ? 1 : 0),
+					'edition' => $ini['dvd']['edition'],
+					'citation' => $ini['dvd']['citation']
+			),
+	);
 
-    $pdo->query('TRUNCATE TABLE `_credits`');
-	$stmt = $pdo->prepare('INSERT INTO `_credits` VALUES (null, ?, ?, ?, ?, ?, ?, ?)');
-    foreach ($credits as $row) {
-        $stmt->execute(array_values($row));
-    }
+	$pdo->query('TRUNCATE TABLE `_credits`');
+	$stmt = $pdo->prepare('INSERT INTO `_credits` VALUES (null, ?, ?, ?, ?)');
+	foreach ($credits as $row) {
+		$stmt->execute(array_values($row));
+	}
 }
