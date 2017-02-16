@@ -1117,8 +1117,10 @@ function setTaxonTreeExtantTotals () {
     );
     // Set number_of_children_extant to extinct children
     // First infraspecies, which may have several rank labels
-    $q = 'SELECT `parent_id` FROM ' . TAXON_TREE . ' WHERE `is_extinct` = 1 AND
-        `rank` NOT IN ("' . implode('", "', $hierarchy) . '") ';
+    $q = 'SELECT `parent_id` AS id, COUNT(`parent_id`) as ct
+    	FROM ' . TAXON_TREE . ' WHERE `is_extinct` = 1 AND
+        `rank` NOT IN ("' . implode('", "', $hierarchy) . '")
+        GROUP BY `parent_id`';
     $stmt = $pdo->query($q);
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         updateExtant($row['id'], $row['ct']);
