@@ -449,9 +449,6 @@
  
     echo 'Setting fossil parents...<br>';
     updateFossilParents();
-
-    die('force eject')   ;
-    
     echo 'Adding extant species totals to ' . TAXON_TREE . ' table...<br>';
     setTaxonTreeExtantTotals();
     echo 'Deleting temporary column...<br>';
