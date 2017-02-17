@@ -1044,6 +1044,20 @@ function updateViruses ($table, $viruses)
     }
 }
 
+function setTaxonTreeFossilFlags () {
+	$pdo = DbHandler::getInstance('target');
+	$query = '
+		UPDATE `_taxon_tree` AS t1, `taxon_detail` AS t2
+		SET
+			t1.`has_preholocene` = t2.`has_preholocene`,
+			t1.`has_modern` =  t2.`has_modern`,
+			t1.`is_extinct` = t2.`is_extinct`
+		WHERE
+			t1.`taxon_id` = t2.`taxon_id` AND
+			(t2.`has_preholocene` = 1 OR t2.`has_modern` = 0 OR t2.`is_extinct` = 1)';
+	$pdo->query($query);
+}
+
 function updateFossilParents ()
 {
     $pdo = DbHandler::getInstance('target');
@@ -1053,8 +1067,12 @@ function updateFossilParents ()
             COUNT(t1.`is_extinct`), t2.`number_of_children`
             FROM `' . TAXON_TREE . '` AS t1
             LEFT JOIN `' . TAXON_TREE . '` AS t2 ON t1.`parent_id` = t2.`taxon_id`
-            WHERE t1.`is_extinct` = 1 AND t1.`delete_me` = ?
-            GROUP BY t2.`taxon_id`
+            WHERE t1.`is_extinct` = 1 AND ';
+        $q .= $i == 0 ? 
+        	't1.`delete_me` = ? ' : 
+        	't1.`delete_me` > 0 AND t1.`delete_me` <= ? ';
+        $q .= '
+        	GROUP BY t2.`taxon_id`
             HAVING COUNT(t1.`is_extinct`) = t2.`number_of_children`';
         $stmt = $pdo->prepare($q);
         $stmt->execute(array($i));
@@ -1064,7 +1082,8 @@ function updateFossilParents ()
                 'm' => $row['has_modern']
             );
         }
-        if (!isset($ids)) {
+        // Break loop if no additional fossil parents have been found
+        if (isset($previousNrIds) && $previousNrIds == count($ids)) {
             break;
         }
         $q = 'UPDATE ' . TAXON_TREE . ' SET `has_modern` = ?, `has_preholocene` = ?,
@@ -1073,6 +1092,7 @@ function updateFossilParents ()
         foreach ($ids as $id => $d) {
             $stmt->execute(array($d['m'], $d['ph'], 1, ($i + 1), $id));
         }
+        $previousNrIds = count($ids);
         unset($ids);
     }
 

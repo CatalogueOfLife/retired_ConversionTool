@@ -214,7 +214,7 @@
             Taxonomic coverage is processed from free text field to a dedicated database table to determine
             points of attachment for each GSD sector. Finally species estimates and source databases
             are linked to the tree.</p>';
-
+   
     foreach ($files as $file) {
         $start = microtime(true);
         writeSql($file['path'], $file['dumpFile'], $file['message']);
@@ -337,7 +337,7 @@
     $query = 'ALTER TABLE `' . SEARCH_ALL . '` DROP `delete_me`';
     $stmt = $pdo->prepare($query);
     $stmt->execute();
-
+    
     $pdo->query("SET SESSION sql_mode = '';");
     echo '&nbsp;&nbsp;&nbsp; Creating common name entries without spaces...<br>';
     $query = 'INSERT INTO `' . SEARCH_ALL . '` (
@@ -412,7 +412,7 @@
         $stmt = $pdo->prepare($query);
         $stmt->execute();
     }
-
+ 
     echo 'Updating ' . TAXON_TREE . '...<br>';
     $query = 'SELECT `taxon_id` FROM `' . TAXON_TREE . '`
         WHERE `rank` NOT IN ("kingdom", "phylum", "class", "order", "family", "superfamily", "genus", "species")';
@@ -438,20 +438,24 @@
     echo 'Adding species totals to ' . TAXON_TREE . ' table...<br>';
     $sql = file_get_contents(PATH . DENORMALIZED_TABLES_PATH . TAXON_TREE_SPECIES_TOTALS . '.sql');
     $stmt = $pdo->query($sql);
-
+    
     echo '</p><p><b>Fossil flags to higher taxa in tree</b><br>';
+    setTaxonTreeFossilFlags();
     echo 'Creating temporary column...<br>';
     $pdo->query("ALTER TABLE `" . TAXON_TREE . "`
         ADD `delete_me` SMALLINT(1) NOT NULL DEFAULT 0");
     $pdo->query("ALTER TABLE `" . TAXON_TREE . "`
         ADD INDEX `delete_me` (`is_extinct`, `delete_me`, `number_of_children`)");
+ 
     echo 'Setting fossil parents...<br>';
     updateFossilParents();
+
+    die('force eject')   ;
+    
     echo 'Adding extant species totals to ' . TAXON_TREE . ' table...<br>';
     setTaxonTreeExtantTotals();
     echo 'Deleting temporary column...<br>';
     $pdo->query("ALTER TABLE `" . TAXON_TREE . "` DROP COLUMN `delete_me`");
-
     echo '</p><p><b>Fixing virus names</b><br/>';
     echo 'Getting viruses from source database...<br/>';
     $viruses = getViruses();
