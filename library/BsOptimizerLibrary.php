@@ -822,7 +822,7 @@ function getViruses ()
 function getDeadEnds ()
 {
     $pdo = DbHandler::getInstance('source');
-    $q = 'SELECT t1.`family`, t1.`superfamily`, t1.`order`, t1.`class`, t1.`phylum`, t1.`kingdom`
+    $q = 'SELECT t1.`database_id`, t1.`family`, t1.`superfamily`, t1.`order`, t1.`class`, t1.`phylum`, t1.`kingdom`
         FROM `families` AS t1
         LEFT JOIN `scientific_names` t2 ON t2.`family_id` = t1.`record_id`
         WHERE t2.`record_id` IS NULL';
@@ -849,20 +849,25 @@ function setBranch ($row)
             $id = getDeadEndTaxonTreeId($row[$rank], $rank, $parentId);
             if (!$id) {
                 $id = getNextTaxonId();
-                insertDeadEnd($id, $rank, ucfirst($row[$rank]), $parentId);
+                insertDeadEnd($id, $rank, ucfirst($row[$rank]), $parentId, $row['database_id']);
             }
             $parentId = $id;
 	   }
 	}
 }
 
-function insertDeadEnd ($id, $rank, $name, $parentId)
+function insertDeadEnd ($id, $rank, $name, $parentId, $databaseId)
 {
     $pdo = DbHandler::getInstance('target');
 	$q = 'INSERT INTO ' . TAXON_TREE . ' (`taxon_id`, `name`, `rank`, `parent_id`, `dead_end`)
 		 VALUES (?, ?, ?, ?, ?)';
 	$stmt = $pdo->prepare($q);
 	$stmt->execute(array($id, $name, $rank, $parentId, 1));
+	
+	$q = 'INSERT INTO ' . SOURCE_DATABASE_TO_TAXON_TREE_BRANCH . ' 
+		(`source_database_id`, `taxon_tree_id`) VALUES (?, ?)';
+	$stmt = $pdo->prepare($q);
+	$stmt->execute(array($databaseId, $id));
 	return $id;
 }
 
@@ -1332,23 +1337,23 @@ function setCredits () {
 
 	$credits = array(
 			array(
-					'type' => 'monthly',
-					'current' => ($ini['current_edition'] == 'monthly' ||
-							!in_array($ini['current_edition'], array('monthly', 'annual', 'dvd')) ? 1 : 0),
-					'edition' => $ini['monthly']['edition'],
-					'citation' => $ini['monthly']['citation']
+				'type' => 'monthly',
+				'current' => ($ini['current_edition'] == 'monthly' ||
+						!in_array($ini['current_edition'], array('monthly', 'annual', 'dvd')) ? 1 : 0),
+				'edition' => $ini['monthly']['edition'],
+				'citation' => $ini['monthly']['citation']
 			),
 			array(
-					'type' => 'annual',
-					'current' => ($ini['current_edition'] == 'annual' ? 1 : 0),
-					'edition' => $ini['annual']['edition'],
-					'citation' => $ini['annual']['citation']
+				'type' => 'annual',
+				'current' => ($ini['current_edition'] == 'annual' ? 1 : 0),
+				'edition' => $ini['annual']['edition'],
+				'citation' => $ini['annual']['citation']
 			),
 			array(
-					'type' => 'dvd',
-					'current' => ($ini['current_edition'] == 'dvd' ? 1 : 0),
-					'edition' => $ini['dvd']['edition'],
-					'citation' => $ini['dvd']['citation']
+				'type' => 'dvd',
+				'current' => ($ini['current_edition'] == 'dvd' ? 1 : 0),
+				'edition' => $ini['dvd']['edition'],
+				'citation' => $ini['dvd']['citation']
 			),
 	);
 
