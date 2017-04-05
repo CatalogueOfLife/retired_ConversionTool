@@ -54,6 +54,8 @@ foreach ($config as $k => $v) {
 $loader = new Ac_Loader(DbHandler::getInstance('source'), $logger);
 $storer = new Bs_Storer(DbHandler::getInstance('target'), $logger, $ind);
 
+echo '<p>Started: ' . date('Y-m-d H:i:s') . '</p>';
+
 echo '<p>Recreating database...<br>';
 $storer->recreateDb();
 echo 'Done!</p>';

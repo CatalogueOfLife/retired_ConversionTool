@@ -43,6 +43,8 @@
 
     $scriptStart = microtime(true);
 
+    echo '<p>Started: ' . date('Y-m-d H:i:s') . '</p>';
+    
     echo '<p>Checking database structure...</p>';
     $errors = checkDatabase();
     if (!empty($errors)) {
