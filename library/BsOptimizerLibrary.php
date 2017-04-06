@@ -841,7 +841,7 @@ function getDeadEndTaxonTreeId ($name, $rank, $parentId) {
 
 function setBranch ($row)
 {
-	$ranks = array('kingdom', 'phylum', 'class', 'order', 'superfamily', 'family');
+	$ranks = array('kingdom', 'phylum', 'class', 'order', 'superfamily', 'family', 'genus');
 	$hierarchy = array();
 	$parentId = 0;
 	foreach ($ranks as $rank) {
@@ -1362,4 +1362,69 @@ function setCredits () {
 	foreach ($credits as $row) {
 		$stmt->execute(array_values($row));
 	}
+}
+
+function getUncreditedTaxaInTree () {
+	$pdo = DbHandler::getInstance('target');
+	$q = 'SELECT t1.`taxon_id` as id, t1.`name`, t1.`rank`
+		FROM ' . TAXON_TREE. ' as t1
+		LEFT JOIN ' . SOURCE_DATABASE_TO_TAXON_TREE_BRANCH . ' AS t2 ON t1.`taxon_id` = t2.`taxon_tree_id`
+		WHERE t2.`taxon_tree_id` IS NULL';
+	$stmt = $pdo->prepare($q);
+	$stmt->execute();
+	return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+function getHigherTaxonDatabaseIdFromAssembly ($rank, $name) {
+	$pdo = DbHandler::getInstance('source');
+	if ($rank != 'genus') {
+		$q = 'SELECT DISTINCT `database_id` FROM `families` WHERE `' . $rank. '` LIKE ?';
+	} else {
+		$q = 'SELECT DISTINCT `database_id` 
+			FROM `scientific_names` 
+			WHERE `' . $rank. '` LIKE ? AND `sp2000_status_id` IN (1, 4)';
+	}
+	$stmt = $pdo->prepare($q);
+	$stmt->execute(array($name));
+	$res = $stmt->fetchAll(PDO::FETCH_NUM);
+	if ($res) {
+		foreach ($res as $row) {
+			$output[] = $row[0];
+		}
+		return $output;
+	}
+	return null;
+}
+
+function getSpeciesDatabaseIdFromAssembly ($name) {
+	$pdo = DbHandler::getInstance('source');
+	$parts = explode(' ', $name);
+	// Regular species
+	if (count($parts) == 2) {
+		list($genus, $species) = $parts;
+		$subgenus = null;
+	// With subgenus
+	} else if (count($parts) == 3) {
+		list($genus, $subgenus, $species) = $parts;
+		if (strpos($subgenus, '(') !== false) {
+			$subgenus = substr($subgenus, 1, -1);
+		}
+	// Something else; discard
+	} else {
+		return false;
+	}
+	$q = 'SELECT DISTINCT `database_id` 
+		FROM `scientific_names` 
+		WHERE `genus` = ? AND `species` = ? AND `subgenus` ';
+	$q .= is_null($subgenus) ? 'IS ?' : '= ?';
+	$stmt = $pdo->prepare($q);
+	$stmt->execute(array($genus, $species, $subgenus));
+	$res = $stmt->fetchAll(PDO::FETCH_NUM);
+	if ($res) {
+		foreach ($res as $row) {
+			$output[] = $row[0];
+		}
+		return $output;
+	}
+	return false;
 }

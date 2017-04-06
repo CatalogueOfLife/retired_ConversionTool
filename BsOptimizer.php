@@ -208,7 +208,9 @@
     $writer = new Zend_Log_Writer_Stream($logFile);
     $logger = new Zend_Log($writer);
     $indicator = new Indicator();
-
+    
+    echo '<p>Started: ' . date('Y-m-d H:i:s') . '</p>';
+    
     $scriptStart = microtime(true);
     echo '<p>First denormalized tables are created and indices are created for the denormalized tables.
             Taxonomic coverage is processed from free text field to a dedicated database table to determine
@@ -809,6 +811,26 @@
         echo 'Copying newly created taxa to search tables...<br>';
         copyDeadEndsToSearch();
     }
+    
+    echo 'Fixing uncredited taxa in tree...<br>';
+    $uncredited = getUncreditedTaxaInTree();
+    foreach ($uncredited as $row) {
+    	if ($row['name'] == 'Not assigned') {
+    		continue;
+    	}
+    	$ids = false;
+    	// Higher taxa
+    	if (in_array($row['rank'], $higherTaxa)) {
+    		$ids = getHigherTaxonDatabaseIdFromAssembly($row['rank'], $row['name']);
+    		// Species
+    	} else if ($row['rank'] == 'species') {
+    		$ids = getSpeciesDatabaseIdFromAssembly($row['name']);
+    	}
+    	if ($ids) {
+    		updateTaxonTree($row['id'], $ids);
+    	}
+    }
+    
 
     echo '</p><p><b>Final housecleaning</b><br>Applying WoRMS source database update...<br>';
     writeSql(realpath(dirname(__FILE__)) . '/library/', 'worms_metadata_restore_baseschema');
