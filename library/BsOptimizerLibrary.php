@@ -1366,7 +1366,7 @@ function setCredits () {
 
 function getUncreditedTaxaInTree () {
 	$pdo = DbHandler::getInstance('target');
-	$q = 'SELECT t1.`taxon_id` as id, t1.`name`, t1.`rank`
+	$q = 'SELECT t1.`taxon_id` as id, t1.`name`, t1.`rank`, t1.`parent_id`
 		FROM ' . TAXON_TREE. ' as t1
 		LEFT JOIN ' . SOURCE_DATABASE_TO_TAXON_TREE_BRANCH . ' AS t2 ON t1.`taxon_id` = t2.`taxon_tree_id`
 		WHERE t2.`taxon_tree_id` IS NULL';
@@ -1375,17 +1375,46 @@ function getUncreditedTaxaInTree () {
 	return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
-function getHigherTaxonDatabaseIdFromAssembly ($rank, $name) {
-	$pdo = DbHandler::getInstance('source');
-	if ($rank != 'genus') {
-		$q = 'SELECT DISTINCT `database_id` FROM `families` WHERE `' . $rank. '` LIKE ?';
-	} else {
-		$q = 'SELECT DISTINCT `database_id` 
-			FROM `scientific_names` 
-			WHERE `' . $rank. '` LIKE ? AND `sp2000_status_id` IN (1, 4)';
-	}
+function getKingdomForId ($id) {
+	$pdo = DbHandler::getInstance('target');
+	$q = 'SELECT `kingdom` FROM ' . SEARCH_SCIENTIFIC . ' WHERE `id` = ?';
 	$stmt = $pdo->prepare($q);
-	$stmt->execute(array($name));
+	$stmt->execute(array($id));
+	$res = $stmt->fetchAll(PDO::FETCH_NUM);
+	return $res ? $res[0][0] : false;
+}
+
+function getFamilyIdForId ($id) {
+	$pdo = DbHandler::getInstance('target');
+	// First get family name
+	$q = 'SELECT `family` FROM ' . SEARCH_FAMILY . ' WHERE `id` = ?';
+	$stmt = $pdo->prepare($q);
+	$stmt->execute(array($id));
+	$res = $stmt->fetch(PDO::FETCH_NUM);
+	if ($res) {
+		$family = $res[0];
+		$pdo = DbHandler::getInstance('source');
+		$q = 'SELECT `record_id` FROM `families` WHERE `family` LIKE ?';
+		$stmt = $pdo->prepare($q);
+		$stmt->execute(array($family));
+		$res = $stmt->fetch(PDO::FETCH_NUM);
+		return $res ? $res[0] : false;
+	}
+	return false;
+}
+
+
+
+function getHigherTaxonDatabaseIdFromAssembly ($rank, $name, $kingdom = false) {
+	$pdo = DbHandler::getInstance('source');
+	if ($name == 'Not assigned' || !$kingdom) {
+		return false;
+	}
+	$q = 'SELECT DISTINCT `database_id`
+		FROM `families`
+		WHERE `' . $rank. '` LIKE ? AND `kingdom` LIKE ?';
+	$stmt = $pdo->prepare($q);
+	$stmt->execute(array($name, $kingdom));
 	$res = $stmt->fetchAll(PDO::FETCH_NUM);
 	if ($res) {
 		foreach ($res as $row) {
@@ -1393,7 +1422,29 @@ function getHigherTaxonDatabaseIdFromAssembly ($rank, $name) {
 		}
 		return $output;
 	}
-	return null;
+	return false;
+}
+
+function getGenusDatabaseIdFromAssembly ($rank, $name, $familyId = false) {
+	$pdo = DbHandler::getInstance('source');
+	if ($name == 'Not assigned' || !$familyId) {
+		return false;
+	}
+	$q = 'SELECT DISTINCT `database_id`
+		FROM `scientific_names`
+		WHERE `' . $rank. '` LIKE ?
+		AND `sp2000_status_id` IN (1, 4)
+		AND	`family_id` LIKE ?';
+	$stmt = $pdo->prepare($q);
+	$stmt->execute(array($name, $familyId));
+	$res = $stmt->fetchAll(PDO::FETCH_NUM);
+	if ($res) {
+		foreach ($res as $row) {
+			$output[] = $row[0];
+		}
+		return $output;
+	}
+	return false;
 }
 
 function getSpeciesDatabaseIdFromAssembly ($name) {
@@ -1403,18 +1454,18 @@ function getSpeciesDatabaseIdFromAssembly ($name) {
 	if (count($parts) == 2) {
 		list($genus, $species) = $parts;
 		$subgenus = null;
-	// With subgenus
+		// With subgenus
 	} else if (count($parts) == 3) {
 		list($genus, $subgenus, $species) = $parts;
 		if (strpos($subgenus, '(') !== false) {
 			$subgenus = substr($subgenus, 1, -1);
 		}
-	// Something else; discard
+		// Something else; discard
 	} else {
 		return false;
 	}
-	$q = 'SELECT DISTINCT `database_id` 
-		FROM `scientific_names` 
+	$q = 'SELECT DISTINCT `database_id`
+		FROM `scientific_names`
 		WHERE `genus` = ? AND `species` = ? AND `subgenus` ';
 	$q .= is_null($subgenus) ? 'IS ?' : '= ?';
 	$stmt = $pdo->prepare($q);

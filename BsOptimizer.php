@@ -819,19 +819,20 @@
     		continue;
     	}
     	$ids = false;
-    	// Higher taxa
-    	if (in_array($row['rank'], $higherTaxa)) {
-    		$ids = getHigherTaxonDatabaseIdFromAssembly($row['rank'], $row['name']);
-    		// Species
-    	} else if ($row['rank'] == 'species') {
+    	if ($row['rank'] == 'species') {
     		$ids = getSpeciesDatabaseIdFromAssembly($row['name']);
+    	} else if ($row['rank'] == 'genus') {
+    		$ids = getGenusDatabaseIdFromAssembly($row['rank'],
+    				$row['name'], getFamilyIdForId($row['parent_id']));
+    	} else if (in_array($row['rank'], $higherTaxa)) {
+    		$ids = getHigherTaxonDatabaseIdFromAssembly($row['rank'],
+    				$row['name'], getKingdomForId($row['id']));
     	}
     	if ($ids) {
     		updateTaxonTree($row['id'], $ids);
     	}
     }
     
-
     echo '</p><p><b>Final housecleaning</b><br>Applying WoRMS source database update...<br>';
     writeSql(realpath(dirname(__FILE__)) . '/library/', 'worms_metadata_restore_baseschema');
 
