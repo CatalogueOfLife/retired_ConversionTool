@@ -1,4 +1,6 @@
 <?php
+require_once 'library/Encoding.php';
+
 /**
  * Abstract storer
  *
@@ -13,6 +15,11 @@ abstract class Bs_Storer_Abstract
     {
         $this->_dbh = $dbh;
         $this->_logger = $logger;
+    }
+    
+    public function fixUtf8 ($string) {
+    	$encoding = new ForceUTF8\Encoding();
+    	return $encoding::fixUTF8($string);
     }
 
     /**
