@@ -21,6 +21,12 @@ abstract class Bs_Storer_Abstract
     	$encoding = new ForceUTF8\Encoding();
     	return $encoding::fixUTF8($string);
     }
+    
+    public function stripNonPrintableCharacters ($string) 
+    {
+    	return filter_var($string, FILTER_UNSAFE_RAW, 
+    		FILTER_FLAG_STRIP_LOW|FILTER_FLAG_STRIP_HIGH);
+    }
 
     /**
      * Test if a single record exists in storer database

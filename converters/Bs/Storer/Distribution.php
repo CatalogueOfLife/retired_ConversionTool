@@ -15,6 +15,8 @@ class Bs_Storer_Distribution extends Bs_Storer_Abstract implements Bs_Storer_Int
         if (empty($distribution->freeText)) {
             return $distribution;
         }
+        $distribution->freeText = 
+        	$this->stripNonPrintableCharacters($distribution->freeText);
         $id = $this->_recordExists('id', 'region_free_text',
             array(
                 'free_text' => $distribution->freeText
