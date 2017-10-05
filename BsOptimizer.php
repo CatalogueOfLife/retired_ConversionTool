@@ -429,6 +429,7 @@
     $queries = array(
     	'UPDATE `' . SEARCH_ALL . '` SET `rank` = "subgenus" WHERE `name` like "%)" 
 			AND `name_suffix` = "" AND `name_status` = 0;',
+    	'UPDATE `' . SPECIES_DETAILS . '` SET `subgenus_id` = 0, `subgenus_lsid` = "", `subgenus_name` = "";',
         'DELETE FROM `' . TAXON_TREE . '` WHERE `rank` = "subgenus";',
         'DELETE FROM `' . SEARCH_SCIENTIFIC . '` WHERE `subgenus` != "" AND `species` = "";',
         'DELETE FROM `' . SEARCH_ALL . '` WHERE `rank` = "subgenus";',
@@ -438,7 +439,8 @@
 				`name_element`,
 				REPLACE(
 					REPLACE(
-						`name`, SUBSTRING(`name`, LOCATE("(", `name`), LENGTH(`name`) - LOCATE(")", REVERSE(`name`)) - LOCATE("(", `name`) + 2), ""), 
+						`name`, SUBSTRING(`name`, LOCATE("(", `name`), LENGTH(`name`) - LOCATE(")", 
+							REVERSE(`name`)) - LOCATE("(", `name`) + 2), ""), 
 					"  ", " ") AS `name`,
 				`name_suffix`,
 				`rank`,
