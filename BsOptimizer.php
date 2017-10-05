@@ -424,18 +424,42 @@
         updateTaxonTreeName($id);
     }
 
-    echo 'Deleting subgenus from ' . TAXON_TREE . ' and ' . SEARCH_SCIENTIFIC . '...<br>';
+    echo 'Deleting subgenus from ' . SEARCH_ALL . ', ' . TAXON_TREE . ' and ' . SEARCH_SCIENTIFIC . '...<br>';
     updateSubgeneraTaxonTree();
     $queries = array(
+    	'UPDATE `' . SEARCH_ALL . '` SET `rank` = "subgenus" WHERE `name` like "%)" 
+			AND `name_suffix` = "" AND `name_status` = 0;',
         'DELETE FROM `' . TAXON_TREE . '` WHERE `rank` = "subgenus";',
         'DELETE FROM `' . SEARCH_SCIENTIFIC . '` WHERE `subgenus` != "" AND `species` = "";',
-        'DELETE FROM `' . SEARCH_ALL . '` WHERE `rank` = "subgenus";'
+        'DELETE FROM `' . SEARCH_ALL . '` WHERE `rank` = "subgenus";',
+		'INSERT INTO `' . SEARCH_ALL . '` 
+			(SELECT 
+				`id`,
+				`name_element`,
+				REPLACE(
+					REPLACE(
+						`name`, SUBSTRING(`name`, LOCATE("(", `name`), LENGTH(`name`) - LOCATE(")", REVERSE(`name`)) - LOCATE("(", `name`) + 2), ""), 
+					"  ", " ") AS `name`,
+				`name_suffix`,
+				`rank`,
+				`name_status`,
+				`name_status_suffix`,
+				`name_status_suffix_suffix`,
+				`group`,
+				`source_database_name`,
+				`source_database_id`,
+				`accepted_taxon_id`,
+				`has_preholocene`,
+				`has_modern`,
+				`is_extinct`
+			FROM `' . SEARCH_ALL . '` 
+			WHERE `name` LIKE "%(%)%" AND `rank` LIKE "%species" AND `name_status` IN (1, 4))'
     );
     foreach ($queries as $query) {
         $stmt = $pdo->prepare($query);
         $stmt->execute();
     }
-
+    
     createTaxonTreeFunction();
     echo 'Adding species totals to ' . TAXON_TREE . ' table...<br>';
     $sql = file_get_contents(PATH . DENORMALIZED_TABLES_PATH . TAXON_TREE_SPECIES_TOTALS . '.sql');

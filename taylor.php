@@ -4,7 +4,7 @@
 <head>
 <meta http-equiv="content-type" content="text/html; charset=utf-8">
 <title>Taylor &amp; Francis csv export</title>
-</head>
+</head> 
 <body style="font: 12px verdana; width: 800px;">
 <h3>Taylor &amp; Francis csv export</h3>
 
@@ -17,7 +17,7 @@ set_include_path('library' . PATH_SEPARATOR . get_include_path());
 $in = 'taylor/input.csv';
 $out = 'taylor/matches.csv';
 $ex = 'taylor/excluded.csv';
-$rootUrl = 'http://www.catalogueoflife.org/annual-checklist/2016/';
+$rootUrl = 'http://www.catalogueoflife.org/annual-checklist/2017/';
 
 require_once 'library/bootstrap.php';
 require_once 'library/BsOptimizerLibrary.php';
