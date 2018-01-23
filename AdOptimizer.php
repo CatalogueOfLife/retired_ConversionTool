@@ -40,11 +40,13 @@
     } else {
       $config = parse_ini_file('config/AcToBs.ini', true);
     }
-
+    
+	setPdo($config);    
     $scriptStart = microtime(true);
 
     echo '<p>Started: ' . date('Y-m-d H:i:s') . '</p>';
     
+    /*
     echo '<p>Checking database structure...</p>';
     $errors = checkDatabase();
     if (!empty($errors)) {
@@ -61,6 +63,7 @@
     if (!empty($errors)) {
       printErrors($errors, 'Missing foreign key reference', $logger);
     }
+    */
 
     echo "</p><p><b>Building 'taxa' table</b><br>";
     $errors = buildTaxaTable();

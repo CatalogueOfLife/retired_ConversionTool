@@ -1,4 +1,6 @@
 <?php
+require_once 'DbHandler.php';
+
 function alwaysFlush ()
 {
     @ini_set('zlib.output_compression', 0);
@@ -9,8 +11,6 @@ function alwaysFlush ()
     ob_implicit_flush(1);
     set_time_limit(0);
 }
-
-
 
 /////////////// Assembly database functions
 
@@ -43,6 +43,8 @@ function printErrors ($errors, $header = false, $logger = false) {
 }
 
 function checkDatabase () {
+	$pdo = DbHandler::getInstance('source');    
+	
     $tables = array("common_names", "databases", "distribution", "families", "references", "scientific_names",
       "scientific_name_references", "specialists", "sp2000_statuses") ;
     $fields["common_names"] = array("record_id", "name_code", "common_name", "language", "country", "reference_id",
@@ -64,13 +66,20 @@ function checkDatabase () {
     $fields["specialists"] = array("record_id", "specialist_name", "specialist_code") ;
     $fields["sp2000_statuses"] = array("record_id", "sp2000_status") ;
 
-    $link = mysqlConnect();
+    //$link = mysqlConnect();
     $tables_in_database = array() ;
     $sql_query = 'SHOW TABLES FROM `' . dbName() . '`';
+    /*
     $sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
     while ($row = mysql_fetch_row($sql_result)) {
         array_push($tables_in_database,strtolower($row[0])) ;
     }
+    */
+    $stmt = $pdo->query($sql_query);
+	while ($row = $stmt->fetch(PDO::FETCH_NUM)) {
+		array_push($tables_in_database, strtolower($row[0]));
+	}
+    
     $errors_found = array() ;
     foreach ($tables as $table) {
         //echo "<p><b>Checking table $table ...</b> " ; ;
@@ -79,59 +88,92 @@ function checkDatabase () {
             continue ;
         }
         $sql_query = "SELECT COUNT(*) FROM `$table`" ;
+        /*
         $sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
         $row = mysql_fetch_row($sql_result) ;
-        if ($row[0] == 0) {
+        */
+        $stmt = $pdo->query($sql_query);
+        $row = $stmt->fetch(PDO::FETCH_NUM);
+         if ($row[0] == 0) {
             $errors_found[] = "Table $table is empty";
         }
         $fields_in_this_table = array() ;
+        
         $sql_query = "SHOW FIELDS FROM `$table` " ;
+        /*
         $sql_result = mysql_query($sql_query) or die("Error: MySQL query failed:" . mysql_error() . "</p>");
         while ($row = mysql_fetch_array($sql_result)) {
             array_push($fields_in_this_table,$row["Field"]);
         }
-        foreach ($fields[$table] as $field) {
+        */
+        $stmt = $pdo->query($sql_query);
+    	while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+			array_push($fields_in_this_table,$row["Field"]);
+		}
+		foreach ($fields[$table] as $field) {
             if (!in_array($field,$fields_in_this_table)) {
                 $errors_found[] = "Field $field in table $table is missing";
                 continue ;
             }
         }
      }
-     mysql_query('UPDATE `families` SET `database_id` = 0 WHERE `database_id` IS NULL');
+     //mysql_query('UPDATE `families` SET `database_id` = 0 WHERE `database_id` IS NULL');
+     $pdo->query('UPDATE `families` SET `database_id` = 0 WHERE `database_id` IS NULL');
      return $errors_found;
 }
 
 function getAcceptedStatuses () {
-    $link = mysqlConnect();
+    // $link = mysqlConnect();
+    $pdo = DbHandler::getInstance('source');    
+	
     $accepted_name_id = 1 ;
     $provisionally_accepted_name_id = 4 ;
-    $sql_query2 = "SELECT `record_id`
-               FROM   `sp2000_statuses`
-               WHERE  `sp2000_status` = 'accepted name' " ;
-    $sql_result2 = mysql_query($sql_query2) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
-    if ( mysql_num_rows($sql_result2) > 0 ) {
-        $row2 = mysql_fetch_row($sql_result2);
-        $accepted_name_id = $row2[0] ;
-    }
-    $sql_query2 = "SELECT `record_id`
-               FROM   `sp2000_statuses`
-               WHERE  `sp2000_status` = 'provisionally accepted name' " ;
+    $sql_query2 = "
+		SELECT `record_id`
+        FROM `sp2000_statuses`
+        WHERE `sp2000_status` = 'accepted name' " ;
+	/*
+	 * $sql_result2 = mysql_query($sql_query2) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
+	 * if ( mysql_num_rows($sql_result2) > 0 ) {
+	 * $row2 = mysql_fetch_row($sql_result2);
+	 * $accepted_name_id = $row2[0] ;
+	 * }
+	 */
+	$stmt = $pdo->query($sql_query2);
+	$row2 = $stmt->fetch(PDO::FETCH_NUM);
+	if ($row2) {
+		$accepted_name_id = $row2[0];
+	}
+    
+    $sql_query2 = "
+		SELECT `record_id`
+        FROM `sp2000_statuses`
+        WHERE `sp2000_status` = 'provisionally accepted name' " ;
+    /*
     $sql_result2 = mysql_query($sql_query2) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
     if ( mysql_num_rows($sql_result2) > 0 ) {
         $row2 = mysql_fetch_row($sql_result2);
         $provisionally_accepted_name_id = $row2[0] ;
     }
+    */
+	$stmt = $pdo->query($sql_query2);
+	$row2 = $stmt->fetch(PDO::FETCH_NUM);
+	if ($row2) {
+		$provisionally_accepted_name_id = $row2[0] ;
+	}
     return array($accepted_name_id, $provisionally_accepted_name_id);
 }
 
 function copyCodesToIds () {
+    $pdo = DbHandler::getInstance('source');    
+	
     $fields["family"] = array ("scientific_names","family_code","family_id","families") ;
     $fields["specialist"] = array ("scientific_names","specialist_code","specialist_id","specialists") ;
     $fields["reference"] = array ("scientific_name_references","reference_code","reference_id","references") ;
     $fields["reference2"] = array ("common_names","reference_code","reference_id","references") ;
 
     $indicator = new Indicator();
-    $link = mysqlConnect();
+    // $link = mysqlConnect();
     $errors_found = array() ;
 
     $code_fields = array() ;
@@ -152,6 +194,7 @@ function copyCodesToIds () {
         $field = $code_field[1] ;
         $index_exists = $anyAction = false ;
         $sql_query = "SHOW INDEX FROM `$table` " ;
+        /*
         $sql_result = mysql_query($sql_query) or die("Error: MySQL query failed:" . mysql_error() . "</p>");
         while ($row = mysql_fetch_array($sql_result)) {
             if ($row["Key_name"] == $field) {
@@ -159,33 +202,58 @@ function copyCodesToIds () {
                 break ;
             }
         }
+        */
+        $stmt = $pdo->query($sql_query);
+    	while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+    	 	if ($row["Key_name"] == $field) {
+                $index_exists = true ;
+                break ;
+            }
+		}
         if ($index_exists == false) {
             $anyAction = true;
             echo "Indexing field '$field' in table '$table'... <br>" ;
             $sql_query = "ALTER TABLE `$table` ADD INDEX (`$field`)" ;
-            $sql_result = mysql_query($sql_query) or die("Error: MySQL query failed:" . mysql_error() . "</p>");
+            // $sql_result = mysql_query($sql_query) or die("Error: MySQL query failed:" . mysql_error() . "</p>");
+            $pdo->query($sql_query);
         }
     }
     echo $anyAction ? '</p><p>' : '';
     echo "Copying family codes from accepted names to synonyms in table 'scientific_names'<br>" ;
     list($accepted_name_id, $provisionally_accepted_name_id) = getAcceptedStatuses();
 
-    $sql_query = "SELECT `name_code`, `family_code`
-                  FROM `scientific_names`
-                  WHERE `family_code` !=  '' AND `family_code` IS NOT NULL
-                  AND (`sp2000_status_id` = $accepted_name_id OR `sp2000_status_id` = $provisionally_accepted_name_id) " ;
-    $sql_result = mysql_query($sql_query) or die("Error: MySQL query failed:" . mysql_error() . "</p>");
-    $number_of_records = mysql_num_rows($sql_result) ;
+    $sql_query = "
+		SELECT COUNT(*)
+        FROM `scientific_names`
+        WHERE `family_code` !=  '' AND `family_code` IS NOT NULL
+        	AND (`sp2000_status_id` = $accepted_name_id OR `sp2000_status_id` = $provisionally_accepted_name_id) " ;
+    $number_of_records = $pdo->query($sql_query)->fetchColumn(); 
 
+    $sql_query = "
+		SELECT `name_code`, `family_code`
+        FROM `scientific_names`
+        WHERE `family_code` !=  '' AND `family_code` IS NOT NULL
+        	AND (`sp2000_status_id` = $accepted_name_id OR `sp2000_status_id` = $provisionally_accepted_name_id) " ;
     list($i, $n, $iterationsPerMarker, $sql_query2) = array(0, 0, 2500, false);
     $indicator->init($number_of_records, 100, $iterationsPerMarker);
-    while ($row = mysql_fetch_array($sql_result)) {
+    // $sql_result = mysql_query($sql_query) or die("Error: MySQL query failed:" . mysql_error() . "</p>");
+    // $number_of_records = mysql_num_rows($sql_result) ;
+    // while ($row = mysql_fetch_array($sql_result)) {
+    
+    $sql_query2 = "UPDATE `scientific_names` SET `family_code` = ? WHERE `accepted_name_code` = ?" ;
+    $stmt2 = $pdo->prepare($sql_query2); 
+    
+    $stmt = $pdo->query($sql_query);
+    while ($row = $stmt->fetch(PDO::FETCH_NUM)) {
         $indicator->iterate();
         $name_code = $row[0] ;
         $family_code = $row[1] ;
+        /*
         $sql_query2 = "UPDATE `scientific_names` SET `family_code` = '" . mysql_real_escape_string($family_code) . "'
                         WHERE `accepted_name_code` = '" . mysql_real_escape_string($name_code) . "'; " ;
         $sql_result2 = mysql_query($sql_query2) or die("Error: MySQL query failed:" . $sql_query2. mysql_error() . "</p>");
+        */
+        $stmt2->execute(array($family_code, $name_code));
      }
 
     foreach ($fields as $field) {
@@ -194,16 +262,28 @@ function copyCodesToIds () {
         $id_field = $field[2] ;
         $lookup_table = $field[3] ;
 
-        $sql_query = "SELECT DISTINCT t1.`$code_field`, t2.`record_id` FROM `$table` AS t1
-                      LEFT JOIN `$lookup_table` AS t2 ON t1.`$code_field` = t2.`$code_field`
-                      WHERE t1.`$code_field` != '' AND t1.`$code_field` IS NOT NULL" ;
-        $sql_result = mysql_query($sql_query) or die("Error: MySQL query failed:" . mysql_error() . "</p>");
-        $number_of_records = mysql_num_rows($sql_result) ;
+	    $sql_query = "
+			SELECT COUNT(*)
+			FROM `$table` AS t1
+            LEFT JOIN `$lookup_table` AS t2 ON t1.`$code_field` = t2.`$code_field`
+            WHERE t1.`$code_field` != '' AND t1.`$code_field` IS NOT NULL" ;
+	    $number_of_records = $pdo->query($sql_query)->fetchColumn(); 
+        
+        $sql_query = "
+			SELECT DISTINCT t1.`$code_field`, t2.`record_id` 
+			FROM `$table` AS t1
+            LEFT JOIN `$lookup_table` AS t2 ON t1.`$code_field` = t2.`$code_field`
+            WHERE t1.`$code_field` != '' AND t1.`$code_field` IS NOT NULL" ;
+        
         $iterationsPerMarker = $number_of_records < 10000 ? 100 : 1000;
         list($i, $j, $sql_query2) = array(0, 0, false);
         $indicator->init($number_of_records, 100, $iterationsPerMarker);
         echo "</p><p>Converting $number_of_records '".$code_field."s' to '$id_field' in table '$table'<br>\n" ;
-        while ($row = mysql_fetch_array($sql_result)) {
+        
+        // $sql_result = mysql_query($sql_query) or die("Error: MySQL query failed:" . mysql_error() . "</p>");
+        // while ($row = mysql_fetch_array($sql_result)) {
+        $stmt = $pdo->query($sql_query);
+    	while ($row = $stmt->fetch(PDO::FETCH_NUM)) {
             $indicator->iterate();
             $this_code = $row[0] ;
             $this_id = $row[1] ;
@@ -211,15 +291,19 @@ function copyCodesToIds () {
                 $errors_found[] = "Name code '$this_code' referenced in table '$table' not present in table '$lookup_table'";
                 continue;
             }
-            $sql_query2 = "UPDATE `$table` SET `$id_field` = $this_id WHERE `$code_field` =  '" .
-                mysql_real_escape_string($this_code) . "';\n" ;
-            $sql_result2 = mysql_query($sql_query2) or die("Error: MySQL query failed: " . mysql_error() . "</p>");
-        }
+            // $sql_query2 = "UPDATE `$table` SET `$id_field` = $this_id WHERE `$code_field` =  '" .
+            //    mysql_real_escape_string($this_code) . "';\n" ;
+            // $sql_result2 = mysql_query($sql_query2) or die("Error: MySQL query failed: " . mysql_error() . "</p>");
+            $stmt2 = $pdo->prepare("UPDATE `$table` SET `$id_field` = ? WHERE `$code_field` = ?");
+            $stmt2->execute(array($this_id, $this_code));
+     	}
     }
     return $errors_found;
 }
 
 function checkForeignKeys () {
+    $pdo = DbHandler::getInstance('source');    
+	
     $fields = array() ;
     array_push($fields,array("scientific_names","accepted_name_code","scientific_names","name_code")) ;
     array_push($fields,array("scientific_names","family_id","families","record_id")) ;
@@ -235,7 +319,7 @@ function checkForeignKeys () {
     array_push($fields,array("scientific_name_references","reference_id","references","record_id")) ;
 
     $indicator = new Indicator();
-    $link = mysqlConnect();
+    // $link = mysqlConnect();
     $errors_found = array() ;
 
     foreach($fields as $field) {
@@ -247,28 +331,37 @@ function checkForeignKeys () {
         echo "Checking links from '$foreign_key_field' in table '$foreign_key_table' to '$primary_key_field'
             in table '$primary_key_table'...<br>\n" ;
 
-        $sql_query = "SELECT DISTINCT t1.`$foreign_key_field`, t2.`$primary_key_field` FROM `$foreign_key_table` AS t1
-                      LEFT JOIN `$primary_key_table` AS t2 ON t1.`$foreign_key_field` = t2.`$primary_key_field`
-                      WHERE t1.`$foreign_key_field` != '' AND t1.`$foreign_key_field` IS NOT NULL
-                      AND t2.`$primary_key_field` IS NULL";
-        $sql_result = mysql_query($sql_query) or die("Error: MySQL query failed:" . mysql_error() . "</p>");
-        $number_of_records = mysql_num_rows($sql_result);
+        $sql_query = "
+			SELECT DISTINCT t1.`$foreign_key_field`, t2.`$primary_key_field` 
+			FROM `$foreign_key_table` AS t1
+            LEFT JOIN `$primary_key_table` AS t2 ON t1.`$foreign_key_field` = t2.`$primary_key_field`
+            WHERE t1.`$foreign_key_field` != '' AND t1.`$foreign_key_field` IS NOT NULL
+            	AND t2.`$primary_key_field` IS NULL";
+        // $sql_result = mysql_query($sql_query) or die("Error: MySQL query failed:" . mysql_error() . "</p>");
+        // $number_of_records = mysql_num_rows($sql_result);
         $recordsToDelete = array();
-        while ($row = mysql_fetch_array($sql_result)) {
+        $stmt = $pdo->query($sql_query);
+        while ($row = $stmt->fetch(PDO::FETCH_NUM)) {
             $recordsToDelete[] = $row[0] ;
         }
+        
+        $sql_query2 = "DELETE FROM `$foreign_key_table` WHERE `$foreign_key_field` = ?";
+        $stmt2 = $pdo->prepare($sql_query2);
+        
         $recordsDeleted = 0;
-        if (!empty($recordsToDelete)) {
-            $sql_query2 = "DELETE FROM `$foreign_key_table` WHERE `$foreign_key_field` IN ('" .
-                implode("', '", array_map('mysql_real_escape_string', $recordsToDelete)) . "')";
+        foreach ($recordsToDelete as $errorId) {
+ 		/*           
+   			$sql_query2 = "
+				DELETE FROM `$foreign_key_table` 
+				WHERE `$foreign_key_field` IN ('" . implode("', '", array_map('mysql_real_escape_string', $recordsToDelete)) . "')";
             $sql_result2 = mysql_query($sql_query2) or die("Error: MySQL query failed:" . mysql_error() . "</p>");
             $recordsDeleted = mysql_affected_rows();
-
-            foreach ($recordsToDelete as $errorId) {
-                $errors_found[] = "Foreign key $errorId for '$foreign_key_field' in table " .
+            */
+        	$stmt2->execute(array($errorId));
+        	$recordsDeleted++;
+        	
+            $errors_found[] = "Foreign key $errorId for '$foreign_key_field' in table " .
             	"'$foreign_key_table' not found as primary key in table '$primary_key_table'";
-
-            }
         }
         echo "Number of problematic records deleted from '$foreign_key_table': $recordsDeleted</br></br>\n" ;
     }
@@ -276,9 +369,12 @@ function checkForeignKeys () {
 }
 
 function createTaxaTable () {
+    /*
     $link = mysqlConnect();
     $sql_result = mysql_query("DROP TABLE IF EXISTS `taxa`") or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
-    $sql_query = "CREATE TABLE `taxa` (
+    */
+    $pdo = DbHandler::getInstance('source');
+	$sql_query = "CREATE TABLE `taxa` (
           `record_id` int(10) unsigned NOT NULL,
           `lsid` varchar(87) DEFAULT NULL,
           `name` varchar(137) NOT NULL default '',
@@ -305,8 +401,11 @@ function createTaxaTable () {
           KEY `name_code` (`name_code`),
           KEY `is_species_or_nonsynonymic_higher_taxon` (`is_species_or_nonsynonymic_higher_taxon`),
           KEY `HierarchyCode` (`HierarchyCode`(255))
-        ) ENGINE=MyISAM DEFAULT CHARSET=latin1  ;";
-    $sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
+        ) ENGINE=MyISAM DEFAULT CHARACTER SET utf8 COLLATE utf8_bin;";
+    // $sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
+     
+    $pdo->query("DROP TABLE IF EXISTS `taxa`");
+    $pdo->query($sql_query);
 }
 
 function startTaxaInsert () {
@@ -317,7 +416,8 @@ function startTaxaInsert () {
 }
 
 function extendTaxaInsert ($data) {
-    return "('" . implode("', '", array_map('mysql_real_escape_string', $data)) . "'),";
+	// return "('" . implode("', '", array_map('mysql_real_escape_string', $data)) . "'),";
+	return '(' . implode(',', array_fill(0, count($data), '?')) . ')';
 }
 
 function endTaxaInsert ($str) {
@@ -325,25 +425,38 @@ function endTaxaInsert ($str) {
 }
 
 function taxaInsert ($data) {
-    $link = mysqlConnect();
-    $sql_query = startTaxaInsert() . extendTaxaInsert($data);
-    mysql_query(endTaxaInsert($sql_query)) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
+	// $link = mysqlConnect();
+    $pdo = DbHandler::getInstance('source');
+	$stmt = $pdo->prepare(startTaxaInsert() . extendTaxaInsert($data));
+	$stmt->execute(array_values($data));
+    
+    // mysql_query(endTaxaInsert($sql_query)) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
 }
 
 function getRecordIdInTaxa ($fields = array()) {
-    $link = mysqlConnect();
+    //$link = mysqlConnect();
+    $pdo = DbHandler::getInstance('source');
+	
     $sql_query = "SELECT `record_id` FROM `taxa` WHERE ";
     foreach ($fields as $column => $value) {
-        $sql_query .= "`$column` = '" . mysql_real_escape_string($value) . "' AND ";
+        $sql_query .= "`$column` = ? AND ";
     }
+    $sql_query = substr($sql_query, 0, -4);
+    /*
     $sql_result = mysql_query(substr($sql_query, 0, -4)) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
     if (mysql_num_rows($sql_result) > 0) {
         return mysql_result($sql_result, 0);
     }
     return false;
+    */
+    $stmt = $pdo->prepare($sql_query);
+    $stmt->execute(array_values($fields));
+    $row = $stmt->fetch(PDO::FETCH_NUM);
+    return isset($row[0]) ? $row[0] : false;
 }
 
 function getHigherTaxonRecordId() {
+	/*
     $link = mysqlConnect();
     $q = mysql_query("SELECT (MAX(`record_id`) + 1) FROM `taxa`") or
         die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
@@ -353,24 +466,42 @@ function getHigherTaxonRecordId() {
     $q = mysql_query("SELECT (MAX(`record_id`) + 1) FROM `scientific_names`") or
         die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
     return mysql_result($q, 0);
+    */
+	
+	$pdo = DbHandler::getInstance('source');
+	$stmt = $pdo->query("SELECT (MAX(`record_id`) + 1) FROM `taxa`");
+	$row = $stmt->fetch(PDO::FETCH_NUM);
+	if ($row) {
+		return $row[0];
+	}
+	return $pdo->query("SELECT (MAX(`record_id`) + 1) FROM `scientific_names`")->fetchColumn();
 }
 
 function addHigherTaxaToTaxa () {
     $indicator = new Indicator();
-    $link = mysqlConnect();
+    $pdo = DbHandler::getInstance('source');
+    $pdo2 = DbHandler::getInstance('source_unbuffered');
+    //$link = mysqlConnect();
     $errors_found = array() ;
 
     // Ruud: 31-10-08
     // Create record_id for each higher taxon that will not overlap with real record_ids in scientific_names table
     $higher_taxon_record_id = getHigherTaxonRecordId();
+    
+	$sql_query = "SELECT COUNT(*) FROM `families`";
+	$number_of_records = $pdo->query($sql_query)->fetchColumn(); 
 
     $sql_query = "SELECT `record_id`,`kingdom`, `phylum`, `class`, `order`,  `superfamily`, `family` FROM `families`";
-    $sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
-    $number_of_records = mysql_num_rows($sql_result);
+    // $sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
+    // $number_of_records = mysql_num_rows($sql_result);
 
     $indicator->init($number_of_records, 100, 50);
     echo "$number_of_records records found in 'families' table<br>";
-    while ($row = mysql_fetch_array($sql_result, MYSQL_NUM)) {
+    
+    $stmt = $pdo2->prepare($sql_query, array(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => false));
+    $stmt->execute();
+    // while ($row = mysql_fetch_array($sql_result, MYSQL_NUM)) {
+    while ($row = $stmt->fetch(PDO::FETCH_NUM)) {
         $indicator->iterate();
         $record_id = $row[0];
         $this_kingdom = $row[1];
@@ -444,22 +575,36 @@ function addHigherTaxaToTaxa () {
 
 function addGeneraToTaxa () {
     $indicator = new Indicator();
-    $link = mysqlConnect();
+    $pdo = DbHandler::getInstance('source');
+    $pdo2 = DbHandler::getInstance('source_unbuffered');
+    //$link = mysqlConnect();
     $errors_found = array() ;
     $higher_taxon_record_id = getHigherTaxonRecordId();
 
-    $sql_query = "SELECT DISTINCT t1.`genus`, t1.`family_id`, t2.`kingdom`, t2.`phylum`, t2.`class`,
-                  t2.`order`, t2.`superfamily`, t2.`family`
-                  FROM `scientific_names` AS t1
-                  LEFT JOIN `families` AS t2 ON t1.`family_id` = t2.`record_id`
-    			  WHERE t1.`family_id` IS NOT NULL";
-    $sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
-    $number_of_records = mysql_num_rows($sql_result);
+	$sql_query = "
+		SELECT COUNT(DISTINCT t1.`genus`)
+        FROM `scientific_names` AS t1
+        LEFT JOIN `families` AS t2 ON t1.`family_id` = t2.`record_id`
+    	WHERE t1.`family_id` IS NOT NULL";
+	$number_of_records = $pdo->query($sql_query)->fetchColumn(); 
+    
+    $sql_query = "
+		SELECT DISTINCT t1.`genus`, t1.`family_id`, t2.`kingdom`, t2.`phylum`, t2.`class`,
+             t2.`order`, t2.`superfamily`, t2.`family`
+        FROM `scientific_names` AS t1
+        LEFT JOIN `families` AS t2 ON t1.`family_id` = t2.`record_id`
+    	WHERE t1.`family_id` IS NOT NULL";
+    // $sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
+    // $number_of_records = mysql_num_rows($sql_result);
     echo "$number_of_records genera found in 'scientific_names' table<br>";
 
     $indicator->init($number_of_records, 100, 300);
     $family_id = $hierarchy = $parent_hierarchy = $parent_id = "";
-    while ($row = mysql_fetch_array($sql_result, MYSQL_NUM)) {
+ 
+    $stmt = $pdo2->prepare($sql_query, array(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => false));
+    $stmt->execute();
+    while ($row = $stmt->fetch(PDO::FETCH_NUM)) {
+    // while ($row = mysql_fetch_array($sql_result, MYSQL_NUM)) {
         $indicator->iterate();
         $old_family_id = $family_id;
         $old_hierarchy = $hierarchy;
@@ -508,23 +653,41 @@ function addGeneraToTaxa () {
 
 function addSubgeneraToTaxa () {
     $indicator = new Indicator();
-    $link = mysqlConnect();
+    // $link = mysqlConnect();
+    $pdo = DbHandler::getInstance('source');
+    $pdo2 = DbHandler::getInstance('source_unbuffered');
     $errors_found = array() ;
     $higher_taxon_record_id = getHigherTaxonRecordId();
 
-    $sql_query = "SELECT DISTINCT t1.`genus`, t1.`family_id`, t2.`kingdom`, t2.`phylum`, t2.`class`,
-                  t2.`order`, t2.`superfamily`, t2.`family`, t1.`subgenus`
-                  FROM `scientific_names` AS t1
-                  LEFT JOIN `families` AS t2 ON t1.`family_id` = t2.`record_id`
-    			  WHERE t1.`subgenus` > '' AND t1.`family_id` IS NOT NULL";
-    $sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
-    $number_of_records = mysql_num_rows($sql_result);
+	$sql_query = "
+		SELECT COUNT(DISTINCT t1.`genus`, t1.`family_id`, t2.`kingdom`, t2.`phylum`, t2.`class`,
+            t2.`order`, t2.`superfamily`, t2.`family`, t1.`subgenus`)
+        FROM `scientific_names` AS t1
+        LEFT JOIN `families` AS t2 ON t1.`family_id` = t2.`record_id`
+    	WHERE t1.`subgenus` > '' AND t1.`family_id` IS NOT NULL";
+	$number_of_records = $pdo->query($sql_query)->fetchColumn(); 
+    
+    $sql_query = "
+		SELECT DISTINCT t1.`genus`, t1.`family_id`, t2.`kingdom`, t2.`phylum`, t2.`class`,
+            t2.`order`, t2.`superfamily`, t2.`family`, t1.`subgenus`
+        FROM `scientific_names` AS t1
+        LEFT JOIN `families` AS t2 ON t1.`family_id` = t2.`record_id`
+    	WHERE t1.`subgenus` > '' AND t1.`family_id` IS NOT NULL";
+    
+	// $sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
+    // $number_of_records = mysql_num_rows($sql_result);
     echo "$number_of_records subgenera found in 'scientific_names' table<br>";
 
     $indicator->init($number_of_records, 100, 300);
     $family_id = $hierarchy = $parent_hierarchy = $parent_id = "";
-    while ($row = mysql_fetch_array($sql_result, MYSQL_NUM)) {
-        $indicator->iterate();
+    
+    $stmt = $pdo2->prepare($sql_query, array(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => false));
+    $stmt->execute();
+    //$stmt->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, false);
+    $stmt->execute();
+    while ($row = $stmt->fetch(PDO::FETCH_NUM)) {
+    // while ($row = mysql_fetch_array($sql_result, MYSQL_NUM)) {
+    	$indicator->iterate();
 
         $old_family_id = $family_id;
         $old_hierarchy = $hierarchy;
@@ -580,25 +743,40 @@ function addSubgeneraToTaxa () {
 
 function addSpeciesToTaxa () {
     $indicator = new Indicator();
-    $link = mysqlConnect();
+    // $link = mysqlConnect();
+    $pdo = DbHandler::getInstance('source');
+    $pdo2 = DbHandler::getInstance('source_unbuffered');
     $errors_found = array() ;
     $acceptedStatuses = getAcceptedStatuses();
 
-    $sql_query = "SELECT t1.`record_id`, t1.`genus`, t1.`species`, t1.`name_code`, t1.`sp2000_status_id`,
-                      t1.`accepted_name_code`, t1.`database_id`, t1.`family_id`, t2.`kingdom`,
-                      t2.`phylum`, t2.`class`, t2.`order`, t2.`superfamily`, t2.`family`, t1.`subgenus`,
-                      t1.`is_extinct`, t1.`has_preholocene`, t1.`has_modern`
-                  FROM `scientific_names` AS t1
-                  LEFT JOIN `families` AS t2 ON t1.`family_id`= t2.`record_id`
-                  WHERE (t1.`infraspecies` = '' OR t1.`infraspecies` IS NULL) AND t1.`family_id` IS NOT NULL";
-    $sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
-    $number_of_records = mysql_num_rows($sql_result);
+	$sql_query = "
+		SELECT COUNT(*)
+        FROM `scientific_names` AS t1
+        LEFT JOIN `families` AS t2 ON t1.`family_id`= t2.`record_id`
+        WHERE (t1.`infraspecies` = '' OR t1.`infraspecies` IS NULL) AND t1.`family_id` IS NOT NULL";
+	$number_of_records = $pdo->query($sql_query)->fetchColumn(); 
+    
+    $sql_query = "
+		SELECT t1.`record_id`, t1.`genus`, t1.`species`, t1.`name_code`, t1.`sp2000_status_id`,
+			t1.`accepted_name_code`, t1.`database_id`, t1.`family_id`, t2.`kingdom`,
+            t2.`phylum`, t2.`class`, t2.`order`, t2.`superfamily`, t2.`family`, t1.`subgenus`,
+            t1.`is_extinct`, t1.`has_preholocene`, t1.`has_modern`
+        FROM `scientific_names` AS t1
+        LEFT JOIN `families` AS t2 ON t1.`family_id`= t2.`record_id`
+        WHERE (t1.`infraspecies` = '' OR t1.`infraspecies` IS NULL) AND t1.`family_id` IS NOT NULL";
+    
+    // $sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
+    // $number_of_records = mysql_num_rows($sql_result);
     echo "$number_of_records species found in 'scientific_names' table<br>";
 
-    list($i, $n, $recordsPerBatch, $sql_query2) = array(0, 0, 2000, startTaxaInsert());
+    list($i, $n, $recordsPerBatch) = array(0, 0, 2000);
     $indicator->init($number_of_records, 100, 2000);
     $family_id = $hierarchy = $parent_hierarchy = $parent_id = "";
-    while ($row = mysql_fetch_array($sql_result, MYSQL_NUM)) {
+    
+    $stmt = $pdo2->prepare($sql_query, array(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => false));
+    $stmt->execute();
+    while ($row = $stmt->fetch(PDO::FETCH_NUM)) {
+    // while ($row = mysql_fetch_array($sql_result, MYSQL_NUM)) {
         $indicator->iterate();
         $i++;
         $n++;
@@ -664,7 +842,7 @@ function addSpeciesToTaxa () {
             continue;
         }
 
-
+        /*
         // add taxon to 'taxa' table
         $sql_query2 .= extendTaxaInsert(
             array($record_id, $taxon, $taxon_with_italics, $taxon_level, $this_name_code, $parent_id,
@@ -678,32 +856,54 @@ function addSpeciesToTaxa () {
             mysql_query(endTaxaInsert($sql_query2)) or die("<p>Error: MySQL query failed: " . mysql_error() . "</p>");
             list($i, $sql_query2) = array(0, startTaxaInsert());
         }
+        */
+        taxaInsert(array($record_id, $taxon, $taxon_with_italics, $taxon_level, $this_name_code, $parent_id,
+            $this_sp2000_status_id, $this_database_id, $is_accepted_name, 1, $hierarchy,
+            $this_is_extinct, $this_has_preholocene, $this_has_modern)
+        );
     }
     return $errors_found;
 }
 
 function addInfraspeciesToTaxa() {
     $indicator = new Indicator();
-    $link = mysqlConnect();
+    // $link = mysqlConnect();
+    $pdo = DbHandler::getInstance('source');
+    $pdo2 = DbHandler::getInstance('source_unbuffered');
+    
     $errors_found = array() ;
     $acceptedStatuses = getAcceptedStatuses();
-
-    $sql_query = "SELECT t1.`record_id`, t1.`genus`, t1.`species`, t1.`infraspecies_marker`,
-            t1.`infraspecies`, t1.`name_code`, t1.`sp2000_status_id`,
+    
+	$sql_query = "
+		SELECT COUNT(*)
+        FROM `scientific_names` AS t1
+        LEFT JOIN `families` AS t2 ON t1.`family_id`= t2.`record_id`
+        WHERE (t1.`infraspecies` != '' AND t1.`infraspecies` IS NOT NULL) AND t1.`family_id` IS NOT NULL";
+	$number_of_records = $pdo->query($sql_query)->fetchColumn();
+	
+	$sql_query = "
+		SELECT t1.`record_id`, t1.`genus`, t1.`species`, t1.`infraspecies_marker`,
+        	t1.`infraspecies`, t1.`name_code`, t1.`sp2000_status_id`,
             t1.`accepted_name_code`, t1.`database_id`, t1.`family_id`, t2.`kingdom`, t2.`phylum`, t2.`class`,
             t2.`order`, t2.`superfamily`, t2.`family`, t1.`subgenus`, t1.`infraspecies_parent_name_code`,
             t1.`is_extinct`, t1.`has_preholocene`, t1.`has_modern`
         FROM `scientific_names` AS t1
         LEFT JOIN `families` AS t2 ON t1.`family_id`= t2.`record_id`
         WHERE (t1.`infraspecies` != '' AND t1.`infraspecies` IS NOT NULL) AND t1.`family_id` IS NOT NULL";
-    $sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
-    $number_of_records = mysql_num_rows($sql_result);
+	// $sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
+    // $number_of_records = mysql_num_rows($sql_result);
     echo "$number_of_records infraspecies found in 'scientific_names' table<br>";
 
     list($i, $n, $recordsPerBatch, $sql_query2) = array(0, 0, 2000, startTaxaInsert());
     $indicator->init($number_of_records, 100, 500);
     $family_id = $hierarchy = $parent_hierarchy = $parent_id = "";
-    while ($row = mysql_fetch_array($sql_result, MYSQL_NUM)) {
+
+    $stmt = $pdo2->prepare($sql_query, array(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => false));
+    $stmt->execute();
+    //$stmt->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, false);
+    $stmt->execute();
+    while ($row = $stmt->fetch(PDO::FETCH_NUM)) {
+    // while ($row = mysql_fetch_array($sql_result, MYSQL_NUM)) {
         $indicator->iterate();
         $i++;
         $n++;
@@ -813,6 +1013,7 @@ function addInfraspeciesToTaxa() {
             continue;
         }
 
+        /*
         // add taxon to 'taxa' table
         $sql_query2 .= extendTaxaInsert(
             array($record_id, $taxon, $taxon_with_italics, $taxon_level, $this_name_code, $parent_id,
@@ -826,12 +1027,21 @@ function addInfraspeciesToTaxa() {
         	mysql_query(endTaxaInsert($sql_query2)) or die("<p>Error: MySQL query failed: " . mysql_error() . "</p>");
             list($i, $sql_query2) = array(0, startTaxaInsert());
         }
+        */
+        
+        taxaInsert(array($record_id, $taxon, $taxon_with_italics, $taxon_level, 
+        	$this_name_code, $parent_id, $this_sp2000_status_id, $this_database_id, 
+        	$is_accepted_name, 1, '', $this_is_extinct, $this_has_preholocene, 
+        	$this_has_modern)
+        );
+        
 
     }
     return $errors_found;
 }
 
 function getInfraspeciesParentId ($nameCode) {
+	/*
     mysqlConnect();
     $q = 'SELECT `record_id` FROM `scientific_names` WHERE
         `name_code` = "' . mysql_real_escape_string($nameCode) . '"';
@@ -841,6 +1051,14 @@ function getInfraspeciesParentId ($nameCode) {
         return $row[0];
     }
     return null;
+    */
+    
+    $pdo = DbHandler::getInstance('source');
+    $query = 'SELECT `record_id` FROM `scientific_names` WHERE `name_code` = ?';
+    $stmt = $pdo->prepare($query);
+    $stmt->execute(array($nameCode));
+    $row = $stmt->fetch(PDO::FETCH_NUM);
+    return !empty($row[0]) ? $row[0] : null;
 }
 
 function setInfraspeciesSearch ($parent_hierarchy, $is_accepted_name) {
@@ -852,32 +1070,50 @@ function setInfraspeciesSearch ($parent_hierarchy, $is_accepted_name) {
 }
 
 function higherTaxaWithAcceptedNames () {
-    $link = mysqlConnect();
-    $taxa = array("subgenera" => "Subgenus", "genera" => "Genus" , "families" => "Family" , "superfamilies" => "Superfamily" ,
-                  "orders" => "Order" , "classes" => "Class" , "phyla" => "Phylum" , "kingdoms" => "Kingdom");
+    // $link = mysqlConnect();
+    $taxa = array(
+    	"subgenera" => "Subgenus", 
+    	"genera" => "Genus" , 
+    	"families" => "Family" , 
+    	"superfamilies" => "Superfamily" ,
+        "orders" => "Order" , 
+    	"classes" => "Class" , 
+    	"phyla" => "Phylum" , 
+    	"kingdoms" => "Kingdom"
+    );
 
-    // Change line below to include dead ends in the tree!
-    // $taxa = array("subgenera" => "Subgenus", "genera" => "Genus");
+    $pdo = DbHandler::getInstance('source');
+		// Change line below to include dead ends in the tree!
+		// $taxa = array("subgenera" => "Subgenus", "genera" => "Genus");
+	$sql_query = "UPDATE `taxa` parent, `taxa` child
+		SET parent.`is_accepted_name` = 1
+		WHERE parent.`taxon` = ? AND parent.`record_id` = child.`parent_id`
+        	AND child.`is_accepted_name` = 1 ";
+	$stmt = $pdo->prepare($sql_query);
+    
     foreach ($taxa as $label => $rank) {
         echo "Finding $label with accepted names...<br>";
-        $sql_query = "UPDATE `taxa` parent, `taxa` child
-                      SET parent.`is_accepted_name` = 1
-                      WHERE parent.`taxon` = '$rank'
-                      AND parent.`record_id` = child.`parent_id`
-                      AND child.`is_accepted_name` = 1 ";
-        $sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
+        $stmt->execute(array($rank));
+		/* $sql_query = "UPDATE `taxa` parent, `taxa` child
+			SET parent.`is_accepted_name` = 1
+			WHERE parent.`taxon` = '" . $rank . "' AND parent.`record_id` = child.`parent_id`
+	        	AND child.`is_accepted_name` = 1 "; */
+        //$sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
     }
     $q = 'UPDATE `taxa` SET `is_accepted_name` = 1
           WHERE `taxon` in ("Family" "Superfamily", "Order", "Class", "Phylum", "Kingdom") AND `name` != ""';
-    mysql_query($q) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
+    // mysql_query($q) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
+    $pdo->query($q);
 }
 
 function higherTaxaWithSynonyms () {
-    $link = mysqlConnect();
+    //$link = mysqlConnect();
+    $pdo = DbHandler::getInstance('source');
     $sql_query = "UPDATE `taxa`
                   SET `is_species_or_nonsynonymic_higher_taxon`  = 0
                   WHERE `taxon` != 'Species' AND `taxon` != 'Infraspecies' AND `is_accepted_name` = 0";
-    $sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
+    //$sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
+	$pdo->query($sql_query);
 }
 
 
@@ -906,13 +1142,22 @@ function buildTaxaTable () {
 
 function verifyAcceptedStatus () {
     $errors_found = array() ;
-
-    $link = mysqlConnect();
+    $pdo = DbHandler::getInstance('source');
+    
+    //$link = mysqlConnect();
     $sql_query = "SELECT t1.`record_id` FROM `taxa` t1
-                  LEFT JOIN `scientific_names` AS t2 ON t1.`record_id` = t2.`record_id`
-                  WHERE t1.`is_accepted_name` != t2.`is_accepted_name` AND
-                  t1.`is_accepted_name` = 1";
-    $sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
+		LEFT JOIN `scientific_names` AS t2 ON t1.`record_id` = t2.`record_id`
+		WHERE t1.`is_accepted_name` != t2.`is_accepted_name` AND t1.`is_accepted_name` = 1";
+    $stmt = $pdo->query($sql_query);
+	while ($row = $stmt->fetch(PDO::FETCH_NUM)) {
+		$ids[] = $row[0];
+	}
+	if (!empty($ids)) {
+        $sql_query = "UPDATE `taxa` SET `is_accepted_name` = 0 WHERE `record_id` IN (" . implode(',', $ids) . ")";
+		$pdo->query($sql_query);
+	}
+    
+    /* $sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
     if (mysql_num_rows($sql_result) > 0) {
         $ids = array();
         while ($row = mysql_fetch_array($sql_result)) {
@@ -920,13 +1165,14 @@ function verifyAcceptedStatus () {
         }
         $sql_query = "UPDATE `taxa` SET `is_accepted_name` = 0 WHERE `record_id` IN (" . implode(',', $ids) . ")";
         $sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
-    }
+    } */
 
     // Ruud 05-02-15: delete taxa with conflicting flags
     $q = 'SELECT `record_id`, `name` from `taxa` WHERE `sp2000_status_id` IN (1,4) AND `is_accepted_name` = 0
           UNION DISTINCT
           SELECT `record_id`, `name` FROM `taxa` WHERE `sp2000_status_id` IN (2,3,5) AND `is_accepted_name` = 1';
-    $r = mysql_query($q) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
+    
+    /* $r = mysql_query($q) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
     if (mysql_num_rows($r) > 0) {
         $ids = array();
         while ($row = mysql_fetch_array($r)) {
@@ -936,6 +1182,16 @@ function verifyAcceptedStatus () {
         }
         $sql_query = "DELETE FROM `taxa` WHERE `record_id` IN (" . implode(',', array_keys($ids)) . ")";
         $sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
+    } */
+    
+    $stmt = $pdo->query($q);
+    while ($row = $stmt->fetch(PDO::FETCH_NUM)) {
+		$ids[$row[0]] = $row[1];
+		$errors_found[] = 'Taxon deleted: conflicting status for ' . $row[1] . ' (id: ' . $row[0] . ')';
+    }
+    if (!empty($errors_found)) {
+        $sql_query = "DELETE FROM `taxa` WHERE `record_id` IN (" . implode(',', array_keys($ids)) . ")";
+    	$pdo->query($sql_query);
     }
     return $errors_found;
 }
@@ -975,3 +1231,17 @@ function writeToLog ($logger, $id, $name, $message, $nameCode = null) {
     $logger->err($m);
 }
 
+function setPdo ($config, $unbuffered = false) {
+	if (!isset($config['source'])) {
+		throw new Exception('No source database defined!');
+	}
+	if (isset($config['source']['options'])) {
+		$options = explode(",", $config['source']['options']);
+		foreach ($options as $option) {
+			$parts = explode("=", trim($option));
+			$o[$parts[0]] = $parts[1];
+		}
+	}
+	DbHandler::createInstance('source', $config['source'], $o);
+	DbHandler::createInstance('source_unbuffered', $config['source'], $o, true);
+}

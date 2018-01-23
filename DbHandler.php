@@ -13,7 +13,7 @@ class DbHandler
     {
     }
 
-    public static function createInstance ($id, array $config, array $options = array())
+    public static function createInstance ($id, array $config, array $options = array(), $unbuffered = false)
     {
         if (isset(self::$instance[$id])) {
             return false;
@@ -27,9 +27,11 @@ class DbHandler
             // array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8")
             // as a way to set up a utf8 connection. We are forcing
             // it with a query if this option is set.
-            if (in_array(
-            'set names utf8', array_map('strtolower', $options))) {
+            if (in_array('set names utf8', array_map('strtolower', $options))) {
                 self::$instance[$id]->query('SET NAMES "utf8"');
+            }
+            if ($unbuffered) {
+            	 self::$instance[$id]->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, false);
             }
             return true;
         }
