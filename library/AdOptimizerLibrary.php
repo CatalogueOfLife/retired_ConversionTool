@@ -305,7 +305,7 @@ function createTaxaTable () {
           KEY `name_code` (`name_code`),
           KEY `is_species_or_nonsynonymic_higher_taxon` (`is_species_or_nonsynonymic_higher_taxon`),
           KEY `HierarchyCode` (`HierarchyCode`(255))
-        ) ENGINE=MyISAM DEFAULT CHARACTER SET utf8 COLLATE utf8_bin; ";
+        ) ENGINE=MyISAM DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci; ";
     $sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
 }
 
