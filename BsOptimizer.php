@@ -8,7 +8,7 @@
 <body style="font: 12px verdana; width: 800px;">
     <h3>Base Scheme Optimizer</h3>
 <?php
-    ini_set('memory_limit', '1024M');
+    ini_set('memory_limit', '1500M');
     set_include_path('library' . PATH_SEPARATOR . get_include_path());
     set_time_limit(86400);
 
@@ -285,16 +285,18 @@
         echo '</p>';
     }
 
-
     echo '<p><b>Post-processing ' . SEARCH_ALL . ', ' . SEARCH_DISTRIBUTION . ', ' . SEARCH_SCIENTIFIC . ' and ' . TAXON_TREE . ' tables</b><br>';
     echo 'Updating ' . SEARCH_ALL . '...<br>';
     echo '&nbsp;&nbsp;&nbsp; Cleaning name elements...<br>';
-    $query = 'SELECT `id`, `name_element` FROM `' . SEARCH_ALL . '`';
-    $stmt = $pdo->prepare($query);
-    $stmt->execute();
-    while ($ne = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        cleanNameElements($ne, $delete_name_elements, $delete_chars);
-    }
+    $batch = 100000;
+    for ($i = 0; $i < 5000000; $i += $batch) {
+        $query = 'SELECT `id`, `name_element` FROM `' . SEARCH_ALL . '` LIMIT %d, %d';
+        $stmt = $pdo->prepare(sprintf($query, $i, $batch));
+        $stmt->execute();
+        while ($ne = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            cleanNameElements($ne, $delete_name_elements, $delete_chars);
+        }
+   }
 
     echo '&nbsp;&nbsp;&nbsp; Creating temporary column to mark rows that should be processed...<br>';
     $query = 'ALTER TABLE `' . SEARCH_ALL . '` ADD `delete_me` TINYINT(1) NOT NULL, ADD INDEX (`delete_me`)';
@@ -429,7 +431,7 @@
     $queries = array(
     	'UPDATE `' . SEARCH_ALL . '` SET `rank` = "subgenus" WHERE `name` like "%)" 
 			AND `name_suffix` = "" AND `name_status` = 0;',
-    	'UPDATE `' . SPECIES_DETAILS . '` SET `subgenus_id` = 0, `subgenus_lsid` = "", `subgenus_name` = "";',
+    	'UPDATE `' . SPECIES_DETAILS . '` SET `subgenus_id` = 0, `subgenus_name` = "";',
         'DELETE FROM `' . TAXON_TREE . '` WHERE `rank` = "subgenus";',
         'DELETE FROM `' . SEARCH_SCIENTIFIC . '` WHERE `subgenus` != "" AND `species` = "";',
         'DELETE FROM `' . SEARCH_ALL . '` WHERE `rank` = "subgenus";',
@@ -820,8 +822,7 @@
     }
     fclose($fp);
 
-    echo '</p><p><b>Tree updates</b><br>Copying tree estimates...<br>';
-    copyEstimates();
+    echo '</p><p><b>Tree updates</b><br>';
 
     // Dead ends
     if (isset($config['dead_ends']['deadEnds']) && $config['dead_ends']['deadEnds'] == 1) {
@@ -837,7 +838,10 @@
         echo 'Copying newly created taxa to search tables...<br>';
         copyDeadEndsToSearch();
     }
-    
+
+    echo 'Copying tree estimates...<br>';
+    copyEstimates();
+  
     echo 'Fixing uncredited taxa in tree...<br>';
     $uncredited = getUncreditedTaxaInTree();
     foreach ($uncredited as $row) {

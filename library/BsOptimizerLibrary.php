@@ -789,9 +789,15 @@ function copyEstimates () {
 function getTaxonTreeId ($p)
 {
     $pdo = DbHandler::getInstance('target');
+    /*
     $q = 'SELECT t1.`taxon_id` AS `id` FROM `_taxon_tree` AS t1
         LEFT JOIN `_search_scientific` AS t2 ON t1.`taxon_id` = t2.`id`
         WHERE t1.`name` = ? AND t1.`rank` = ? AND t2.`kingdom` = ?';
+    */
+    $q = 'SELECT t1.`taxon_id` AS `id` FROM `_taxon_tree` AS t1
+        LEFT JOIN `_search_all` AS t2 ON t1.`taxon_id` = t2.`id`
+        WHERE t1.`name` = ? AND t1.`rank` = ? AND t2.`group` = ?';
+    echo "$q<br>";
     $stmt = $pdo->prepare($q);
     $stmt->execute($p);
     $r = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -1313,7 +1319,7 @@ function cleanString ($str)
 
 function hashCoL ($s, $removeDiacritical = true) {
     if ($removeDiacritical) {
-        $s = iconv('UTF-8', 'ASCII//TRANSLIT', $s);
+        $s = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $s);
     }
     return md5(strtolower(str_replace(' ', '_', $s)));
 }

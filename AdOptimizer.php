@@ -21,10 +21,10 @@
     require_once 'DbHandler.php';
     require_once 'library/Zend/Log/Writer/Stream.php';
     require_once 'library/Zend/Log.php';
-    require_once 'Indicator.php';
-    require 'taxonmatcher/TaxonMatcher.php';
-    require 'taxonmatcher/EchoEventListener.php';
-    require 'taxonmatcher/LogEventListener.php';
+    require_once 'Indicator.php'; 
+    // require 'taxonmatcher/TaxonMatcher.php';
+    // require 'taxonmatcher/EchoEventListener.php';
+    // require 'taxonmatcher/LogEventListener.php';
     alwaysFlush();
 
     $logFile = 'logs/' . date("Y-m-d") . '-assembly-optimizer.log';
@@ -44,7 +44,7 @@
     $scriptStart = microtime(true);
 
     echo '<p>Started: ' . date('Y-m-d H:i:s') . '</p>';
-    
+/*    
     echo '<p>Checking database structure...</p>';
     $errors = checkDatabase();
     if (!empty($errors)) {
@@ -61,6 +61,7 @@
     if (!empty($errors)) {
       printErrors($errors, 'Missing foreign key reference', $logger);
     }
+    */
 
     echo "</p><p><b>Building 'taxa' table</b><br>";
     $errors = buildTaxaTable();
@@ -76,7 +77,7 @@
     }
     $totalTime = round(microtime(true) - $scriptStart);
     echo '</p><p>Optimalization took ' . $indicator->formatTime($totalTime) . '.</p>';
-
+/*
     echo '<p><br><br><b>Creating LSIDs</b><br>';
     $taxonMatcher = new TaxonMatcher();
     $taxonMatcher->setDbHost($config['source']['host']);
@@ -108,8 +109,9 @@
     catch(Exception $e) {
         echo "\n" . $e->getTraceAsString();
     }
+    */
 ?>
-    </p><p><br><br>Post-processing ready! Proceed to <b>Step 2</b>:
+    <p><br><br>Post-processing ready! Proceed to <b>Step 2</b>:
     <a href="AcToBs.php">Import the data into the new database</a>.</p>
 </body>
 </html>

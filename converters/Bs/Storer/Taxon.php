@@ -67,7 +67,7 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon implements Bs_Storer_Interfa
         $this->_setTaxonNameElement($taxon);
         $this->_setTaxonScrutiny($taxon);
         $this->_setTaxonReferences($taxon);
-        $this->_setTaxonLsid($taxon);
+        //$this->_setTaxonLsid($taxon);
         $this->_setTaxonUri($taxon);
         $this->_setTaxonDetail($taxon);
         $this->_setTaxonDistribution($taxon);

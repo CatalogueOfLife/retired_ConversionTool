@@ -1,4 +1,6 @@
 <?php
+global $mysqli;
+
 function alwaysFlush ()
 {
     @ini_set('zlib.output_compression', 0);
@@ -14,16 +16,18 @@ function alwaysFlush ()
 
 /////////////// Assembly database functions
 
-function mysqlConnect () {
-    $config = parse_ini_file('config/AcToBs.ini', true);
-    $link = mysql_connect(
-        $config['source']['host'],
-        $config['source']['username'],
-        $config['source']['password'])
-        or die("Error: connection failure: " . mysql_error());
-    mysql_select_db($config['source']['dbname'])
-        or die("Error: could not select database: " . mysql_error());
-    return $link;
+function mysqli () {
+    global $mysqli;
+    if (empty($mysqli)) {
+        $config = parse_ini_file('config/AcToBs.ini', true);
+        $mysqli = mysqli_connect(
+            $config['source']['host'],
+            $config['source']['username'],
+            $config['source']['password'],
+            $config['source']['dbname'])
+            or die("Error: connection failure: " . mysqli_connect_errno());
+    }
+    return $mysqli;
 }
 
 function dbName () {
@@ -64,11 +68,10 @@ function checkDatabase () {
     $fields["specialists"] = array("record_id", "specialist_name", "specialist_code") ;
     $fields["sp2000_statuses"] = array("record_id", "sp2000_status") ;
 
-    $link = mysqlConnect();
     $tables_in_database = array() ;
     $sql_query = 'SHOW TABLES FROM `' . dbName() . '`';
-    $sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
-    while ($row = mysql_fetch_row($sql_result)) {
+    $sql_result = mysqli_query(mysqli(), $sql_query) or die("<p>Error: MySQL query failed:" . mysqli_error(mysqli()) . "</p>");
+    while ($row = mysqli_fetch_row($sql_result)) {
         array_push($tables_in_database,strtolower($row[0])) ;
     }
     $errors_found = array() ;
@@ -79,15 +82,15 @@ function checkDatabase () {
             continue ;
         }
         $sql_query = "SELECT COUNT(*) FROM `$table`" ;
-        $sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
-        $row = mysql_fetch_row($sql_result) ;
+        $sql_result = mysqli_query(mysqli(), $sql_query) or die("<p>Error: MySQL query failed:" . mysqli_error(mysqli()) . "</p>");
+        $row = mysqli_fetch_row($sql_result) ;
         if ($row[0] == 0) {
             $errors_found[] = "Table $table is empty";
         }
         $fields_in_this_table = array() ;
         $sql_query = "SHOW FIELDS FROM `$table` " ;
-        $sql_result = mysql_query($sql_query) or die("Error: MySQL query failed:" . mysql_error() . "</p>");
-        while ($row = mysql_fetch_array($sql_result)) {
+        $sql_result = mysqli_query(mysqli(), $sql_query) or die("Error: MySQL query failed:" . mysqli_error(mysqli()) . "</p>");
+        while ($row = mysqli_fetch_array($sql_result)) {
             array_push($fields_in_this_table,$row["Field"]);
         }
         foreach ($fields[$table] as $field) {
@@ -97,28 +100,27 @@ function checkDatabase () {
             }
         }
      }
-     mysql_query('UPDATE `families` SET `database_id` = 0 WHERE `database_id` IS NULL');
+     mysqli_query(mysqli(), 'UPDATE `families` SET `database_id` = 0 WHERE `database_id` IS NULL');
      return $errors_found;
 }
 
 function getAcceptedStatuses () {
-    $link = mysqlConnect();
     $accepted_name_id = 1 ;
     $provisionally_accepted_name_id = 4 ;
     $sql_query2 = "SELECT `record_id`
                FROM   `sp2000_statuses`
                WHERE  `sp2000_status` = 'accepted name' " ;
-    $sql_result2 = mysql_query($sql_query2) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
-    if ( mysql_num_rows($sql_result2) > 0 ) {
-        $row2 = mysql_fetch_row($sql_result2);
+    $sql_result2 = mysqli_query(mysqli(), $sql_query2) or die("<p>Error: MySQL query failed:" . mysqli_error(mysqli()) . "</p>");
+    if (mysqli_num_rows($sql_result2) > 0 ) {
+        $row2 = mysqli_fetch_row($sql_result2);
         $accepted_name_id = $row2[0] ;
     }
     $sql_query2 = "SELECT `record_id`
                FROM   `sp2000_statuses`
                WHERE  `sp2000_status` = 'provisionally accepted name' " ;
-    $sql_result2 = mysql_query($sql_query2) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
-    if ( mysql_num_rows($sql_result2) > 0 ) {
-        $row2 = mysql_fetch_row($sql_result2);
+    $sql_result2 = mysqli_query(mysqli(), $sql_query2) or die("<p>Error: MySQL query failed:" . mysqli_error(mysqli()) . "</p>");
+    if ( mysqli_num_rows($sql_result2) > 0 ) {
+        $row2 = mysqli_fetch_row($sql_result2);
         $provisionally_accepted_name_id = $row2[0] ;
     }
     return array($accepted_name_id, $provisionally_accepted_name_id);
@@ -131,7 +133,6 @@ function copyCodesToIds () {
     $fields["reference2"] = array ("common_names","reference_code","reference_id","references") ;
 
     $indicator = new Indicator();
-    $link = mysqlConnect();
     $errors_found = array() ;
 
     $code_fields = array() ;
@@ -152,8 +153,8 @@ function copyCodesToIds () {
         $field = $code_field[1] ;
         $index_exists = $anyAction = false ;
         $sql_query = "SHOW INDEX FROM `$table` " ;
-        $sql_result = mysql_query($sql_query) or die("Error: MySQL query failed:" . mysql_error() . "</p>");
-        while ($row = mysql_fetch_array($sql_result)) {
+        $sql_result = mysqli_query(mysqli(), $sql_query) or die("Error: MySQL query failed:" . mysqli_error(mysqli()) . "</p>");
+        while ($row = mysqli_fetch_array($sql_result)) {
             if ($row["Key_name"] == $field) {
                 $index_exists = true ;
                 break ;
@@ -163,7 +164,7 @@ function copyCodesToIds () {
             $anyAction = true;
             echo "Indexing field '$field' in table '$table'... <br>" ;
             $sql_query = "ALTER TABLE `$table` ADD INDEX (`$field`)" ;
-            $sql_result = mysql_query($sql_query) or die("Error: MySQL query failed:" . mysql_error() . "</p>");
+            $sql_result = mysqli_query(mysqli(), $sql_query) or die("Error: MySQL query failed:" . mysqli_error(mysqli()) . "</p>");
         }
     }
     echo $anyAction ? '</p><p>' : '';
@@ -174,18 +175,18 @@ function copyCodesToIds () {
                   FROM `scientific_names`
                   WHERE `family_code` !=  '' AND `family_code` IS NOT NULL
                   AND (`sp2000_status_id` = $accepted_name_id OR `sp2000_status_id` = $provisionally_accepted_name_id) " ;
-    $sql_result = mysql_query($sql_query) or die("Error: MySQL query failed:" . mysql_error() . "</p>");
-    $number_of_records = mysql_num_rows($sql_result) ;
+    $sql_result = mysqli_query(mysqli(), $sql_query) or die("Error: MySQL query failed:" . mysqli_error(mysqli()) . "</p>");
+    $number_of_records = mysqli_num_rows($sql_result) ;
 
     list($i, $n, $iterationsPerMarker, $sql_query2) = array(0, 0, 2500, false);
     $indicator->init($number_of_records, 100, $iterationsPerMarker);
-    while ($row = mysql_fetch_array($sql_result)) {
+    while ($row = mysqli_fetch_array($sql_result)) {
         $indicator->iterate();
         $name_code = $row[0] ;
         $family_code = $row[1] ;
-        $sql_query2 = "UPDATE `scientific_names` SET `family_code` = '" . mysql_real_escape_string($family_code) . "'
-                        WHERE `accepted_name_code` = '" . mysql_real_escape_string($name_code) . "'; " ;
-        $sql_result2 = mysql_query($sql_query2) or die("Error: MySQL query failed:" . $sql_query2. mysql_error() . "</p>");
+        $sql_query2 = "UPDATE `scientific_names` SET `family_code` = '" . mysqli_real_escape_string(mysqli(), $family_code) . "'
+                        WHERE `accepted_name_code` = '" . mysqli_real_escape_string(mysqli(), $name_code) . "'; " ;
+        $sql_result2 = mysqli_query(mysqli(), $sql_query2) or die("Error: MySQL query failed:" . $sql_query2. mysqli_error(mysqli()) . "</p>");
      }
 
     foreach ($fields as $field) {
@@ -197,13 +198,13 @@ function copyCodesToIds () {
         $sql_query = "SELECT DISTINCT t1.`$code_field`, t2.`record_id` FROM `$table` AS t1
                       LEFT JOIN `$lookup_table` AS t2 ON t1.`$code_field` = t2.`$code_field`
                       WHERE t1.`$code_field` != '' AND t1.`$code_field` IS NOT NULL" ;
-        $sql_result = mysql_query($sql_query) or die("Error: MySQL query failed:" . mysql_error() . "</p>");
-        $number_of_records = mysql_num_rows($sql_result) ;
+        $sql_result = mysqli_query(mysqli(), $sql_query) or die("Error: MySQL query failed:" . mysqli_error(mysqli()) . "</p>");
+        $number_of_records = mysqli_num_rows($sql_result) ;
         $iterationsPerMarker = $number_of_records < 10000 ? 100 : 1000;
         list($i, $j, $sql_query2) = array(0, 0, false);
         $indicator->init($number_of_records, 100, $iterationsPerMarker);
         echo "</p><p>Converting $number_of_records '".$code_field."s' to '$id_field' in table '$table'<br>\n" ;
-        while ($row = mysql_fetch_array($sql_result)) {
+        while ($row = mysqli_fetch_array($sql_result)) {
             $indicator->iterate();
             $this_code = $row[0] ;
             $this_id = $row[1] ;
@@ -212,8 +213,8 @@ function copyCodesToIds () {
                 continue;
             }
             $sql_query2 = "UPDATE `$table` SET `$id_field` = $this_id WHERE `$code_field` =  '" .
-                mysql_real_escape_string($this_code) . "';\n" ;
-            $sql_result2 = mysql_query($sql_query2) or die("Error: MySQL query failed: " . mysql_error() . "</p>");
+                mysqli_real_escape_string(mysqli(), $this_code) . "';\n" ;
+            $sql_result2 = mysqli_query(mysqli(), $sql_query2) or die("Error: MySQL query failed: " . mysqli_error(mysqli()) . "</p>");
         }
     }
     return $errors_found;
@@ -235,7 +236,6 @@ function checkForeignKeys () {
     array_push($fields,array("scientific_name_references","reference_id","references","record_id")) ;
 
     $indicator = new Indicator();
-    $link = mysqlConnect();
     $errors_found = array() ;
 
     foreach($fields as $field) {
@@ -251,18 +251,18 @@ function checkForeignKeys () {
                       LEFT JOIN `$primary_key_table` AS t2 ON t1.`$foreign_key_field` = t2.`$primary_key_field`
                       WHERE t1.`$foreign_key_field` != '' AND t1.`$foreign_key_field` IS NOT NULL
                       AND t2.`$primary_key_field` IS NULL";
-        $sql_result = mysql_query($sql_query) or die("Error: MySQL query failed:" . mysql_error() . "</p>");
-        $number_of_records = mysql_num_rows($sql_result);
+        $sql_result = mysqli_query(mysqli(), $sql_query) or die("Error: MySQL query failed:" . mysqli_error(mysqli()) . "</p>");
+        $number_of_records = mysqli_num_rows($sql_result);
         $recordsToDelete = array();
-        while ($row = mysql_fetch_array($sql_result)) {
+        while ($row = mysqli_fetch_array($sql_result)) {
             $recordsToDelete[] = $row[0] ;
         }
         $recordsDeleted = 0;
         if (!empty($recordsToDelete)) {
             $sql_query2 = "DELETE FROM `$foreign_key_table` WHERE `$foreign_key_field` IN ('" .
-                implode("', '", array_map('mysql_real_escape_string', $recordsToDelete)) . "')";
-            $sql_result2 = mysql_query($sql_query2) or die("Error: MySQL query failed:" . mysql_error() . "</p>");
-            $recordsDeleted = mysql_affected_rows();
+            implode("', '", escapeRow($recordsToDelete)) . "')";
+                $sql_result2 = mysqli_query(mysqli(), $sql_query2) or die("Error: MySQL query failed:" . mysqli_error(mysqli()) . "</p>");
+            $recordsDeleted = mysqli_affected_rows();
 
             foreach ($recordsToDelete as $errorId) {
                 $errors_found[] = "Foreign key $errorId for '$foreign_key_field' in table " .
@@ -276,8 +276,7 @@ function checkForeignKeys () {
 }
 
 function createTaxaTable () {
-    $link = mysqlConnect();
-    $sql_result = mysql_query("DROP TABLE IF EXISTS `taxa`") or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
+    $sql_result = mysqli_query(mysqli(), "DROP TABLE IF EXISTS `taxa`") or die("<p>Error: MySQL query failed:" . mysqli_error(mysqli()) . "</p>");
     $sql_query = "CREATE TABLE `taxa` (
           `record_id` int(10) unsigned NOT NULL,
           `lsid` varchar(87) DEFAULT NULL,
@@ -306,7 +305,7 @@ function createTaxaTable () {
           KEY `is_species_or_nonsynonymic_higher_taxon` (`is_species_or_nonsynonymic_higher_taxon`),
           KEY `HierarchyCode` (`HierarchyCode`(255))
         ) ENGINE=MyISAM DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci; ";
-    $sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
+    $sql_result = mysqli_query(mysqli(), $sql_query) or die("<p>Error: MySQL query failed:" . mysqli_error(mysqli()) . "</p>");
 }
 
 function startTaxaInsert () {
@@ -317,7 +316,7 @@ function startTaxaInsert () {
 }
 
 function extendTaxaInsert ($data) {
-    return "('" . implode("', '", array_map('mysql_real_escape_string', $data)) . "'),";
+    return "('" . implode("', '", escapeRow($data)) . "'),";
 }
 
 function endTaxaInsert ($str) {
@@ -325,39 +324,35 @@ function endTaxaInsert ($str) {
 }
 
 function taxaInsert ($data) {
-    $link = mysqlConnect();
     $sql_query = startTaxaInsert() . extendTaxaInsert($data);
-    mysql_query(endTaxaInsert($sql_query)) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
+    mysqli_query(mysqli(), endTaxaInsert($sql_query)) or die("<p>Error: MySQL query failed:" . mysqli_error(mysqli()) . "</p>");
 }
 
 function getRecordIdInTaxa ($fields = array()) {
-    $link = mysqlConnect();
     $sql_query = "SELECT `record_id` FROM `taxa` WHERE ";
     foreach ($fields as $column => $value) {
-        $sql_query .= "`$column` = '" . mysql_real_escape_string($value) . "' AND ";
+        $sql_query .= "`$column` = '" . mysqli_real_escape_string(mysqli(), $value) . "' AND ";
     }
-    $sql_result = mysql_query(substr($sql_query, 0, -4)) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
-    if (mysql_num_rows($sql_result) > 0) {
-        return mysql_result($sql_result, 0);
+    $sql_result = mysqli_query(mysqli(), substr($sql_query, 0, -4)) or die("<p>Error: MySQL query failed:" . mysqli_error(mysqli()) . "</p>");
+    if (mysqli_num_rows($sql_result) > 0) {
+        return mysqli_result($sql_result, 0);
     }
     return false;
 }
 
 function getHigherTaxonRecordId() {
-    $link = mysqlConnect();
-    $q = mysql_query("SELECT (MAX(`record_id`) + 1) FROM `taxa`") or
-        die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
-    if ($higher_taxon_record_id = mysql_result($q, 0)) {
+    $q = mysqli_query(mysqli(), "SELECT (MAX(`record_id`) + 1) FROM `taxa`") or
+        die("<p>Error: MySQL query failed:" . mysqli_error(mysqli()) . "</p>");
+    if ($higher_taxon_record_id = mysqli_result($q, 0)) {
         return $higher_taxon_record_id;
     }
-    $q = mysql_query("SELECT (MAX(`record_id`) + 1) FROM `scientific_names`") or
-        die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
-    return mysql_result($q, 0);
+    $q = mysqli_query(mysqli(), "SELECT (MAX(`record_id`) + 1) FROM `scientific_names`") or
+        die("<p>Error: MySQL query failed:" . mysqli_error(mysqli()) . "</p>");
+    return mysqli_result($q, 0);
 }
 
 function addHigherTaxaToTaxa () {
     $indicator = new Indicator();
-    $link = mysqlConnect();
     $errors_found = array() ;
 
     // Ruud: 31-10-08
@@ -365,12 +360,12 @@ function addHigherTaxaToTaxa () {
     $higher_taxon_record_id = getHigherTaxonRecordId();
 
     $sql_query = "SELECT `record_id`,`kingdom`, `phylum`, `class`, `order`,  `superfamily`, `family` FROM `families`";
-    $sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
-    $number_of_records = mysql_num_rows($sql_result);
+    $sql_result = mysqli_query(mysqli(), $sql_query) or die("<p>Error: MySQL query failed:" . mysqli_error(mysqli()) . "</p>");
+    $number_of_records = mysqli_num_rows($sql_result);
 
     $indicator->init($number_of_records, 100, 50);
     echo "$number_of_records records found in 'families' table<br>";
-    while ($row = mysql_fetch_array($sql_result, MYSQL_NUM)) {
+    while ($row = mysqli_fetch_array($sql_result, MYSQLI_NUM)) {
         $indicator->iterate();
         $record_id = $row[0];
         $this_kingdom = $row[1];
@@ -444,7 +439,6 @@ function addHigherTaxaToTaxa () {
 
 function addGeneraToTaxa () {
     $indicator = new Indicator();
-    $link = mysqlConnect();
     $errors_found = array() ;
     $higher_taxon_record_id = getHigherTaxonRecordId();
 
@@ -453,13 +447,13 @@ function addGeneraToTaxa () {
                   FROM `scientific_names` AS t1
                   LEFT JOIN `families` AS t2 ON t1.`family_id` = t2.`record_id`
     			  WHERE t1.`family_id` IS NOT NULL";
-    $sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
-    $number_of_records = mysql_num_rows($sql_result);
+    $sql_result = mysqli_query(mysqli(), $sql_query) or die("<p>Error: MySQL query failed:" . mysqli_error(mysqli()) . "</p>");
+    $number_of_records = mysqli_num_rows($sql_result);
     echo "$number_of_records genera found in 'scientific_names' table<br>";
 
     $indicator->init($number_of_records, 100, 300);
     $family_id = $hierarchy = $parent_hierarchy = $parent_id = "";
-    while ($row = mysql_fetch_array($sql_result, MYSQL_NUM)) {
+    while ($row = mysqli_fetch_array($sql_result, MYSQLI_NUM)) {
         $indicator->iterate();
         $old_family_id = $family_id;
         $old_hierarchy = $hierarchy;
@@ -508,7 +502,6 @@ function addGeneraToTaxa () {
 
 function addSubgeneraToTaxa () {
     $indicator = new Indicator();
-    $link = mysqlConnect();
     $errors_found = array() ;
     $higher_taxon_record_id = getHigherTaxonRecordId();
 
@@ -517,13 +510,13 @@ function addSubgeneraToTaxa () {
                   FROM `scientific_names` AS t1
                   LEFT JOIN `families` AS t2 ON t1.`family_id` = t2.`record_id`
     			  WHERE t1.`subgenus` > '' AND t1.`family_id` IS NOT NULL";
-    $sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
-    $number_of_records = mysql_num_rows($sql_result);
+    $sql_result = mysqli_query(mysqli(), $sql_query) or die("<p>Error: MySQL query failed:" . mysqli_error(mysqli()) . "</p>");
+    $number_of_records = mysqli_num_rows($sql_result);
     echo "$number_of_records subgenera found in 'scientific_names' table<br>";
 
     $indicator->init($number_of_records, 100, 300);
     $family_id = $hierarchy = $parent_hierarchy = $parent_id = "";
-    while ($row = mysql_fetch_array($sql_result, MYSQL_NUM)) {
+    while ($row = mysqli_fetch_array($sql_result, MYSQLI_NUM)) {
         $indicator->iterate();
 
         $old_family_id = $family_id;
@@ -580,103 +573,116 @@ function addSubgeneraToTaxa () {
 
 function addSpeciesToTaxa () {
     $indicator = new Indicator();
-    $link = mysqlConnect();
     $errors_found = array() ;
     $acceptedStatuses = getAcceptedStatuses();
-
-    $sql_query = "SELECT t1.`record_id`, t1.`genus`, t1.`species`, t1.`name_code`, t1.`sp2000_status_id`,
-                      t1.`accepted_name_code`, t1.`database_id`, t1.`family_id`, t2.`kingdom`,
-                      t2.`phylum`, t2.`class`, t2.`order`, t2.`superfamily`, t2.`family`, t1.`subgenus`,
-                      t1.`is_extinct`, t1.`has_preholocene`, t1.`has_modern`
-                  FROM `scientific_names` AS t1
-                  LEFT JOIN `families` AS t2 ON t1.`family_id`= t2.`record_id`
-                  WHERE (t1.`infraspecies` = '' OR t1.`infraspecies` IS NULL) AND t1.`family_id` IS NOT NULL";
-    $sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
-    $number_of_records = mysql_num_rows($sql_result);
+ 
+    $q = "SELECT COUNT(1)
+              FROM `scientific_names` AS t1
+              LEFT JOIN `families` AS t2 ON t1.`family_id`= t2.`record_id`
+              WHERE (t1.`infraspecies` = '' OR t1.`infraspecies` IS NULL) AND t1.`family_id` IS NOT NULL";
+    $r = mysqli_query(mysqli(), $q) or die("<p>Error: MySQL query failed:" . mysqli_error(mysqli()) . "</p>");
+    $row = mysqli_fetch_row($r);
+    $number_of_records = $row[0];
     echo "$number_of_records species found in 'scientific_names' table<br>";
-
-    list($i, $n, $recordsPerBatch, $sql_query2) = array(0, 0, 2000, startTaxaInsert());
+    
+    // Do in batches, as query result too large for mysqli
     $indicator->init($number_of_records, 100, 2000);
-    $family_id = $hierarchy = $parent_hierarchy = $parent_id = "";
-    while ($row = mysql_fetch_array($sql_result, MYSQL_NUM)) {
-        $indicator->iterate();
-        $i++;
-        $n++;
-        $old_family_id = $family_id;
-        $old_hierarchy = $hierarchy;
-        $old_parent_hierarchy = $parent_hierarchy;
-
-        $row = array_map('trim', $row);
-        $record_id = $row[0];
-        $this_genus = $row[1];
-        $this_subgenus = $row[14];
-        $this_species = $row[2];
-        $this_name_code = $row[3];
-        $this_sp2000_status_id = $row[4];
-        $accepted_name_code = $row[5];
-        $this_database_id = $row[6];
-        $family_id = $row[7];
-
-        $this_kingdom = $row[8];
-        $this_phylum = $row[9];
-        $this_class = $row[10];
-        $this_order = $row[11];
-        $this_superfamily = $row[12];
-        $this_family = $row[13];
-
-        $this_is_extinct = $row[15];
-        $this_has_preholocene = $row[16];
-        $this_has_modern = $row[17];
-
-        if ($this_kingdom == "Viruses" || $this_kingdom == "Subviral agents") {
-            $taxon = $taxon_with_italics = $this_species;
-        } else {
-            $taxon = $this_genus . ' ' . (($this_subgenus != "") ? "($this_subgenus) " : "") . $this_species;
-            $taxon_with_italics = "<i>$taxon</i>";
-        }
-        $taxon_level = "Species";
-
-        $parent_hierarchy = $this_kingdom . "_" . $this_phylum . "_" . $this_class . "_" . $this_order . "_" .
-            (($this_superfamily != "") ? $this_superfamily . "_" : "") . $this_family . "_" . $this_genus .
-        	(($this_subgenus != "") ? "_" . $this_subgenus : "");
-        $hierarchy = $parent_hierarchy . "_" . $this_species;
-
-        $is_accepted_name = in_array($this_sp2000_status_id, $acceptedStatuses) ? 1 : 0;
-
-        $parent_id = getRecordIdInTaxa(array('HierarchyCode' => $parent_hierarchy));
-        if (!$parent_id) {
-            if ($is_accepted_name == 1) {
-                $errors_found[] = "No parent taxon found for species $taxon_with_italics
-                   (parent genus <i>$this_genus</i>)";
-                continue;
+    $batch = 100000;
+    
+    for ($z = 0; $z < $number_of_records; $z += $batch) {
+    
+        $sql_query = "SELECT t1.`record_id`, t1.`genus`, t1.`species`, t1.`name_code`, t1.`sp2000_status_id`,
+                          t1.`accepted_name_code`, t1.`database_id`, t1.`family_id`, t2.`kingdom`,
+                          t2.`phylum`, t2.`class`, t2.`order`, t2.`superfamily`, t2.`family`, t1.`subgenus`,
+                          t1.`is_extinct`, t1.`has_preholocene`, t1.`has_modern`
+                      FROM `scientific_names` AS t1
+                      LEFT JOIN `families` AS t2 ON t1.`family_id`= t2.`record_id`
+                      WHERE (t1.`infraspecies` = '' OR t1.`infraspecies` IS NULL) AND t1.`family_id` IS NOT NULL
+                      LIMIT %d, %d";
+        $sql_result = mysqli_query(mysqli(), sprintf($sql_query, $z, $batch)) or die("<p>Error: MySQL query failed:" . mysqli_error(mysqli()) . "</p>");
+    
+        list($i, $n, $recordsPerBatch, $sql_query2) = array(0, 0, 1000, startTaxaInsert());
+        $family_id = $hierarchy = $parent_hierarchy = $parent_id = "";
+        while ($row = mysqli_fetch_array($sql_result, MYSQLI_NUM)) {
+            $indicator->iterate();
+            $i++;
+            $n++;
+            $old_family_id = $family_id;
+            $old_hierarchy = $hierarchy;
+            $old_parent_hierarchy = $parent_hierarchy;
+    
+            $row = array_map('trim', $row);
+            $record_id = $row[0];
+            $this_genus = $row[1];
+            $this_subgenus = $row[14];
+            $this_species = $row[2];
+            $this_name_code = $row[3];
+            $this_sp2000_status_id = $row[4];
+            $accepted_name_code = $row[5];
+            $this_database_id = $row[6];
+            $family_id = $row[7];
+    
+            $this_kingdom = $row[8];
+            $this_phylum = $row[9];
+            $this_class = $row[10];
+            $this_order = $row[11];
+            $this_superfamily = $row[12];
+            $this_family = $row[13];
+    
+            $this_is_extinct = $row[15];
+            $this_has_preholocene = $row[16];
+            $this_has_modern = $row[17];
+    
+            if ($this_kingdom == "Viruses" || $this_kingdom == "Subviral agents") {
+                $taxon = $taxon_with_italics = $this_species;
             } else {
-                $parent_id = 0;
+                $taxon = $this_genus . ' ' . (($this_subgenus != "") ? "($this_subgenus) " : "") . $this_species;
+                $taxon_with_italics = "<i>$taxon</i>";
             }
-        }
-        if ($this_sp2000_status_id == "") {
-            $errors_found[] = "No Species 2000 status found for species $taxon_with_italics (id: $record_id)";
-            // Ruud 27-01-11: don't insert into taxa table, dismiss instead
-            continue;
-        }
-        if ($this_database_id == "") {
-            $errors_found[] = "No database ID found for species $taxon_with_italics (id: $record_id)";
-            // Ruud 27-01-11: don't insert into taxa table, dismiss instead
-            continue;
-        }
-
-
-        // add taxon to 'taxa' table
-        $sql_query2 .= extendTaxaInsert(
-            array($record_id, $taxon, $taxon_with_italics, $taxon_level, $this_name_code, $parent_id,
-                $this_sp2000_status_id, $this_database_id, $is_accepted_name, 1, $hierarchy,
-                $this_is_extinct, $this_has_preholocene, $this_has_modern
-            )
-        );
-
-        if ($i >= $recordsPerBatch || $n >= $number_of_records) {
-        	//$link = mysqlConnect();
-            mysql_query(endTaxaInsert($sql_query2)) or die("<p>Error: MySQL query failed: " . mysql_error() . "</p>");
-            list($i, $sql_query2) = array(0, startTaxaInsert());
+            $taxon_level = "Species";
+    
+            $parent_hierarchy = $this_kingdom . "_" . $this_phylum . "_" . $this_class . "_" . $this_order . "_" .
+                (($this_superfamily != "") ? $this_superfamily . "_" : "") . $this_family . "_" . $this_genus .
+            	(($this_subgenus != "") ? "_" . $this_subgenus : "");
+            $hierarchy = $parent_hierarchy . "_" . $this_species;
+    
+            $is_accepted_name = in_array($this_sp2000_status_id, $acceptedStatuses) ? 1 : 0;
+    
+            $parent_id = getRecordIdInTaxa(array('HierarchyCode' => $parent_hierarchy));
+            if (!$parent_id) {
+                if ($is_accepted_name == 1) {
+                    $errors_found[] = "No parent taxon found for species $taxon_with_italics
+                       (parent genus <i>$this_genus</i>)";
+                    continue;
+                } else {
+                    $parent_id = 0;
+                }
+            }
+            if ($this_sp2000_status_id == "") {
+                $errors_found[] = "No Species 2000 status found for species $taxon_with_italics (id: $record_id)";
+                // Ruud 27-01-11: don't insert into taxa table, dismiss instead
+                continue;
+            }
+            if ($this_database_id == "") {
+                $errors_found[] = "No database ID found for species $taxon_with_italics (id: $record_id)";
+                // Ruud 27-01-11: don't insert into taxa table, dismiss instead
+                continue;
+            }
+    
+    
+            // add taxon to 'taxa' table
+            $sql_query2 .= extendTaxaInsert(
+                array($record_id, $taxon, $taxon_with_italics, $taxon_level, $this_name_code, $parent_id,
+                    $this_sp2000_status_id, $this_database_id, $is_accepted_name, 1, $hierarchy,
+                    $this_is_extinct, $this_has_preholocene, $this_has_modern
+                )
+            );
+    
+            if ($i >= $recordsPerBatch || $n >= $number_of_records) {
+            	//$link = mysqlConnect();
+                mysqli_query(mysqli(), endTaxaInsert($sql_query2)) or die("<p>Error: MySQL query failed: " . mysqli_error(mysqli()) . "</p>");
+                list($i, $sql_query2) = array(0, startTaxaInsert());
+            }
         }
     }
     return $errors_found;
@@ -684,7 +690,6 @@ function addSpeciesToTaxa () {
 
 function addInfraspeciesToTaxa() {
     $indicator = new Indicator();
-    $link = mysqlConnect();
     $errors_found = array() ;
     $acceptedStatuses = getAcceptedStatuses();
 
@@ -696,14 +701,14 @@ function addInfraspeciesToTaxa() {
         FROM `scientific_names` AS t1
         LEFT JOIN `families` AS t2 ON t1.`family_id`= t2.`record_id`
         WHERE (t1.`infraspecies` != '' AND t1.`infraspecies` IS NOT NULL) AND t1.`family_id` IS NOT NULL";
-    $sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
-    $number_of_records = mysql_num_rows($sql_result);
+    $sql_result = mysqli_query(mysqli(), $sql_query) or die("<p>Error: MySQL query failed:" . mysqli_error(mysqli()) . "</p>");
+    $number_of_records = mysqli_num_rows($sql_result);
     echo "$number_of_records infraspecies found in 'scientific_names' table<br>";
 
     list($i, $n, $recordsPerBatch, $sql_query2) = array(0, 0, 2000, startTaxaInsert());
     $indicator->init($number_of_records, 100, 500);
     $family_id = $hierarchy = $parent_hierarchy = $parent_id = "";
-    while ($row = mysql_fetch_array($sql_result, MYSQL_NUM)) {
+    while ($row = mysqli_fetch_array($sql_result, MYSQLI_NUM)) {
         $indicator->iterate();
         $i++;
         $n++;
@@ -823,7 +828,7 @@ function addInfraspeciesToTaxa() {
 
         if ($i >= $recordsPerBatch || $n >= $number_of_records) {
         	//$link = mysqlConnect();
-        	mysql_query(endTaxaInsert($sql_query2)) or die("<p>Error: MySQL query failed: " . mysql_error() . "</p>");
+            mysqli_query(mysqli(), endTaxaInsert($sql_query2)) or die("<p>Error: MySQL query failed: " . mysqli_error(mysqli()) . "</p>");
             list($i, $sql_query2) = array(0, startTaxaInsert());
         }
 
@@ -832,12 +837,11 @@ function addInfraspeciesToTaxa() {
 }
 
 function getInfraspeciesParentId ($nameCode) {
-    mysqlConnect();
     $q = 'SELECT `record_id` FROM `scientific_names` WHERE
-        `name_code` = "' . mysql_real_escape_string($nameCode) . '"';
-    $r = mysql_query($q) or die(mysql_error(). $q);
-    if (mysql_num_rows($r) == 1) {
-        $row = mysql_fetch_row($r);
+        `name_code` = "' . mysqli_real_escape_string(mysqli(), $nameCode) . '"';
+    $r = mysqli_query(mysqli(), $q) or die(mysqli_error(mysqli()). $q);
+    if (mysqli_num_rows($r) == 1) {
+        $row = mysqli_fetch_row($r);
         return $row[0];
     }
     return null;
@@ -852,7 +856,6 @@ function setInfraspeciesSearch ($parent_hierarchy, $is_accepted_name) {
 }
 
 function higherTaxaWithAcceptedNames () {
-    $link = mysqlConnect();
     $taxa = array("subgenera" => "Subgenus", "genera" => "Genus" , "families" => "Family" , "superfamilies" => "Superfamily" ,
                   "orders" => "Order" , "classes" => "Class" , "phyla" => "Phylum" , "kingdoms" => "Kingdom");
 
@@ -865,19 +868,18 @@ function higherTaxaWithAcceptedNames () {
                       WHERE parent.`taxon` = '$rank'
                       AND parent.`record_id` = child.`parent_id`
                       AND child.`is_accepted_name` = 1 ";
-        $sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
+        $sql_result = mysqli_query(mysqli(), $sql_query) or die("<p>Error: MySQL query failed:" . mysqli_error(mysqli()) . "</p>");
     }
     $q = 'UPDATE `taxa` SET `is_accepted_name` = 1
           WHERE `taxon` in ("Family" "Superfamily", "Order", "Class", "Phylum", "Kingdom") AND `name` != ""';
-    mysql_query($q) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
+    mysqli_query(mysqli(), $q) or die("<p>Error: MySQL query failed:" . mysqli_error(mysqli()) . "</p>");
 }
 
 function higherTaxaWithSynonyms () {
-    $link = mysqlConnect();
     $sql_query = "UPDATE `taxa`
                   SET `is_species_or_nonsynonymic_higher_taxon`  = 0
                   WHERE `taxon` != 'Species' AND `taxon` != 'Infraspecies' AND `is_accepted_name` = 0";
-    $sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
+    $sql_result = mysqli_query(mysqli(), $sql_query) or die("<p>Error: MySQL query failed:" . mysqli_error(mysqli()) . "</p>");
 }
 
 
@@ -907,35 +909,34 @@ function buildTaxaTable () {
 function verifyAcceptedStatus () {
     $errors_found = array() ;
 
-    $link = mysqlConnect();
     $sql_query = "SELECT t1.`record_id` FROM `taxa` t1
                   LEFT JOIN `scientific_names` AS t2 ON t1.`record_id` = t2.`record_id`
                   WHERE t1.`is_accepted_name` != t2.`is_accepted_name` AND
                   t1.`is_accepted_name` = 1";
-    $sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
-    if (mysql_num_rows($sql_result) > 0) {
+    $sql_result = mysqli_query(mysqli(), $sql_query) or die("<p>Error: MySQL query failed:" . mysqli_error(mysqli()) . "</p>");
+    if (mysqli_num_rows($sql_result) > 0) {
         $ids = array();
-        while ($row = mysql_fetch_array($sql_result)) {
+        while ($row = mysqli_fetch_array($sql_result)) {
             $ids[] = $row[0];
         }
         $sql_query = "UPDATE `taxa` SET `is_accepted_name` = 0 WHERE `record_id` IN (" . implode(',', $ids) . ")";
-        $sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
+        $sql_result = mysqli_query(mysqli(), $sql_query) or die("<p>Error: MySQL query failed:" . mysqli_error(mysqli()) . "</p>");
     }
 
     // Ruud 05-02-15: delete taxa with conflicting flags
     $q = 'SELECT `record_id`, `name` from `taxa` WHERE `sp2000_status_id` IN (1,4) AND `is_accepted_name` = 0
           UNION DISTINCT
           SELECT `record_id`, `name` FROM `taxa` WHERE `sp2000_status_id` IN (2,3,5) AND `is_accepted_name` = 1';
-    $r = mysql_query($q) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
-    if (mysql_num_rows($r) > 0) {
+    $r = mysqli_query(mysqli(), $q) or die("<p>Error: MySQL query failed:" . mysqli_error(mysqli()) . "</p>");
+    if (mysqli_num_rows($r) > 0) {
         $ids = array();
-        while ($row = mysql_fetch_array($r)) {
+        while ($row = mysqli_fetch_array($r)) {
             $ids[$row[0]] = $row[1];
             $errors_found[] = 'Taxon deleted: conflicting status for ' . $row[1] . ' (id: ' . $row[0] . ')';
 
         }
         $sql_query = "DELETE FROM `taxa` WHERE `record_id` IN (" . implode(',', array_keys($ids)) . ")";
-        $sql_result = mysql_query($sql_query) or die("<p>Error: MySQL query failed:" . mysql_error() . "</p>");
+        $sql_result = mysqli_query(mysqli(), $sql_query) or die("<p>Error: MySQL query failed:" . mysqli_error(mysqli()) . "</p>");
     }
     return $errors_found;
 }
@@ -945,18 +946,18 @@ function verifyAcceptedStatus () {
  // Compare Jorrit's taxa to Ruud's taxa
 $link = mysqlConnect();
 echo "Fetching Ruud's data...<br>";
-mysql_select_db('assembly');
+mysqli_select_db('assembly');
 $q = 'select name, name_code from taxa';
-$r = mysql_query($q) or die(mysql_error);
-while ($row = mysql_fetch_array($r, MYSQL_NUM)) {
+$r = mysqli_query($q) or die(mysqli_error);
+while ($row = mysqli_fetch_array($r, MYSQLI_NUM)) {
 $jorrit[$row[1]] = $row[0];
 }
 echo "Fetching Jorrit's data...<br>";
-mysql_select_db('assembly_jorrit');
+mysqli_select_db('assembly_jorrit');
 $q = 'select name, name_code from taxa';
-$r = mysql_query($q) or die(mysql_error);
-$indicator->init(mysql_num_rows($r), 100, 10000);
-while ($row = mysql_fetch_array($r, MYSQL_NUM)) {
+$r = mysqli_query($q) or die(mysqli_error);
+$indicator->init(mysqli_num_rows($r), 100, 10000);
+while ($row = mysqli_fetch_array($r, MYSQLI_NUM)) {
 $indicator->iterate();
 if (isset($jorrit[$row[1]]) && $jorrit[$row[1]] == $row[0]) {
 unset($jorrit[$row[1]]);
@@ -975,3 +976,21 @@ function writeToLog ($logger, $id, $name, $message, $nameCode = null) {
     $logger->err($m);
 }
 
+function mysqli_result ($res, $row = 0, $col = 0) {
+    $numrows = mysqli_num_rows($res);
+    if ($numrows && $row <= ($numrows-1) && $row >=0){
+        mysqli_data_seek($res,$row);
+        $resrow = (is_numeric($col)) ? mysqli_fetch_row($res) : mysqli_fetch_assoc($res);
+        if (isset($resrow[$col])){
+            return $resrow[$col];
+        }
+    }
+    return false;
+}
+
+function escapeRow (&$row = []) {
+    foreach ($row as $k => $v) {
+        $row[$k] = mysqli_real_escape_string(mysqli(), $v);
+    }
+    return $row;
+}

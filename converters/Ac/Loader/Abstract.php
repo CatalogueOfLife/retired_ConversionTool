@@ -18,13 +18,22 @@ abstract class Ac_Loader_Abstract
 
     public static function memoryUse ()
     {
-        return (memory_get_usage() / (ini_get('memory_limit') * 1048576)) * 100;
+        return (memory_get_usage() / self::unitToInt(ini_get('memory_limit'))) * 100;
     }
 
+    public static function unitToInt ($s)
+    {
+        return (int)preg_replace_callback('/(\-?\d+)(.?)/', function ($m) {
+            return $m[1] * pow(1024, strpos('BKMG', $m[2]));
+        }, strtoupper($s));
+    }
+    
     public function printObject ($object)
     {
         echo '<pre>';
         print_r($object);
         echo '</pre>';
     }
+    
+     
 }

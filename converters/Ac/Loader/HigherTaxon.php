@@ -6,7 +6,7 @@ require_once 'converters/Ac/Model/AcToBs/HigherTaxon.php';
 /**
  * HigherTaxon loader
  *
- * @author N�ria Torrescasana Aloy, Ruud Altenburg
+ * @author Nuria Torrescasana Aloy, Ruud Altenburg
  *
  */
 class Ac_Loader_HigherTaxon extends Ac_Loader_Abstract

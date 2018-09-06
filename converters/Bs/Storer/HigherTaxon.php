@@ -19,7 +19,7 @@ class Bs_Storer_HigherTaxon extends Bs_Storer_TaxonAbstract implements Bs_Storer
         $this->_setScientificNameElement($taxon);
         $this->_setTaxon($taxon);
         $this->_setTaxonNameElement($taxon);
-        $this->_setTaxonLsid($taxon);
+        //$this->_setTaxonLsid($taxon);
     }
 
     protected function _setTaxon (Model $taxon)
