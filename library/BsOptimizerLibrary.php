@@ -797,7 +797,6 @@ function getTaxonTreeId ($p)
     $q = 'SELECT t1.`taxon_id` AS `id` FROM `_taxon_tree` AS t1
         LEFT JOIN `_search_all` AS t2 ON t1.`taxon_id` = t2.`id`
         WHERE t1.`name` = ? AND t1.`rank` = ? AND t2.`group` = ?';
-    echo "$q<br>";
     $stmt = $pdo->prepare($q);
     $stmt->execute($p);
     $r = $stmt->fetch(PDO::FETCH_ASSOC);
