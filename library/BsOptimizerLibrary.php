@@ -1093,7 +1093,7 @@ function updateFossilParents ()
             );
         }
         // Break loop if no additional fossil parents have been found
-        if (isset($previousNrIds) && $previousNrIds == count($ids)) {
+        if (!isset($ids) || isset($previousNrIds) && $previousNrIds == count($ids)) {
             break;
         }
         $q = 'UPDATE ' . TAXON_TREE . ' SET `has_modern` = ?, `has_preholocene` = ?,
