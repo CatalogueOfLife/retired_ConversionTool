@@ -117,10 +117,10 @@ class AdOptimizer {
             update scientific_names as t1
             left join scientific_names as t2 on t1.accepted_name_code = t2.name_code
             set t1.family_code = t2.family_code
-            where t1.sp2000_status_id not in (1, 4)
+            where t1.sp2000_status_id not in (1,4)
         ');
         if (!$stmt || $stmt->rowCount() === 0) {
-            $this->addMessage("Failed to copy family codes to synonyms");
+            $this->addMessage("Family codes already copied to synonyms");
         }
         return $this;
     }
