@@ -576,10 +576,11 @@ function addSpeciesToTaxa () {
     $errors_found = array() ;
     $acceptedStatuses = getAcceptedStatuses();
  
-    $q = "SELECT COUNT(1)
-              FROM `scientific_names` AS t1
-              LEFT JOIN `families` AS t2 ON t1.`family_id`= t2.`record_id`
-              WHERE (t1.`infraspecies` = '' OR t1.`infraspecies` IS NULL) AND t1.`family_id` IS NOT NULL";
+    $q = "
+        SELECT COUNT(1)
+        FROM `scientific_names` AS t1
+        LEFT JOIN `families` AS t2 ON t1.`family_id`= t2.`record_id`
+        WHERE (t1.`infraspecies` = '' OR t1.`infraspecies` IS NULL) AND t1.`family_id` IS NOT NULL";
     $r = mysqli_query(mysqli(), $q) or die("<p>Error: MySQL query failed:" . mysqli_error(mysqli()) . "</p>");
     $row = mysqli_fetch_row($r);
     $number_of_records = $row[0];
@@ -587,22 +588,25 @@ function addSpeciesToTaxa () {
     
     // Do in batches, as query result too large for mysqli
     $indicator->init($number_of_records, 100, 2000);
-    $batch = 100000;
+    $batch = 10000;
     
     for ($z = 0; $z < $number_of_records; $z += $batch) {
     
-        $sql_query = "SELECT t1.`record_id`, t1.`genus`, t1.`species`, t1.`name_code`, t1.`sp2000_status_id`,
-                          t1.`accepted_name_code`, t1.`database_id`, t1.`family_id`, t2.`kingdom`,
-                          t2.`phylum`, t2.`class`, t2.`order`, t2.`superfamily`, t2.`family`, t1.`subgenus`,
-                          t1.`is_extinct`, t1.`has_preholocene`, t1.`has_modern`
-                      FROM `scientific_names` AS t1
-                      LEFT JOIN `families` AS t2 ON t1.`family_id`= t2.`record_id`
-                      WHERE (t1.`infraspecies` = '' OR t1.`infraspecies` IS NULL) AND t1.`family_id` IS NOT NULL
-                      LIMIT %d, %d";
-        $sql_result = mysqli_query(mysqli(), sprintf($sql_query, $z, $batch)) or die("<p>Error: MySQL query failed:" . mysqli_error(mysqli()) . "</p>");
+        $sql_query = "
+            SELECT t1.`record_id`, t1.`genus`, t1.`species`, t1.`name_code`, t1.`sp2000_status_id`,
+                t1.`accepted_name_code`, t1.`database_id`, t1.`family_id`, t2.`kingdom`,
+                t2.`phylum`, t2.`class`, t2.`order`, t2.`superfamily`, t2.`family`, t1.`subgenus`,
+                t1.`is_extinct`, t1.`has_preholocene`, t1.`has_modern`
+            FROM `scientific_names` AS t1
+            LEFT JOIN `families` AS t2 ON t1.`family_id`= t2.`record_id`
+            WHERE (t1.`infraspecies` = '' OR t1.`infraspecies` IS NULL) AND t1.`family_id` IS NOT NULL
+            LIMIT %d, %d";
+        $sql_result = mysqli_query(mysqli(), sprintf($sql_query, $z, $batch)) or 
+            die("<p>Error: MySQL query failed:" . mysqli_error(mysqli()) . "</p>");
     
-        list($i, $n, $recordsPerBatch, $sql_query2) = array(0, 0, 1000, startTaxaInsert());
+        list($i, $n, $recordsPerBatch, $sql_query2) = array(0, 0, 500, startTaxaInsert());
         $family_id = $hierarchy = $parent_hierarchy = $parent_id = "";
+        
         while ($row = mysqli_fetch_array($sql_result, MYSQLI_NUM)) {
             $indicator->iterate();
             $i++;
@@ -669,7 +673,6 @@ function addSpeciesToTaxa () {
                 continue;
             }
     
-    
             // add taxon to 'taxa' table
             $sql_query2 .= extendTaxaInsert(
                 array($record_id, $taxon, $taxon_with_italics, $taxon_level, $this_name_code, $parent_id,
@@ -679,11 +682,16 @@ function addSpeciesToTaxa () {
             );
     
             if ($i >= $recordsPerBatch || $n >= $number_of_records) {
-            	//$link = mysqlConnect();
                 mysqli_query(mysqli(), endTaxaInsert($sql_query2)) or die("<p>Error: MySQL query failed: " . mysqli_error(mysqli()) . "</p>");
                 list($i, $sql_query2) = array(0, startTaxaInsert());
             }
         }
+        
+        if ($sql_query2 !== startTaxaInsert()) {
+            echo 'this is the fucking problem';
+            mysqli_query(mysqli(), endTaxaInsert($sql_query2)) or die("<p>Error: MySQL query failed: " . mysqli_error(mysqli()) . "</p>");
+        }
+        
     }
     return $errors_found;
 }
@@ -897,6 +905,7 @@ function buildTaxaTable () {
     $errors_found['Species'] = addSpeciesToTaxa();
     echo "<br><br>Adding infraspecies: ";
     $errors_found['Infraspecies'] = addInfraspeciesToTaxa();
+  
     echo "</p><p><b>Updating higher taxa</b><br>";
     higherTaxaWithAcceptedNames();
     echo "Finding higher taxa containing only synonyms...<br>";

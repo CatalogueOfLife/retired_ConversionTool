@@ -21,7 +21,7 @@ require_once 'converters/Ac/Loader.php';
 require_once 'converters/Bs/Storer.php';
 require_once 'library/Zend/Log/Writer/Stream.php';
 require_once 'library/Zend/Log.php';
-require_once 'Indicator.php';
+require_once 'library/Indicator.php';
 alwaysFlush();
 
 /**

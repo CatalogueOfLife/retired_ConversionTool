@@ -15,7 +15,7 @@
     require_once 'library/bootstrap.php';
     require_once 'library/BsOptimizerLibrary.php';
     require_once 'DbHandler.php';
-    require_once 'Indicator.php';
+    require_once 'library/Indicator.php';
     require_once 'library/Zend/Log/Writer/Stream.php';
     require_once 'library/Zend/Log.php';
     alwaysFlush();
