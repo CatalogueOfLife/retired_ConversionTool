@@ -373,7 +373,7 @@ class AdOptimizer {
     
     private function addGeneraToTaxa () 
     {
-        $taxonId = getHigherTaxonRecordId();
+        $taxonId = $this->getHigherTaxonRecordId();
         $stmt = $this->pdo->query("
             SELECT DISTINCT t1.`genus`, t1.`family_id`, t2.`kingdom`, t2.`phylum`, t2.`class`,
                   t2.`order`, t2.`superfamily`, t2.`family`
