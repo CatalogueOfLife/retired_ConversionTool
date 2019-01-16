@@ -32,11 +32,11 @@
     echo '<p>Checking database structure...';
     $converter->checkDatabase()->printMessages('Database tables and columns');
     $converter->checkIndices()->printMessages('Database indices');
-    echo "</p><p>Copying family codes from accepted names to synonyms...<br>" ;
+    echo "Copying family codes from accepted names to synonyms...<br>" ;
     $converter->familyCodeToSynonyms()->printMessages();
-    echo '</p><p>Copying foreign key codes to foreign key ids...<br>';
+    echo 'Copying foreign key codes to foreign key ids...<br>';
     $converter->codesToIds()->printMessages();
-    echo '</p><p>Checking foreign key references...<br>';
+    echo 'Checking foreign key references...<br>';
     $converter->checkForeignKeys();
     echo "</p><p>Building 'taxa' table...";
     $converter->buildTaxaTable();

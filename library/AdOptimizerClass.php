@@ -103,7 +103,7 @@ class AdOptimizer {
                     $stmt = $this->pdo->query("SHOW INDEX FROM `$table` WHERE Key_name = '$index'");
                     if (empty($stmt->fetch())) {
                         $this->pdo->query("ALTER TABLE `$table` ADD INDEX (`$index`)");
-                        $this->addMessage("Indexed field '$index' in table '$table'");
+                        $this->addMessage("Missing index on '$index' in table '$table' added");
                     }
                 }
             }
