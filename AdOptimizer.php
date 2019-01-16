@@ -38,8 +38,10 @@
     $converter->codesToIds()->printMessages();
     echo '</p><p>Checking foreign key references...<br>';
     $converter->checkForeignKeys();
-    echo "</p><p>Building 'taxa' table...<br>";
-    $converter->buildTaxaTable()->printMessages();
+    echo "</p><p>Building 'taxa' table...";
+    $converter->buildTaxaTable();
+    echo "<p>Errors in taxa table:<br>";
+    $converter->printMessages();
         
     $totalTime = round(microtime(true) - $scriptStart);
     echo '</p><p>Optimalization took ' . $converter->formatTime($totalTime) . '.</p>';
