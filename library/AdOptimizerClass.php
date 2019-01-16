@@ -113,15 +113,13 @@ class AdOptimizer {
  
     public function familyCodeToSynonyms ()
     {
-        $stmt = $this->pdo->query('
+        $this->query('
             update scientific_names as t1
             left join scientific_names as t2 on t1.accepted_name_code = t2.name_code
             set t1.family_code = t2.family_code
-            where t1.sp2000_status_id not in (1,4)
-        ');
-        if (!$stmt || $stmt->rowCount() === 0) {
-            $this->addMessage("Family codes already copied to synonyms");
-        }
+            where t1.sp2000_status_id not in (1,4)',
+            'Family codes to synonyms: already copied!'
+        );
         return $this;
     }
     
@@ -153,10 +151,7 @@ class AdOptimizer {
                 where t1.reference_code != '' and t1.reference_code is not null"
         ];
         foreach ($sql as $label => $query) {
-            $stmt = $this->pdo->query($query);
-            if (!$stmt || $stmt->rowCount() === 0) {
-                $this->addMessage("Failed to copy " . $label);
-            }
+            $this->query($query, ucfirst($label) . ': already copied!');
         }
         return $this;
     }
@@ -175,11 +170,11 @@ class AdOptimizer {
                 WHERE t1.`$fkColumn` != '' AND t1.`$fkColumn` IS NOT NULL
                 AND t2.`$pkColumn` IS NULL";
             
-            $stmt = $this->pdo->query($query);
+            $stmt = $this->query($query);
             $deleteIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
             if (!empty($deleteIds)) {
                 $delete = "DELETE FROM `$fkTable` WHERE `$fkColumn` IN ('" . implode("','", $deleteIds) . "')";
-                $stmt2 = $this->pdo->query($delete);
+                $this->query($delete);
                 foreach ($deleteIds as $errorId) {
                     $this->addMessage("Foreign key $errorId for '$fkColumn' in table '$fkTable' 
                         not found as primary key in table '$pkTable'");
@@ -212,6 +207,23 @@ class AdOptimizer {
         return $this->indicator->formatTime($s);
     }
     
+    private function query ($query = false, $message = false)
+    {
+        if (!$query) {
+            throw new Exception('No query?!');
+        }
+        $stmt = $this->pdo->query($query);
+        // We have a problem
+        if (!$stmt) {
+            throw new Exception('Query failed! ' . $query);
+        }
+        // No results; report if requested
+        if ($stmt->rowCount() == 0 && $message) {
+            $this->addMessage($message);
+        }
+        return $stmt;
+    }
+    
     private function updateHigherTaxa () 
     {
         $taxa = [
@@ -237,12 +249,12 @@ class AdOptimizer {
             echo "Finding $label with accepted names...<br>";
             $stmt->execute([$rank]);
         }
-        $this->pdo->query('
+        $this->query('
             UPDATE `taxa` 
             SET `is_accepted_name` = 1
             WHERE `taxon` in ("Family" "Superfamily", "Order", "Class", "Phylum", "Kingdom") AND `name` != ""'
         );
-        $this->pdo->query("
+        $this->query("
             UPDATE `taxa`
             SET `is_species_or_nonsynonymic_higher_taxon` = 0
             WHERE `taxon` != 'Species' AND `taxon` != 'Infraspecies' AND `is_accepted_name` = 0"
@@ -251,7 +263,7 @@ class AdOptimizer {
     }
     
     private function verifyAcceptedStatus () {
-         $stmt = $this->pdo->query("
+        $stmt = $this->query("
             SELECT t1.`record_id` FROM `taxa` t1
             LEFT JOIN `scientific_names` AS t2 ON t1.`record_id` = t2.`record_id`
             WHERE t1.`is_accepted_name` != t2.`is_accepted_name` AND
@@ -259,7 +271,7 @@ class AdOptimizer {
         );
         $ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
         if (count($ids) > 0) {
-            $this->pdo->query("
+            $this->query("
                 UPDATE `taxa` 
                 SET `is_accepted_name` = 0 
                 WHERE `record_id` IN (" . implode(',', $ids) . ")"
@@ -267,7 +279,7 @@ class AdOptimizer {
         }
         
         // Ruud 05-02-15: delete taxa with conflicting flags
-        $stmt = $this->pdo->query('
+        $stmt = $this->query('
             SELECT `record_id`, `name`
             FROM `taxa`
             WHERE `sp2000_status_id` IN (1,4) AND `is_accepted_name` = 0
@@ -284,20 +296,17 @@ class AdOptimizer {
                 $ids[$row[0]] = $row[1];
                 $this->addMessage('Taxon deleted: conflicting status for ' . $row[1] . ' (id: ' . $row[0] . ')');
             }
-            $this->pdo->query("DELETE FROM `taxa` WHERE `record_id` IN (" . implode(',', array_keys($ids)) . ")");
+            $this->query("DELETE FROM `taxa` WHERE `record_id` IN (" . implode(',', array_keys($ids)) . ")");
        }
         return $this;
     }
-    
-    
-    
     
     private function addHigherTaxaToTaxa () 
     {
         // Ruud: 31-10-08
         // Create record_id for each higher taxon that will not overlap with real record_ids in scientific_names table
         $taxonId = $this->getHigherTaxonRecordId();
-        $stmt = $this->pdo->query("
+        $stmt = $this->query("
             SELECT `record_id`,`kingdom`, `phylum`, `class`, `order`,  `superfamily`, `family` 
             FROM `families`"
         );
@@ -374,7 +383,7 @@ class AdOptimizer {
     private function addGeneraToTaxa () 
     {
         $taxonId = $this->getHigherTaxonRecordId();
-        $stmt = $this->pdo->query("
+        $stmt = $this->query("
             SELECT DISTINCT t1.`genus`, t1.`family_id`, t2.`kingdom`, t2.`phylum`, t2.`class`,
                   t2.`order`, t2.`superfamily`, t2.`family`
             FROM `scientific_names` AS t1
@@ -427,8 +436,8 @@ class AdOptimizer {
     
     private function addSubgeneraToTaxa () 
     {
-        $taxonId = getHigherTaxonRecordId();
-        $stmt = $this->pdo->query("
+        $taxonId = $this->getHigherTaxonRecordId();
+        $stmt = $this->query("
             SELECT DISTINCT t1.`genus`, t1.`family_id`, t2.`kingdom`, t2.`phylum`, t2.`class`,
                   t2.`order`, t2.`superfamily`, t2.`family`, t1.`subgenus`
             FROM `scientific_names` AS t1
@@ -495,7 +504,7 @@ class AdOptimizer {
         
     private function addSpeciesToTaxa () 
     {
-        $stmt = $this->pdo->query("
+        $stmt = $this->query("
             SELECT COUNT(1)
             FROM `scientific_names` AS t1
             LEFT JOIN `families` AS t2 ON t1.`family_id`= t2.`record_id`
@@ -593,7 +602,7 @@ class AdOptimizer {
     
     private function addInfraspeciesToTaxa () 
     {
-        $stmt = $this->pdo->query("
+        $stmt = $this->query("
             SELECT t1.`record_id`, t1.`genus`, t1.`species`, t1.`infraspecies_marker`,
                 t1.`infraspecies`, t1.`name_code`, t1.`sp2000_status_id`,
                 t1.`accepted_name_code`, t1.`database_id`, t1.`family_id`, t2.`kingdom`, 
@@ -709,9 +718,6 @@ class AdOptimizer {
         return $this;
     }
     
-    
-    
-    
     private function taxaInsert ($values = [])
     {
         // Only need to do this once
@@ -726,9 +732,6 @@ class AdOptimizer {
         $this->taxaStmt->execute(array_values($values));
     }
     
-    
-    
-    
     private function addMessage ($message)
     {
         $this->messages[] = $message;
@@ -741,8 +744,8 @@ class AdOptimizer {
     
     private function createTaxaTable ()
     {
-        $this->pdo->query("DROP TABLE IF EXISTS `taxa`");
-        $this->pdo->query("
+        $this->query("DROP TABLE IF EXISTS `taxa`");
+        $this->query("
             CREATE TABLE `taxa` (
                 `record_id` int(10) unsigned NOT NULL,
                 `lsid` varchar(87) DEFAULT NULL,
@@ -776,11 +779,11 @@ class AdOptimizer {
     
     private function getHigherTaxonRecordId () 
     {
-        $stmt = $this->pdo->query('select record_id + 1 from taxa order by record_id desc limit 1');
+        $stmt = $this->query('select record_id + 1 from taxa order by record_id desc limit 1');
         if ($stmt->rowCount() == 1) {
             return $stmt->fetch(PDO::FETCH_COLUMN);
         }
-        $stmt = $this->pdo->query('select record_id + 1 from scientific_names order by record_id desc limit 1');
+        $stmt = $this->query('select record_id + 1 from scientific_names order by record_id desc limit 1');
         return $stmt->fetch(PDO::FETCH_COLUMN);
     }
     
