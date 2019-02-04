@@ -431,7 +431,7 @@
     $queries = array(
     	'UPDATE `' . SEARCH_ALL . '` SET `rank` = "subgenus" WHERE `name` like "%)" 
 			AND `name_suffix` = "" AND `name_status` = 0;',
-    	'UPDATE `' . SPECIES_DETAILS . '` SET `subgenus_id` = 0, `subgenus_name` = "";',
+    	//'UPDATE `' . SPECIES_DETAILS . '` SET `subgenus_id` = 0, `subgenus_name` = "";',
         'DELETE FROM `' . TAXON_TREE . '` WHERE `rank` = "subgenus";',
         'DELETE FROM `' . SEARCH_SCIENTIFIC . '` WHERE `subgenus` != "" AND `species` = "";',
         'DELETE FROM `' . SEARCH_ALL . '` WHERE `rank` = "subgenus";',
