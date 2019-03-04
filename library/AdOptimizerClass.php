@@ -24,6 +24,9 @@ class AdOptimizer {
         foreach ($config['source'] as $k => $v) {
             $this->config[$k] = $v;
         }
+        foreach ($config['col_plus'] as $k => $v) {
+            $this->config[$k] = $v;
+        }
         $this->indicator = new Indicator();
     }
     
@@ -34,7 +37,8 @@ class AdOptimizer {
             $this->pdo = new PDO(
                 sprintf('%s:host=%s;dbname=%s', $this->dbType, $this->config['host'], $this->config['dbname']), 
                 $this->config['username'], 
-                $this->config['password']
+                $this->config['password'],
+                [PDO::MYSQL_ATTR_LOCAL_INFILE => true]
             );
         }
         return $this->pdo;
@@ -52,11 +56,93 @@ class AdOptimizer {
         return $this->logger;
     }
     
+    public function importCsv ()
+    {
+        $tmpDir = dirname(__DIR__) . '/tmp/';
+        if (!is_readable($tmpDir)) {
+            throw new Exception($tmpDir . ' to extract csv to is not readable!');
+        }
+        $zipFile = $tmpDir . 'ac-export.zip';
+        
+        // Is path available in config?
+        if (!isset($this->config['csvPath'])) {
+            throw new Exception('Please add path to zip with csv files to ini file ("csvPath")!');
+        }
+        // Download file
+        $result = $this->downloadFile($this->config['csvPath'], $zipFile);
+        if ($result['error'] !== false) {
+            throw new Exception('Could not download ' . $this->config['csvPath'] . ': ' . $result['error']);
+        }
+        // ... and is it readable?
+        if (!is_readable($zipFile)) {
+            throw new Exception('Downloaded archive ' . $zipFile . ' is not readable!');
+        }
+        // Is destination present and readable?
+        $files = [];
+        $zip = new ZipArchive();
+        $zip->open($zipFile);
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $stat = $zip->statIndex($i);
+            if ($stat['size'] > 0){
+                $files[] = $stat['name'];
+            }
+        }
+         // print_r($files); die();
+        $zip->extractTo($tmpDir);
+        foreach ($files as $file) {
+            $table = str_replace('.csv', '', $file);
+            $file = $tmpDir . $file;
+            $tmp = new SplFileObject($file, 'r');
+            $tmp->seek(PHP_INT_MAX);
+            $nrLines = $tmp->key() - 1;
+
+            $this->pdo->query('TRUNCATE table `' . $table . '`');
+            $query = "
+                LOAD DATA LOCAL INFILE '$file'
+                INTO TABLE `$table`
+                FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"'
+                LINES TERMINATED BY '\n'
+                IGNORE 1 LINES;";
+            $res = $this->pdo->query($query);
+            if (!$res) {
+                throw new Exception($file . " file is corrupt!");
+            } else if ($res->rowCount() < $nrLines) {
+                $this->addMessage($file . ': ' . $nrLines - $res->rowCount() . 'rows were skipped!');
+            }
+            unlink($file);
+        }
+        return $this;
+    }
+    
+    public function downloadFile ($from, $to)
+    {
+        $ch = @curl_init($from);
+        if (!$ch) {
+            $error = 'Could not locate file at ' . $from;
+        }
+        $fp = @fopen($to, 'w+');
+        if (!$ch) {
+            $error = 'Could not open destination file at ' . $to;
+        }
+        curl_setopt($ch, CURLOPT_FILE, $fp);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 1000);
+        curl_setopt($ch, CURLOPT_USERAGENT, 'any');
+        curl_setopt($ch, CURLOPT_VERBOSE, true);
+        curl_exec($ch);
+        if ($errno = curl_errno($ch)) {
+            $error = "cURL error ({$errno}): " . curl_strerror($errno);
+        }
+        curl_close($ch);
+        fclose($fp);
+        return ['error' => isset($error) ? $error : false];
+    }
+    
     public function printMessages ($header = false, $clearAfterPrinting = true) {
         if (!empty($this->messages)) {
             $output = '<p>' . ($header ? '<b>' . $header .'</b><br>' : '');
             foreach ($this->messages as $error) {
-                $this->logger->err("\n$header:\n" . strip_tags($error) . "\n");
+                $this->logger->err("\n" . ($header ? "$header:\n" : '') . strip_tags($error) . "\n");
                 $output .= $error.'<br>';
             }
             echo $output.'</p>';

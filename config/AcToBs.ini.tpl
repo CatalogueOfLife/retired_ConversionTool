@@ -42,16 +42,11 @@ path = /var/www/path
 version = @VERSION@
 revision = @REVISION@
 
-[taxonmatcher]
-; database name of the old AC
-dbNameCurrent = assembly_previous
-; database name staging area (will be created if not exists)
-dbNameStage = CoLTTC
-; The LSID suffix for the new CoL
-lsidSuffix = col2012acv15
-; maximum number of records to fetch from old and new taxa table
-; zero or less means no limit
-readLimit = 0
+[col_plus]
+; url to zip file containing csv dumps
+csvPath = "http://api.col.plus/download/ac-export.zip"
+; database scheme of ACEF assembly database
+schema = ""
 
 [sitemaps]
 ; directory in which to store sitemaps

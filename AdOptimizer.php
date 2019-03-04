@@ -29,7 +29,9 @@
     
     echo '<p>Started: ' . date('Y-m-d H:i:s') . '</p>';
     
-    echo '<p>Checking database structure...';
+    echo '<p>Importing csv files...<br>';
+    $converter->importCsv()->printMessages();
+    echo 'Checking database structure...';
     $converter->checkDatabase()->printMessages('Database tables and columns');
     $converter->checkIndices()->printMessages('Database indices');
     echo "Copying family codes from accepted names to synonyms...<br>" ;
