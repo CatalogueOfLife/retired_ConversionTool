@@ -1,23 +1,46 @@
 <?php
-// Password required when calling the service
-$password = 'difficult-password';
+
 $pid = 'tmp/monitor.pid';
 $phpExec = '/usr/bin/php';
 
-// Get security key
-$key = isset($_GET['pw']) ? $_GET['pw'] : false;
-
-// Basic security plus date check
-if (!$key || $key !== $password) {
-    die("You did not say the magic word, bye bye\n\n");
+// Get settings from config.ini
+if (!file_exists('config/AcToBs.ini')) {
+    die('Cannot locate config.ini!');
+}
+$config = parse_ini_file('config/AcToBs.ini', true);
+foreach ($config['col_plus'] as $k => $v) {
+    $cfg[$k] = $v;
 }
 
-// Conversion still running
+// Get security key from GET
+$key = isset($_GET['p']) ? $_GET['p'] : false;
+// ... or from command line
+if (!$key) {
+    $options = getopt("p:");
+    //die(print_r($options));
+    $key = isset($options['p']) ? $options['p'] : false;
+}
+
+// Basic security
+if (!$key || $key !== $cfg['key']) {
+    die("You did not say the magic word, bye bye...\n\n");
+}
+
+// Conversion still running?
 if (file_exists($pid)) {
-    $progress = file_get_contents('tmp/monitor.pid');
-    echo "Conversion in progress:\n";
-    die($progress);
+    // Check if script is running less than the maximum running time
+    if (time() - filemtime($pid) < $cfg['runtime']) {
+        $progress = file_get_contents($pid);
+        echo "Conversion in progress:\n";
+        die($progress . "\n\n");
+    }
+    // Process got stuck; delete pid and continue
+    unlink($pid);
 }
+
+// Keep running even if user disconnects
+ignore_user_abort(true);
+set_time_limit($cfg['runtime']);
 
 // Create pid
 $fp = fopen($pid, 'w+');

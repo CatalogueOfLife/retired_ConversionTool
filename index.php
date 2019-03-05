@@ -29,7 +29,25 @@ if ($config['settings']['revision'] != '') {
 <body style="font: 12px verdana; width: 600px;">
 <h3>4D4Life Conversion Tool</h3>
 <p style="font-size: 10px; margin-bottom: 20px;">
-<?php echo $version; ?></p>
+<?php 
+    echo $version; 
+    /* 
+     * If a current auto-pilot conversion is in progress, just display
+     * the current progress and do NOT offer the option to start something manually
+    */
+    if (file_exists('tmp/monitor.pid')) {
+        $status = file_get_contents('tmp/monitor.pid');
+        die( 
+            "</p>
+             <p style='color: red; font-weight: bold;'>An automated conversion currently is in progress! 
+             Current status:</p>
+             <p>" . nl2br($status) . "</p>
+             </body>
+             </html>"
+        );
+    }
+?>
+</p>
 <p>Welcome to the 4D4Life Conversion Tool. This tool is used to transfer
 the Assembly Database to a database based on the Base Scheme. It's recommended
 to start with a fresh Base Scheme database rather than re-using an older version,

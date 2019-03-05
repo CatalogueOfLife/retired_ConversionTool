@@ -47,6 +47,10 @@ revision = @REVISION@
 csvPath = "http://api.col.plus/download/ac-export.zip"
 ; database scheme of ACEF assembly database
 schema = ""
+; auto-pilot password
+key = ""
+; maximum runtime for auto-pilot script in seconds
+runtime = 43200
 
 [sitemaps]
 ; directory in which to store sitemaps
