@@ -1336,9 +1336,10 @@ function updateNameAndGroup ($row) {
 	$stmt->execute($row);
 }
 
-function setCredits () {
+function setCredits ($iniPath = false) {
 	$pdo = DbHandler::getInstance('target');
-	$ini = parse_ini_file('config/credits.ini', true);
+	$iniPath = $iniPath ? $iniPath : 'config/credits.ini';
+	$ini = parse_ini_file($iniPath, true);
 
 	$credits = array(
 			array(

@@ -51,6 +51,10 @@ schema = ""
 key = ""
 ; maximum runtime for auto-pilot script in seconds
 runtime = 43200
+; path to git repo used by update script
+gitPath = "/path/to/col-info-pages-settings"
+; git branch
+gitBranch = master
 
 [sitemaps]
 ; directory in which to store sitemaps
