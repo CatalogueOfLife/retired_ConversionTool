@@ -54,28 +54,28 @@ output($fp, "Starting CoL+ conversion at " . date('d-m-Y H:i:s') . "\n\n");
 output($fp, "Step 1: download and import data from CoL+ server\n");
 $output = shell_exec("$phpExec AdOptimizer.php 2>&1");
 $step1 = microtime(true);
-file_put_contents('log/' . date('Y-m-d') . '-step-1-log.htm', $output);
+file_put_contents('logs/' . date('Y-m-d') . '-step-1-log.htm', $output);
 output($fp, "Ready in " . round($step1 - $start) . " seconds\n\n");
 
 // Step 2
 output($fp, "Step 2: copy data to Annual Checklist database\n");
 $output = shell_exec("$phpExec AcToBs.php 2>&1");
 $step2 = microtime(true);
-file_put_contents('log/' . date('Y-m-d') . '-step-2-log.htm', $output);
+file_put_contents('logs/' . date('Y-m-d') . '-step-2-log.htm', $output);
 output($fp, "Ready in " . round($step2 - $step1) . " seconds\n\n");
 
 // Step 3
 fwrite($fp, "Step 3: create auxiliary tables in Annual Checklist database\n");
 $output = shell_exec("$phpExec BsOptimizer.php 2>&1");
 $step3 = microtime(true);
-file_put_contents('log/' . date('Y-m-d') . '-step-3-log.htm', $output);
+file_put_contents('logs/' . date('Y-m-d') . '-step-3-log.htm', $output);
 output($fp, "Ready in " . round($step3 - $step2) . " seconds\n\n");
 
 // Step 4
 output($fp, "Step 4: create sitemap files\n");
 $output = shell_exec("$phpExec sitemaps.php 2>&1");
 $step4 = microtime(true);
-file_put_contents('log/' . date('Y-m-d') . '-step-4-log.htm', $output);
+file_put_contents('logs/' . date('Y-m-d') . '-step-4-log.htm', $output);
 output($fp, "Ready in " . round($step4 - $step3) . " seconds\n\n");
 
 output($fp, "Conversion ready!\nTotal running time: " . round($step4 - $start) . " seconds\n\n");
