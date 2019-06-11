@@ -157,7 +157,7 @@ class Bs_Storer_TaxonAbstract extends Bs_Storer_Abstract
 
     protected function _getScientificNameElementId ($nameElement)
     {
-        $name = trim(strtolower($nameElement));
+        $name = trim(mb_strtolower($nameElement));
         $nameElementId = $this->_recordExists('id', 'scientific_name_element',
             array(
                 'name_element' => $name

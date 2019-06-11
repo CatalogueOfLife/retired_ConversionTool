@@ -38,7 +38,10 @@ class AdOptimizer {
                 sprintf('%s:host=%s;dbname=%s', $this->dbType, $this->config['host'], $this->config['dbname']), 
                 $this->config['username'], 
                 $this->config['password'],
-                [PDO::MYSQL_ATTR_LOCAL_INFILE => true]
+                [
+                    PDO::MYSQL_ATTR_LOCAL_INFILE => true,
+                    PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8",
+                ]
             );
         }
         return $this->pdo;
@@ -87,7 +90,6 @@ class AdOptimizer {
                 $files[] = $stat['name'];
             }
         }
-         // print_r($files); die();
         $zip->extractTo($tmpDir);
         foreach ($files as $file) {
             $table = str_replace('.csv', '', $file);
@@ -107,7 +109,7 @@ class AdOptimizer {
             if (!$res) {
                 throw new Exception($file . " file is corrupt!");
             } else if ($res->rowCount() < $nrLines) {
-                $this->addMessage($file . ': ' . $nrLines - $res->rowCount() . 'rows were skipped!');
+                $this->addMessage($file . ': ' . ($nrLines - $res->rowCount()) . ' rows were skipped!');
             }
             unlink($file);
         }
@@ -128,7 +130,7 @@ class AdOptimizer {
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
         curl_setopt($ch, CURLOPT_TIMEOUT, 1000);
         curl_setopt($ch, CURLOPT_USERAGENT, 'any');
-        curl_setopt($ch, CURLOPT_VERBOSE, true);
+        curl_setopt($ch, CURLOPT_VERBOSE, false);
         curl_exec($ch);
         if ($errno = curl_errno($ch)) {
             $error = "cURL error ({$errno}): " . curl_strerror($errno);

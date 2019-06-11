@@ -31,7 +31,7 @@
     
     echo '<p>Importing csv files...<br>';
     $converter->importCsv()->printMessages();
-    echo 'Checking database structure...';
+    echo 'Checking database structure...<br>';
     $converter->checkDatabase()->printMessages('Database tables and columns');
     $converter->checkIndices()->printMessages('Database indices');
     echo "Copying family codes from accepted names to synonyms...<br>" ;

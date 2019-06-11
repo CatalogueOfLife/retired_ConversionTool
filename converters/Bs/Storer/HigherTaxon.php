@@ -43,7 +43,7 @@ class Bs_Storer_HigherTaxon extends Bs_Storer_TaxonAbstract implements Bs_Storer
     protected function _setScientificNameElement (Model $taxon)
     {
         // All names are stored in lower case
-        $name = strtolower($taxon->name);
+        $name = mb_strtolower($taxon->name);
         $nameElementId = $this->_recordExists('id', 'scientific_name_element',
             array(
                 'name_element' => $name

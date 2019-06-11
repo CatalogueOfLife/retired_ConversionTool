@@ -108,7 +108,7 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon implements Bs_Storer_Interfa
         	}
         }
         foreach ($nameElements as $rankId => $nameElement) {
-            $name = strtolower($nameElement);
+            $name = mb_strtolower($nameElement);
             $nameElementId = $this->_recordExists('id', 'scientific_name_element',
                 array(
                     'name_element' => $name
