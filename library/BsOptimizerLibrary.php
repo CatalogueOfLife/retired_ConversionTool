@@ -774,7 +774,7 @@ function insertNaturalKey ($d)
 }
 
 function copyEstimates () {
-   $pdo = DbHandler::getInstance('estimates');
+   $pdo = DbHandler::getInstance('source');
    $q = 'SELECT * FROM `estimates`';
    $stmt = $pdo->query($q);
    while ($r = $stmt->fetch(PDO::FETCH_ASSOC)) {

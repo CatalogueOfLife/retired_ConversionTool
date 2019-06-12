@@ -101,6 +101,21 @@ CREATE TABLE `distribution` (
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
 
+DROP TABLE IF EXISTS `estimates`;
+
+CREATE TABLE `estimates` (
+  `namecode` varchar(42) NOT NULL,
+  `kingdom` varchar(15) NOT NULL,
+  `rank` varchar(15) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `estimate` int(7) DEFAULT NULL,
+  `source` text,
+  `inserted` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`namecode`),
+  KEY `kingdom` (`kingdom`,`rank`,`name`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+
 
 # Dump of table families
 # ------------------------------------------------------------

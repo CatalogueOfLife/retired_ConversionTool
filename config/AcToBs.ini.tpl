@@ -18,16 +18,6 @@ driver = mysql
 ; separate options by comma
 options = "PDO::MYSQL_ATTR_INIT_COMMAND=set names utf8"
 
-[estimates]
-dbname = @ESTIMATES.DBNAME@
-host = @ESTIMATES.DBHOST@
-username = @ESTIMATES.DBUSER@
-password = @ESTIMATES.DBPASS@
-port =  @ESTIMATES.DBPORT@; Can be empty
-driver = mysql
-; separate options by comma
-options = "PDO::MYSQL_ATTR_INIT_COMMAND=set names utf8"
-
 [checks]
 fk_constraints = 1
 taxon_ids = 1
