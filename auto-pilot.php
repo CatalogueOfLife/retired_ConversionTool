@@ -82,7 +82,7 @@ output($fp, "Conversion ready!\nTotal running time: " . round($step4 - $start) .
 
 $output = file_get_contents($pid);
 unlink($pid);
-die($output);
+//die($output);
 
 function alwaysFlush () {
     // Turn off output buffering

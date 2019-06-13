@@ -109,11 +109,38 @@ class AdOptimizer {
             if (!$res) {
                 throw new Exception($file . " file is corrupt!");
             } else if ($res->rowCount() < $nrLines) {
-                $this->addMessage($file . ': ' . ($nrLines - $res->rowCount()) . ' rows were skipped!');
+                $this->addMessage($file . ': not everything seems to be imported; veriying...');
+                $this->reportMissingRecordIds($file);
             }
             unlink($file);
         }
         return $this;
+    }
+    
+    private function reportMissingRecordIds ($file)
+    {
+        $table = str_replace('.csv', '', $file);
+        $i = 0;
+        if (($handle = fopen($file, "r")) !== false) {
+            while (($row = fgetcsv($handle, 1000, ",")) !== false) {
+                // Check header; set prepared statement
+                $column = $row[0];
+                if ($i == 0) {
+                    if ($column != 'record_id' && $column != 'name_code') {
+                        $this->addMessage($file . ": $column is not a valid header; aborting verification");
+                        return false;
+                    }
+                    $stmt = $this->pdo->prepare("select `$column` from `$table` where `$column` = ?");
+                } else {
+                    $stmt->execute([$row[0]]);
+                    if ($stmt->rowCount() != 1) {
+                        $this->addMessage($file . ": $column not imported to $table!");
+                    }
+                }
+                $i++;
+            }
+            fclose($handle);
+        }
     }
     
     public function downloadFile ($from, $to)
@@ -285,8 +312,8 @@ class AdOptimizer {
         
         echo "</p><p>Updating higher taxa...<br>";
         $this->updateHigherTaxa();
-        echo "Verifying accepted status...<br>";
-        $this->verifyAcceptedStatus();
+        // echo "Verifying accepted status...<br>";
+        // $this->verifyAcceptedStatus();
         return $this;
     }
     

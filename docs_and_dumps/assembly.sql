@@ -52,8 +52,8 @@ CREATE TABLE `common_names` (
 DROP TABLE IF EXISTS `databases`;
 
 CREATE TABLE `databases` (
-  `database_name_displayed` varchar(125) COLLATE utf8_bin DEFAULT NULL,
   `record_id` int(10) NOT NULL AUTO_INCREMENT,
+  `database_name_displayed` varchar(125) COLLATE utf8_bin DEFAULT NULL,
   `database_name` varchar(150) COLLATE utf8_bin DEFAULT NULL,
   `database_full_name` varchar(100) COLLATE utf8_bin NOT NULL DEFAULT '',
   `web_site` longtext COLLATE utf8_bin,
@@ -63,7 +63,7 @@ CREATE TABLE `databases` (
   `taxonomic_coverage` longtext COLLATE utf8_bin,
   `abstract` longtext COLLATE utf8_bin,
   `version` varchar(255) COLLATE utf8_bin DEFAULT NULL,
-  `release_date` date DEFAULT '0000-00-00',
+  `release_date` date DEFAULT '1900-01-01',
   `SpeciesCount` int(11) DEFAULT '0',
   `SpeciesEst` int(11) DEFAULT '0',
   `authors_editors` longtext COLLATE utf8_bin,
@@ -104,16 +104,16 @@ CREATE TABLE `distribution` (
 DROP TABLE IF EXISTS `estimates`;
 
 CREATE TABLE `estimates` (
-  `namecode` varchar(42) NOT NULL,
+  `name_code` varchar(42) NOT NULL DEFAULT '',
   `kingdom` varchar(15) NOT NULL,
-  `rank` varchar(15) NOT NULL,
   `name` varchar(255) NOT NULL,
+  `rank` varchar(15) NOT NULL,
   `estimate` int(7) DEFAULT NULL,
   `source` text,
   `inserted` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated` timestamp NULL DEFAULT NULL,
-  PRIMARY KEY (`namecode`),
-  KEY `kingdom` (`kingdom`,`rank`,`name`)
+  KEY `kingdom` (`kingdom`,`rank`,`name`),
+  KEY `name_code` (`name_code`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 
