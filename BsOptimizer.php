@@ -211,9 +211,6 @@
     
     echo '<p>Started: ' . date('Y-m-d H:i:s') . '</p>';
     
-    copyEstimates();
-    die();
-    
     $scriptStart = microtime(true);
     echo '<p>First denormalized tables are created and indices are created for the denormalized tables.
             Taxonomic coverage is processed from free text field to a dedicated database table to determine
