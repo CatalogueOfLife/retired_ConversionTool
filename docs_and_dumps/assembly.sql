@@ -1,13 +1,13 @@
 # ************************************************************
 # Sequel Pro SQL dump
-# Version 5428
+# Version 5438
 #
 # https://www.sequelpro.com/
 # https://github.com/sequelpro/sequelpro
 #
 # Host: localhost (MySQL 5.6.38)
-# Database: assembly_deploy
-# Generation Time: 2019-02-14 12:44:53 +0000
+# Database: assembly+
+# Generation Time: 2019-06-13 07:42:45 +0000
 # ************************************************************
 
 
@@ -101,6 +101,10 @@ CREATE TABLE `distribution` (
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
 
+
+# Dump of table estimates
+# ------------------------------------------------------------
+
 DROP TABLE IF EXISTS `estimates`;
 
 CREATE TABLE `estimates` (
@@ -117,6 +121,7 @@ CREATE TABLE `estimates` (
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 
+
 # Dump of table families
 # ------------------------------------------------------------
 
@@ -124,12 +129,12 @@ DROP TABLE IF EXISTS `families`;
 
 CREATE TABLE `families` (
   `record_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `hierarchy_code` varchar(250) COLLATE utf8_bin DEFAULT '',
-  `kingdom` varchar(50) COLLATE utf8_bin DEFAULT 'Not Assigned',
-  `phylum` varchar(50) COLLATE utf8_bin DEFAULT ' Not Assigned ',
-  `class` varchar(50) COLLATE utf8_bin DEFAULT ' Not Assigned ',
-  `order` varchar(50) COLLATE utf8_bin DEFAULT ' Not Assigned ',
-  `family` varchar(50) COLLATE utf8_bin DEFAULT ' Not Assigned ',
+  `hierarchy_code` varchar(250) COLLATE utf8_bin NOT NULL,
+  `kingdom` varchar(50) COLLATE utf8_bin NOT NULL DEFAULT 'Not Assigned',
+  `phylum` varchar(50) COLLATE utf8_bin NOT NULL DEFAULT ' Not Assigned ',
+  `class` varchar(50) COLLATE utf8_bin NOT NULL DEFAULT ' Not Assigned ',
+  `order` varchar(50) COLLATE utf8_bin NOT NULL DEFAULT ' Not Assigned ',
+  `family` varchar(50) COLLATE utf8_bin NOT NULL DEFAULT ' Not Assigned ',
   `superfamily` varchar(50) COLLATE utf8_bin DEFAULT NULL,
   `database_id` int(10) NOT NULL,
   `family_code` varchar(50) COLLATE utf8_bin NOT NULL,
@@ -230,9 +235,9 @@ CREATE TABLE `scientific_names` (
   `is_accepted_name` int(1) DEFAULT NULL,
   `GSDTaxonGUID` longtext COLLATE utf8_bin,
   `GSDNameGUID` longtext COLLATE utf8_bin,
-  `is_extinct` smallint(1) DEFAULT '0',
-  `has_preholocene` smallint(1) DEFAULT '0',
-  `has_modern` smallint(1) DEFAULT '1',
+  `is_extinct` smallint(1) NOT NULL DEFAULT '0',
+  `has_preholocene` smallint(1) NOT NULL DEFAULT '0',
+  `has_modern` smallint(1) NOT NULL DEFAULT '1',
   PRIMARY KEY (`record_id`,`name_code`),
   KEY `database_id` (`database_id`),
   KEY `family_id` (`family_id`),
@@ -251,8 +256,6 @@ CREATE TABLE `scientific_names` (
 
 
 
-# Dump of table sp2000_statuses
-# ------------------------------------------------------------
 
 DROP TABLE IF EXISTS `sp2000_statuses`;
 
@@ -262,6 +265,19 @@ CREATE TABLE `sp2000_statuses` (
   PRIMARY KEY (`record_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
+LOCK TABLES `sp2000_statuses` WRITE;
+/*!40000 ALTER TABLE `sp2000_statuses` DISABLE KEYS */;
+
+INSERT INTO `sp2000_statuses` (`record_id`, `sp2000_status`)
+VALUES
+	(1,'accepted name'),
+	(2,'ambiguous synonym'),
+	(3,'misapplied name'),
+	(4,'provisionally accepted name'),
+	(5,'synonym');
+
+/*!40000 ALTER TABLE `sp2000_statuses` ENABLE KEYS */;
+UNLOCK TABLES;
 
 
 # Dump of table specialists
@@ -277,6 +293,42 @@ CREATE TABLE `specialists` (
   PRIMARY KEY (`record_id`),
   KEY `specialist_code` (`specialist_code`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
+
+
+# Dump of table taxa
+# ------------------------------------------------------------
+
+DROP TABLE IF EXISTS `taxa`;
+
+CREATE TABLE `taxa` (
+  `record_id` int(10) unsigned NOT NULL,
+  `lsid` varchar(87) DEFAULT NULL,
+  `name` varchar(137) NOT NULL DEFAULT '',
+  `name_with_italics` varchar(151) NOT NULL DEFAULT '',
+  `taxon` varchar(12) NOT NULL DEFAULT '',
+  `name_code` varchar(42) DEFAULT NULL,
+  `parent_id` int(10) NOT NULL DEFAULT '0',
+  `sp2000_status_id` int(1) NOT NULL DEFAULT '0',
+  `database_id` int(2) NOT NULL DEFAULT '0',
+  `is_accepted_name` int(1) NOT NULL DEFAULT '0',
+  `is_species_or_nonsynonymic_higher_taxon` int(1) NOT NULL DEFAULT '0',
+  `HierarchyCode` varchar(1000) NOT NULL,
+  `is_extinct` smallint(1) DEFAULT '0',
+  `has_preholocene` smallint(1) DEFAULT '0',
+  `has_modern` smallint(1) DEFAULT '1',
+  PRIMARY KEY (`record_id`),
+  KEY `name` (`name`,`is_species_or_nonsynonymic_higher_taxon`,`database_id`,`sp2000_status_id`),
+  KEY `sp2000_status_id` (`sp2000_status_id`),
+  KEY `parent_id` (`parent_id`),
+  KEY `database_id` (`database_id`),
+  KEY `taxon` (`taxon`),
+  KEY `lsid` (`lsid`),
+  KEY `is_accepted_name` (`is_accepted_name`),
+  KEY `name_code` (`name_code`),
+  KEY `is_species_or_nonsynonymic_higher_taxon` (`is_species_or_nonsynonymic_higher_taxon`),
+  KEY `HierarchyCode` (`HierarchyCode`(255))
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 
 
