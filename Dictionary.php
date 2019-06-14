@@ -6,7 +6,7 @@
  * need for MySQL lookup queries but note that a large array gobbles up a lot
  * of memory! Use only for small data sets.
  * 
- * @author Nœria Torrescasana Aloy
+ * @author Nï¿½ria Torrescasana Aloy
  */
 class Dictionary
 {
@@ -29,6 +29,10 @@ class Dictionary
     public static function get($name, $key) {
         return isset(self::$concepts[$name][$key]) ?
             self::$concepts[$name][$key] : false;
+    }
+    
+    public static function exists($name, $value) {
+        return in_array($value, self::$concepts[$name]);
     }
     
     public static function dump($name) {

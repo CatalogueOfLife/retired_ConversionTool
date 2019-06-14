@@ -110,16 +110,15 @@ class AdOptimizer {
                 throw new Exception($file . " file is corrupt!");
             } else if ($res->rowCount() < $nrLines) {
                 $this->addMessage($file . ': not everything seems to be imported; veriying...');
-                $this->reportMissingRecordIds($file);
+                $this->reportMissingRecordIds($file, $table);
             }
             unlink($file);
         }
         return $this;
     }
     
-    private function reportMissingRecordIds ($file)
+    private function reportMissingRecordIds ($file, $table)
     {
-        $table = str_replace('.csv', '', $file);
         $i = 0;
         if (($handle = fopen($file, "r")) !== false) {
             while (($row = fgetcsv($handle, 1000, ",")) !== false) {
@@ -312,8 +311,8 @@ class AdOptimizer {
         
         echo "</p><p>Updating higher taxa...<br>";
         $this->updateHigherTaxa();
-        // echo "Verifying accepted status...<br>";
-        // $this->verifyAcceptedStatus();
+        echo "Verifying accepted status...<br>";
+        $this->verifyAcceptedStatus();
         return $this;
     }
     
@@ -612,6 +611,8 @@ class AdOptimizer {
                     $taxonId, $taxon, $taxon_with_italics, $taxon_level, '',
                     $parent_id, 0, 0, 0, 1, $hierarchy, 0, 0, 1
                 ]);
+            } else {
+                $this->addMessage("$taxon not inserted; $hierarchy already exists");
             }
         }
         return $this;
@@ -630,7 +631,7 @@ class AdOptimizer {
         
         $family_id = $hierarchy = $parent_hierarchy = $parent_id = "";
         $this->indicator->init($total, 100, 2000);
-        $batch = 50000;
+        $batch = 150000;
         
         for ($i = 0; $i <= $total; $i += $batch) {
             $query = "
@@ -844,7 +845,10 @@ class AdOptimizer {
                     `has_preholocene`, `has_modern`)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         }
-        $this->taxaStmt->execute(array_values($values));
+        if (!$this->taxaStmt->execute(array_values($values))) {
+            $errors = $this->taxaStmt->errorInfo();
+            $this->addMessage("Could not insert data for " . $values[1] . ': ' . $errors[2]);
+        }
     }
     
     private function addMessage ($message)
