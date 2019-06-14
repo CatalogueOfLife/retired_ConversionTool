@@ -51,13 +51,11 @@ $start = microtime(true);
 // Step 1
 output($fp, "Starting CoL+ conversion at " . date('d-m-Y H:i:s') . "\n\n");
 
-/*
 output($fp, "Step 1: download and import data from CoL+ server\n");
 $output = shell_exec("$phpExec AdOptimizer.php 2>&1");
 $step1 = microtime(true);
 file_put_contents('logs/' . date('Y-m-d') . '-step-1-log.htm', $output);
 output($fp, "Ready in " . round($step1 - $start) . " seconds\n\n");
-*/
 
 // Step 2
 output($fp, "Step 2: copy data to Annual Checklist database\n");
