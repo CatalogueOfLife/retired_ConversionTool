@@ -31,10 +31,6 @@ class Dictionary
             self::$concepts[$name][$key] : false;
     }
     
-    public static function exists($name, $value) {
-        return in_array($value, self::$concepts[$name]);
-    }
-    
     public static function dump($name) {
         var_dump(
             isset(self::$concepts[$name]) ? self::$concepts[$name] : false

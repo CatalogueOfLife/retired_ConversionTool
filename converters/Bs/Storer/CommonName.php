@@ -104,20 +104,12 @@ class Bs_Storer_CommonName extends Bs_Storer_Abstract
     }
 
     private function _getLanguageIso(Model $commonName) {
-        if (Dictionary::exists('languages', strtolower($commonName->language))) {
-            $commonName->languageIso = strtolower($commonName->language);
-            return $commonName;
-        }
         if ($iso = Dictionary::get('languages', $commonName->language)) {
             $commonName->languageIso = $iso;
             return $commonName;
         }
         $iso = $this->_recordExists('iso', 'language',
             array('name' => $commonName->language));
-        if (!$iso) {
-            $iso = $this->_recordExists('iso', 'language',
-                ['iso' => strtolower($commonName->language)]);
-        }
         if ($iso) {
             Dictionary::add('languages', $commonName->language, $iso);
             $commonName->languageIso = $iso;
@@ -127,19 +119,11 @@ class Bs_Storer_CommonName extends Bs_Storer_Abstract
     }
 
     private function _getCountryIso(Model $commonName) {
-        if (Dictionary::exists('countries', strtoupper($commonName->country))) {
-            $commonName->countryIso = strtoupper($commonName->countryIso);
-            return $commonName;
-        }
         if ($iso = Dictionary::get('countries', $commonName->country)) {
             $commonName->countryIso = $iso;
             return $commonName;
         }
         $iso = $this->_recordExists('iso', 'country', ['name' => $commonName->country]);
-        if (!$iso) {
-            $iso = $this->_recordExists('iso', 'country', 
-                ['iso' => strtoupper($commonName->country)]);
-        }
         if ($iso) {
             Dictionary::add('countries', $commonName->country, $iso);
             $commonName->countryIso = $iso;
