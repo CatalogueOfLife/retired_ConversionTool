@@ -14,8 +14,7 @@ class Bs_Storer_HigherTaxon extends Bs_Storer_TaxonAbstract implements Bs_Storer
     public function store (Model $taxon)
     {
         // Source database id is NULL for all higher taxa
-        $this->_setTaxonomicRankId(
-            $taxon);
+        $this->_setTaxonomicRankId($taxon);
         $this->_setScientificNameElement($taxon);
         $this->_setTaxon($taxon);
         $this->_setTaxonNameElement($taxon);

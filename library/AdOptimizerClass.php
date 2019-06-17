@@ -421,7 +421,7 @@ class AdOptimizer {
         // Create record_id for each higher taxon that will not overlap with real record_ids in scientific_names table
         $taxonId = $this->getHigherTaxonRecordId();
         $stmt = $this->query("
-            SELECT `record_id`,`kingdom`, `phylum`, `class`, `order`,  `superfamily`, `family` 
+            SELECT `record_id`,`kingdom`, `phylum`, `class`, `order`,  `superfamily`, `family`, `family_code`
             FROM `families`"
         );
         $total = $stmt->rowCount();
@@ -431,7 +431,8 @@ class AdOptimizer {
         
         while ($row = $stmt->fetch(PDO::FETCH_NUM)) {
             $this->indicator->iterate();
-            list($record_id, $this_kingdom, $this_phylum, $this_class, $this_order, $this_superfamily ,$this_family) = $row;
+            list($record_id, $this_kingdom, $this_phylum, $this_class, $this_order, $this_superfamily,
+                $this_family, $this_family_code) = $row;
             for ($j = 1; $j <= 6; $j ++) {
                 if ($j == 5 && $this_superfamily == "") {
                     // do nothing
@@ -487,7 +488,7 @@ class AdOptimizer {
                     }
                     // add taxon to 'taxa' table
                     $taxonId++;
-                    $this->taxaInsert([$taxonId, $taxon, $taxon, $taxon_level, '', $parent_id, 0, 0, 0, 1, $hierarchy, 0, 0, 1]);
+                    $this->taxaInsert([$taxonId, $taxon, $taxon, $taxon_level, $this_family_code, $parent_id, 0, 0, 0, 1, $hierarchy, 0, 0, 1]);
                 }
             }
         }
