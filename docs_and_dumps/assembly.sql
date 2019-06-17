@@ -109,18 +109,13 @@ DROP TABLE IF EXISTS `estimates`;
 
 CREATE TABLE `estimates` (
   `name_code` varchar(42) NOT NULL DEFAULT '',
-  `kingdom` varchar(15) NOT NULL,
-  `name` varchar(255) NOT NULL,
-  `rank` varchar(15) NOT NULL,
   `estimate` int(7) DEFAULT NULL,
   `source` text,
   `inserted` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated` timestamp NULL DEFAULT NULL,
-  KEY `kingdom` (`kingdom`,`rank`,`name`),
   KEY `name_code` (`name_code`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
-
-
+ 
 
 # Dump of table families
 # ------------------------------------------------------------
