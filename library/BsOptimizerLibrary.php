@@ -775,10 +775,10 @@ function insertNaturalKey ($d)
 
 function copyEstimates () {
    $pdo = DbHandler::getInstance('source');
-   $q = 'SELECT `name_code`, `estimate`, `source` FROM `estimates`';
+   $q = 'SELECT `name`, `rank`, `estimate`, `source` FROM `estimates`';
    $stmt = $pdo->query($q);
    while ($r = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        $id = getTaxonTreeId($r['name_code']);
+        $id = getTaxonTreeId(array($r['name'], $r['rank']));
         $r['estimate'] = empty($r['estimate']) ? 0 : $r['estimate'];
         if ($id) {
             updateTaxonTreeEstimates(array($r['estimate'], $r['source'], $id));
@@ -786,17 +786,14 @@ function copyEstimates () {
    }
 }
 
-function getTaxonTreeId ($nameCode)
+function getTaxonTreeId ($p)
 {
     $pdo = DbHandler::getInstance('target');
-    /*
     $q = 'SELECT t1.`taxon_id` AS `id` FROM `_taxon_tree` AS t1
-        LEFT JOIN `_search_scientific` AS t2 ON t1.`taxon_id` = t2.`id`
-        WHERE t1.`name` = ? AND t1.`rank` = ? AND t2.`kingdom` = ?';
-    */
-    $q = 'SELECT `id` FROM `taxon` WHERE `original_id` = ?';
+        LEFT JOIN `_search_all` AS t2 ON t1.`taxon_id` = t2.`id`
+        WHERE t1.`name` = ? AND t1.`rank` = ? AND t2.`group` = ?';
     $stmt = $pdo->prepare($q);
-    $stmt->execute([$nameCode]);
+    $stmt->execute($p);
     $r = $stmt->fetch(PDO::FETCH_ASSOC);
     return !empty($r) ? $r['id'] : false;
 }
