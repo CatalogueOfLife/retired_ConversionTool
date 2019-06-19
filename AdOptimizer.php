@@ -28,6 +28,7 @@
     $scriptStart = microtime(true);
     
     echo '<p>Started: ' . date('Y-m-d H:i:s') . '</p>';
+    
     echo '<p>Importing csv files...<br>';
     $converter->importCsv()->printMessages();
     echo 'Checking database structure...<br>';
@@ -37,8 +38,8 @@
     $converter->familyCodeToSynonyms()->printMessages();
     echo 'Copying foreign key codes to foreign key ids...<br>';
     $converter->codesToIds()->printMessages();
-    echo 'Checking foreign key references...<br>';
-    $converter->checkForeignKeys();
+    // echo 'Checking foreign key references...<br>';
+    // $converter->checkForeignKeys();
     echo "</p><p>Building 'taxa' table...";
     $converter->buildTaxaTable();
     echo "<p>Errors in taxa table:<br>";

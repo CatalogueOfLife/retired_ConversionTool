@@ -104,6 +104,12 @@ class Bs_Storer_CommonName extends Bs_Storer_Abstract
     }
 
     private function _getLanguageIso(Model $commonName) {
+        // Check if name != iso; if so, switch things around
+        if ($name = $this->_recordExists('name', 'language', ['iso' => $commonName->language])) {
+            $commonName->languageIso = $commonName->language;
+            $commonName->language = $name;
+            return $commonName;
+        }
         if ($iso = Dictionary::get('languages', $commonName->language)) {
             $commonName->languageIso = $iso;
             return $commonName;
@@ -119,6 +125,12 @@ class Bs_Storer_CommonName extends Bs_Storer_Abstract
     }
 
     private function _getCountryIso(Model $commonName) {
+        // Check if name != iso; if so, switch things around
+        if ($name = $this->_recordExists('name', 'country', ['iso' => $commonName->country])) {
+            $commonName->countryIso = $commonName->country;
+            $commonName->country = $name;
+            return $commonName;
+        }
         if ($iso = Dictionary::get('countries', $commonName->country)) {
             $commonName->countryIso = $iso;
             return $commonName;
@@ -240,7 +252,7 @@ class Bs_Storer_CommonName extends Bs_Storer_Abstract
         }
         return $commonName;
     }
-
+ 
     private function _setReferenceToCommonName(Model $commonName)
     {
         $refToCN = $this->_recordExists('reference_id',
