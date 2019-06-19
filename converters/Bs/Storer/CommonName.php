@@ -105,7 +105,7 @@ class Bs_Storer_CommonName extends Bs_Storer_Abstract
 
     private function _getLanguageIso(Model $commonName) {
         // Check if name != iso; if so, switch things around
-        if ($name = $this->_recordExists('name', 'language', ['iso' => $commonName->language])) {
+        if ($name = $this->_recordExists('name', 'language', ['iso' => strtoupper($commonName->language)])) {
             $commonName->languageIso = $commonName->language;
             $commonName->language = $name;
             return $commonName;
@@ -126,7 +126,7 @@ class Bs_Storer_CommonName extends Bs_Storer_Abstract
 
     private function _getCountryIso(Model $commonName) {
         // Check if name != iso; if so, switch things around
-        if ($name = $this->_recordExists('name', 'country', ['iso' => $commonName->country])) {
+        if ($name = $this->_recordExists('name', 'country', ['iso' => strtolower($commonName->country)])) {
             $commonName->countryIso = $commonName->country;
             $commonName->country = $name;
             return $commonName;
