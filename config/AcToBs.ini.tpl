@@ -35,6 +35,8 @@ revision = @REVISION@
 [col_plus]
 ; url to zip file containing csv dumps
 csvPath = "http://api.col.plus/download/ac-export.zip"
+; path to zip file with all individual log files
+logZipPath = ""
 ; database scheme of ACEF assembly database
 schema = ""
 ; auto-pilot password

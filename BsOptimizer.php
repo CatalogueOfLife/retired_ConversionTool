@@ -589,7 +589,7 @@
             'taxon_id' => $row['taxon_id']
         ));
     }
-
+    
     // Natural keys for accepted (infra)species
     echo '</p><p><b>Creating natural keys</b><br>Creating keys for valid (infra)species...<br>';
     $query = 'SELECT t1.`id`, t1.`family`, t1.`genus`, t1.`subgenus`, t1.`species`,

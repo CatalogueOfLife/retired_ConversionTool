@@ -28,6 +28,11 @@ if (!$key || $key !== $cfg['key']) {
     die("You did not say the magic word, bye bye...\n\n");
 }
 
+// Test path to zipped logs
+if (!file_exists($cfg['logZipPath'])) {
+    die("Path to downloable zip archive with logs is invalid, please adjust config\n");
+}
+
 // Conversion still running?
 if (file_exists($pid)) {
     // Check if script is running less than the maximum running time
@@ -37,6 +42,9 @@ if (file_exists($pid)) {
         die($progress . "\n\n");
     }
     // Process got stuck; delete pid and continue
+    echo "Deleting previous session.\nProgess data saved was:\n\n====================\n";
+    $output = file_get_contents($pid);
+    echo $output . "\n====================\n\n";
     unlink($pid);
 }
 
@@ -47,6 +55,7 @@ set_time_limit($cfg['runtime']);
 // Create pid
 $fp = fopen($pid, 'w+');
 $start = microtime(true);
+$date = date('Y-m-d');
 
 // Step 1
 output($fp, "Starting CoL+ conversion at " . date('d-m-Y H:i:s') . "\n\n");
@@ -54,35 +63,60 @@ output($fp, "Starting CoL+ conversion at " . date('d-m-Y H:i:s') . "\n\n");
 output($fp, "Step 1: download and import data from CoL+ server\n");
 $output = shell_exec("$phpExec AdOptimizer.php 2>&1");
 $step1 = microtime(true);
-file_put_contents('logs/' . date('Y-m-d') . '-step-1-log.htm', $output);
+file_put_contents('logs/' . $date . '-step-1-log.htm', $output);
 output($fp, "Ready in " . round($step1 - $start) . " seconds\n\n");
 
 // Step 2
 output($fp, "Step 2: copy data to Annual Checklist database\n");
 $output = shell_exec("$phpExec AcToBs.php 2>&1");
 $step2 = microtime(true);
-file_put_contents('logs/' . date('Y-m-d') . '-step-2-log.htm', $output);
+file_put_contents('logs/' . $date . '-step-2-log.htm', $output);
 output($fp, "Ready in " . round($step2 - $step1) . " seconds\n\n");
 
 // Step 3
 output($fp, "Step 3: create auxiliary tables in Annual Checklist database\n");
 $output = shell_exec("$phpExec BsOptimizer.php 2>&1");
 $step3 = microtime(true);
-file_put_contents('logs/' . date('Y-m-d') . '-step-3-log.htm', $output);
+file_put_contents('logs/' . $date . '-step-3-log.htm', $output);
 output($fp, "Ready in " . round($step3 - $step2) . " seconds\n\n");
 
 // Step 4
 output($fp, "Step 4: create sitemap files\n");
 $output = shell_exec("$phpExec sitemaps.php 2>&1");
 $step4 = microtime(true);
-file_put_contents('logs/' . date('Y-m-d') . '-step-4-log.htm', $output);
+file_put_contents('logs/' . $date . '-step-4-log.htm', $output);
 output($fp, "Ready in " . round($step4 - $step3) . " seconds\n\n");
 
-output($fp, "Conversion ready!\nTotal running time: " . round($step4 - $start) . " seconds\n\n");
+output($fp, "Deleting monitor file...\n");
 
-$output = file_get_contents($pid);
+// Pid can be deleted now
 unlink($pid);
-//die($output);
+
+// Zip logs into a downloadable archive
+output($fp, "Creating zip archive with log files...\n");
+$logFiles = [
+    '-step-1-log.htm',
+    '-step-2-log.htm',
+    '-step-3-log.htm',
+    '-step-4-log.htm',
+    '-assembly-optimizer.log',
+    '-basescheme-optimizer.log',
+    '-converter.log',
+    '-duplicate-names.csv',
+    '-duplicate-natural-keys.csv',
+    '-sitemap-creator.log',
+];
+$zip = new ZipArchive();
+$zip->open($cfg['logZipPath'] . '/' . $date . '-log.zip', ZIPARCHIVE::CREATE);
+foreach ($logFiles as $file) {
+    $path = 'logs/' . $date . $file;
+    if (file_exists($path)) {
+        $zip->addFile($path, $path);
+    }
+}
+$zip->close();
+output($fp, "Conversion ready!\n\nTotal running time: " . round(microtime(true) - $start) . " seconds\n");
+
 
 function alwaysFlush () {
     // Turn off output buffering

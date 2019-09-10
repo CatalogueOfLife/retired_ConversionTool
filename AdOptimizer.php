@@ -28,7 +28,6 @@
     $scriptStart = microtime(true);
     
     echo '<p>Started: ' . date('Y-m-d H:i:s') . '</p>';
-    
     echo '<p>Importing csv files...<br>';
     $converter->importCsv()->printMessages();
     echo 'Checking database structure...<br>';
