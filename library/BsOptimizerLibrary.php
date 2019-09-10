@@ -576,9 +576,10 @@ function getSourceDatabaseIds ($tt)
         if ($tt['parent_id'] != 0) {
             if (empty($tt['parent_rank'])) {
                 $logger->err($tt['rank'] . ' ' . $tt['name'] . ' has no parent.');
+            } else {
+                $query .= 'AND `' . strtolower($tt['parent_rank']) . '` = ? ';
+                $params[] = $tt['parent_name'];
             }
-            $query .= 'AND `' . strtolower($tt['parent_rank']) . '` = ? ';
-            $params[] = $tt['parent_name'];
         }
     }
     // Species
@@ -810,7 +811,7 @@ function updateTaxonTreeEstimates ($p)
 function getViruses ()
 {
     $pdo = DbHandler::getInstance('source');
-    $q = 'SELECT t1.`record_id` AS `id`, t2.`name` AS `genus`, t1.`name` AS `species`
+    $q = 'SELECT t1.`record_id` AS `id`, t2.`name` AS `genus`, t1.`name` AS `species`, t1.`database_id`
         FROM `taxa` AS t1
         LEFT JOIN `taxa` AS t2 ON t1.`parent_id` = t2.`record_id`
         WHERE t1.`HierarchyCode` LIKE "virus%" AND t1.`taxon` = "species"';
@@ -1042,8 +1043,12 @@ function updateViruses ($table, $viruses)
         case TAXON_TREE:
             $q = 'UPDATE ' . TAXON_TREE . ' SET `name` = ? WHERE `taxon_id` = ?';
             $stmt = $pdo->prepare($q);
+            $q2 = 'INSERT IGNORE INTO ' . SOURCE_DATABASE_TO_TAXON_TREE_BRANCH . ' 
+                (`source_database_id`, `taxon_tree_id`) VALUES (?, ?)';
+            $stmt2 = $pdo->prepare($q2);
             foreach ($viruses as $row) {
                  $stmt->execute(array($row['species'], $row['id']));
+                 $stmt2->execute(array($row['database_id'], $row['id']));
             }
             break;
     }

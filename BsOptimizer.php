@@ -483,6 +483,7 @@
     setTaxonTreeExtantTotals();
     echo 'Deleting temporary column...<br>';
     $pdo->query("ALTER TABLE `" . TAXON_TREE . "` DROP COLUMN `delete_me`");
+    
     echo '</p><p><b>Fixing virus names</b><br/>';
     echo 'Getting viruses from source database...<br/>';
     $viruses = getViruses();
