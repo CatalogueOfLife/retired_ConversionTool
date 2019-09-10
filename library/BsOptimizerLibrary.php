@@ -845,7 +845,7 @@ function setBranch ($row)
 	$hierarchy = array();
 	$parentId = 0;
 	foreach ($ranks as $rank) {
-		if (!empty($row[$rank])) {
+	    if (!empty($row[$rank]) && $row[$rank] !== "Not assigned") {
             $id = getDeadEndTaxonTreeId($row[$rank], $rank, $parentId);
             if (!$id) {
                 $id = getNextTaxonId();
@@ -1022,7 +1022,7 @@ function updateViruses ($table, $viruses)
             $q = 'UPDATE ' . SEARCH_ALL . ' SET `name` = ? WHERE `id` = ?';
             $stmt = $pdo->prepare($q);
             foreach ($viruses as $row) {
-                $stmt->execute(array($row['genus'] . ' ' . $row['species'], $row['id']));
+                $stmt->execute(array($row['species'], $row['id']));
             }
             break;
         case SEARCH_SCIENTIFIC:
@@ -1043,7 +1043,7 @@ function updateViruses ($table, $viruses)
             $q = 'UPDATE ' . TAXON_TREE . ' SET `name` = ? WHERE `taxon_id` = ?';
             $stmt = $pdo->prepare($q);
             foreach ($viruses as $row) {
-                 $stmt->execute(array($row['genus'] . ' ' . $row['species'], $row['id']));
+                 $stmt->execute(array($row['species'], $row['id']));
             }
             break;
     }
