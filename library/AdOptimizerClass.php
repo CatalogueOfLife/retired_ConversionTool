@@ -68,13 +68,13 @@ class AdOptimizer {
         $zipFile = $tmpDir . 'ac-export.zip';
         
         // Is path available in config?
-        if (!isset($this->config['csvPath'])) {
-            throw new Exception('Please add path to zip with csv files to ini file ("csvPath")!');
+        if (!isset($this->config['csvUrl'])) {
+            throw new Exception('Please add path to zip with csv files to ini file ("csvUrl")!');
         }
         // Download file
-        $result = $this->downloadFile($this->config['csvPath'], $zipFile);
+        $result = $this->downloadFile($this->config['csvUrl'], $zipFile);
         if ($result['error'] !== false) {
-            throw new Exception('Could not download ' . $this->config['csvPath'] . ': ' . $result['error']);
+            throw new Exception('Could not download ' . $this->config['csvUrl'] . ': ' . $result['error']);
         }
         // ... and is it readable?
         if (!is_readable($zipFile)) {
