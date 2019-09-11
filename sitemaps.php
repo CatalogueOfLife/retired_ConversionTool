@@ -54,7 +54,7 @@ $total = $r->fetchColumn();
 echo "Writing sitemap files for $total urls...</p><p>";
 $indicator->init($total, 75, 1000);
 
-$stmt = $config['sitemaps']['naturalKeys'] == 0 ?
+$stmt = $config['keys']['naturalKeys'] == 0 ?
     $pdo->prepare(
     	'SELECT DISTINCT `id`, `name_status`, `accepted_taxon_id`
     	FROM `_search_all` WHERE `rank` IN ("species", "infraspecies")

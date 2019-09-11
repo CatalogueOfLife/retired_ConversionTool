@@ -53,8 +53,12 @@ gitBranch = master
 sitemapPath = sitemaps/
 ; base url of CoL species detail page
 sitemapBaseUrl = http://www.catalogueoflife.org/col/details/species/id/
+
+[keys]
 ; use natural keys (1) or numerical ids (0)
 naturalKeys = 1
+; use CoL+ unique ids (1) or traditional CoL natural keys (0)
+colPlusKeys = 1
 
 [dead_ends]
 ; copy dead ends in tree from source database?
