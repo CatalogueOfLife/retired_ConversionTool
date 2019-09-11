@@ -591,6 +591,11 @@
         ));
     }
     
+    $useColPlusKeys = false;
+    if (isset($config['keys']['colPlusKeys']) && $config['keys']['colPlusKeys'] == 1) {
+        $useColPlusKeys = true;
+    }
+    
     // Natural keys for accepted (infra)species
     echo '</p><p><b>Creating natural keys</b><br>Creating keys for valid (infra)species...<br>';
     $query = 'SELECT t1.`id`, t1.`family`, t1.`genus`, t1.`subgenus`, t1.`species`,
@@ -603,7 +608,9 @@
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         $name = $row['genus'] . (!empty($row['subgenus']) ? ' (' . $row['subgenus'] . ')' : '') .
             ' ' . $row['species'] . (!empty($row['infraspecies']) ? ' ' . $row['infraspecies'] : '');
-        $hash = hashCoL($row['family'] . $name . $row['author'] . $row['infraspecific_marker'] . $row['status']);
+        $hash = $useColPlusKeys ?
+            $row['original_id'] :
+            hashCoL($row['family'] . $name . $row['author'] . $row['infraspecific_marker'] . $row['status']);
         insertNaturalKey(array(
             $row['id'],
             $hash,
@@ -617,16 +624,20 @@
 
     // Natural keys for synonyms
     echo 'Creating keys for synonyms...<br>';
-    $query = 'SELECT `id`, `family`, `genus`, `subgenus`, `species`, `infraspecies`,
-            `status`, `infraspecific_marker`, `author`, `accepted_species_name`, `accepted_species_author`
-        FROM `' . SEARCH_SCIENTIFIC . '`
+    $query = 'SELECT t1.`id`, t1.`family`, t1.`genus`, t1.`subgenus`, t1.`species`, t1.`infraspecies`,
+            t1.`status`, t1.`infraspecific_marker`, t1.`author`, t1.`accepted_species_name`, 
+            t1.`accepted_species_author`, t2.`original_id`
+        FROM `' . SEARCH_SCIENTIFIC . '` AS t1
+        LEFT JOIN `synonym` AS t2 ON t1.`id` = t2.`id`
         WHERE `species` != "" AND `accepted_species_id` > 0';
     $stmt = $pdo->prepare($query);
     $stmt->execute();
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         $name = $row['genus'] . (!empty($row['subgenus']) ? ' (' . $row['subgenus'] . ')' : '') .
             ' ' . $row['species'] . (!empty($row['infraspecies']) ? ' ' . $row['infraspecies'] : '');
-        $hash = hashCoL($row['family'] . $name . $row['author'] . $row['infraspecific_marker'] . $row['status']);
+        $hash = $useColPlusKeys ?
+            $row['original_id'] :
+            hashCoL($row['family'] . $name . $row['author'] . $row['infraspecific_marker'] . $row['status']);
         insertNaturalKey(array(
             $row['id'],
             $hash,
