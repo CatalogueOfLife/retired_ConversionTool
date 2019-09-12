@@ -87,9 +87,6 @@ for ($limit = $memLimit = 100000, $offset = 0; $offset < $total; $offset += $mem
             }
             catch (PDOException $e) {
                 $logger->err("\nStore error: " . formatException($e));
-                echo '<pre>';
-                print_r($taxon);
-                echo '</pre>';
                 echo 'Store error: '.formatException($e);
             }
         }
