@@ -100,26 +100,26 @@ class Bs_Storer_Synonym extends Bs_Storer_TaxonAbstract implements Bs_Storer_Int
         $name = trim($synonym->infraspecies);
         if (!empty($name)) {
             $nameElements[$synonym->taxonomicRankId] = $name;
-            $synonym->nameElementIds = $nameElements;
-            $stmt = $this->_dbh->prepare(
-                'INSERT INTO `synonym_name_element` (`taxonomic_rank_id`, `scientific_name_element_id`,
-        	`synonym_id`, `hybrid_order`) VALUES (?, ?, ?, ?)'
-                );
-            
-            // Hybrid synonyms are currently stored as regular taxa as
-            // accepted hybrids cannot be stored according to the rules either
-            foreach ($synonym->nameElementIds as $rankId => $nameElement) {
-                $nameElementId = $this->_getScientificNameElementId($nameElement);
-                try {
-                    $stmt->execute(array(
-                        $rankId,
-                        $nameElementId,
-                        $synonym->id,
-                        null
-                    ));
-                } catch (PDOException $e) {
-                    $this->_handleException("Store error synonym name element", $e);
-                }
+        }
+        $synonym->nameElementIds = $nameElements;
+        
+        $stmt = $this->_dbh->prepare(
+            'INSERT INTO `synonym_name_element` (`taxonomic_rank_id`, `scientific_name_element_id`,
+    	   `synonym_id`, `hybrid_order`) VALUES (?, ?, ?, ?)'
+        );
+        // Hybrid synonyms are currently stored as regular taxa as
+        // accepted hybrids cannot be stored according to the rules either
+        foreach ($synonym->nameElementIds as $rankId => $nameElement) {
+            $nameElementId = $this->_getScientificNameElementId($nameElement);
+            try {
+                $stmt->execute(array(
+                    $rankId,
+                    $nameElementId,
+                    $synonym->id,
+                    null
+                ));
+            } catch (PDOException $e) {
+                $this->_handleException("Store error synonym name element", $e);
             }
         }
         return $synonym;
