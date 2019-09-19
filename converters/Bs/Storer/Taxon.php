@@ -91,16 +91,18 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon implements Bs_Storer_Interfa
     }
 
     protected function _countNameElements (Model $taxon) {
+        $nameElements = [];
         foreach (array('genus', 'species', 'infraspecies') as $ne) {
         	if (!empty($taxon->{$ne})) {
         		$nameElements[$ne] = $taxon->{$ne};
         	}
         }
-        return isset($nameElements) ? count($nameElements) : 0;
+        return count($nameElements);
     }
 
     protected function _setScientificNameElements (Model $taxon)
     {
+        $nameElements = [];
         foreach (array('genus', 'subgenus', 'species', 'infraspecies') as $ne) {
         	$name = trim($taxon->{$ne});
         	if (!empty($name)) {

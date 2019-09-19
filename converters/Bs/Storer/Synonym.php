@@ -91,6 +91,7 @@ class Bs_Storer_Synonym extends Bs_Storer_TaxonAbstract implements Bs_Storer_Int
 
     protected function _setSynonymNameElements (Model $synonym)
     {
+        $nameElements = [];
         foreach (array('genus', 'subgenus', 'species') as $ne) {
             $name = trim($synonym->{$ne});
         	if (!empty($name)) {
