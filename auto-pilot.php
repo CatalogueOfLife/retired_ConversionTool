@@ -67,8 +67,6 @@ $step1 = microtime(true);
 file_put_contents('logs/' . $date . '-step-1-log.htm', $output);
 output($fp, "Ready in " . round($step1 - $start) . " seconds\n\n");
 
-die();
-
 // Step 2
 output($fp, "Step 2: copy data to Annual Checklist database\n");
 $output = shell_exec("$phpExec AcToBs.php 2>&1");
