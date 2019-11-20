@@ -32,9 +32,6 @@
     $converter->processZip()->printMessages();
     echo '<p>Importing csv files...<br>';
     $converter->importCsv()->printMessages();
-    
-    die('stop');
-    
     echo 'Checking database structure...<br>';
     $converter->checkDatabase()->printMessages('Database tables and columns');
     $converter->checkIndices()->printMessages('Database indices');
