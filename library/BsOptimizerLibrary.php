@@ -1336,7 +1336,7 @@ function updateNameAndGroup ($row) {
 	$stmt->execute($row);
 }
 
-function setCredits ($iniPath = false) {
+function setCredits ($iniPath = false, $delete = false) {
 	$pdo = DbHandler::getInstance('target');
 	$iniPath = $iniPath ? $iniPath : 'config/credits.ini';
 	$ini = parse_ini_file($iniPath, true);
@@ -1355,18 +1355,15 @@ function setCredits ($iniPath = false) {
 				'edition' => $ini['annual']['edition'],
 				'citation' => $ini['annual']['citation']
 			),
-			array(
-				'type' => 'dvd',
-				'current' => ($ini['current_edition'] == 'dvd' ? 1 : 0),
-				'edition' => $ini['dvd']['edition'],
-				'citation' => $ini['dvd']['citation']
-			),
 	);
 
 	$pdo->query('TRUNCATE TABLE `_credits`');
 	$stmt = $pdo->prepare('INSERT INTO `_credits` VALUES (null, ?, ?, ?, ?)');
 	foreach ($credits as $row) {
 		$stmt->execute(array_values($row));
+	}
+	if ($delete) {
+	    unlink($iniPath);
 	}
 }
 

@@ -56,6 +56,7 @@ set_time_limit($cfg['runtime']);
 $fp = fopen($pid, 'w+');
 $start = microtime(true);
 $date = date('Y-m-d');
+$time = date('H-i');
 
 // Step 1
 output($fp, "Starting CoL+ conversion at " . date('d-m-Y H:i:s') . "\n\n");
@@ -107,14 +108,22 @@ $logFiles = [
     '-sitemap-creator.log',
 ];
 $zip = new ZipArchive();
-$zip->open($cfg['logZipPath'] . '/' . $date . '-log.zip', ZIPARCHIVE::CREATE);
+$delete = [];
+$zip->open($cfg['logZipPath'] . '/' . $date . '_' . $time . '-log.zip', ZIPARCHIVE::CREATE);
 foreach ($logFiles as $file) {
     $path = 'logs/' . $date . $file;
     if (file_exists($path)) {
         $zip->addFile($path, $path);
+        $delete[] = $path;
     }
 }
 $zip->close();
+
+// Delete original log files after zipping them
+foreach ($delete as $file) {
+    unlink($file);
+}
+
 output($fp, "Conversion ready!\n\nTotal running time: " . round(microtime(true) - $start) . " seconds\n");
 
 

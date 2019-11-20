@@ -92,6 +92,11 @@ class AdOptimizer {
         }
         $zip->extractTo($tmpDir);
         foreach ($files as $file) {
+            // Leave anything that's not a csv file
+            if (strpos($file, '.csv') === false) {
+                continue;
+            }
+            
             $table = str_replace('.csv', '', $file);
             $file = $tmpDir . $file;
             $tmp = new SplFileObject($file, 'r');
