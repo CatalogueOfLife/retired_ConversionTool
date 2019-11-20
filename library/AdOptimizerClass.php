@@ -59,18 +59,35 @@ class AdOptimizer {
         return $this->logger;
     }
     
-    public function importCsv ()
+    public function processZip ()
     {
-        $tmpDir = dirname(__DIR__) . '/tmp/';
-        if (!is_readable($tmpDir)) {
-            throw new Exception($tmpDir . ' to extract csv to is not readable!');
-        }
-        $zipFile = $tmpDir . 'ac-export.zip';
+        // Bootstrap paths
         
         // Is path available in config?
         if (!isset($this->config['csvUrl'])) {
             throw new Exception('Please add path to zip with csv files to ini file ("csvUrl")!');
         }
+        $tmpDir = dirname(__DIR__) . '/tmp/';
+        // Is tmp directory to extract zip to writable?
+        if (!is_writable($tmpDir)) {
+            throw new Exception($tmpDir . ' to extract csv to is not writable!');
+        }
+        $zipFile = $tmpDir . 'ac-export.zip';
+        // Is directory to move credits.ini to writable?
+        $creditsDir = dirname(__DIR__) . '/config/';
+        if (!is_writable($creditsDir)) {
+            throw new Exception($creditsDir . ' to write credit.ini to is not writable!');
+        }
+        // Is directory to move logos to available?
+        if (!isset($this->config['colPath'])) {
+            throw new Exception('Please add path to CoL rool directory to ini file ("colPath")!');
+        }
+        // ... and is it writable?
+        $logosDir = $this->config['colPath'] . '/public/images/databases/';
+        if (!is_writable($logosDir)) {
+            throw new Exception($logosDir . ' to write database logos to is not writable!');
+        }
+        
         // Download file
         $result = $this->downloadFile($this->config['csvUrl'], $zipFile);
         if ($result['error'] !== false) {
@@ -80,17 +97,33 @@ class AdOptimizer {
         if (!is_readable($zipFile)) {
             throw new Exception('Downloaded archive ' . $zipFile . ' is not readable!');
         }
-        // Is destination present and readable?
-        $files = [];
+
+        // Well, let's go then
+        // $files = [];
+        $this->addMessage('Extracting zip to ' . $tmpDir);
         $zip = new ZipArchive();
         $zip->open($zipFile);
-        for ($i = 0; $i < $zip->numFiles; $i++) {
-            $stat = $zip->statIndex($i);
-            if ($stat['size'] > 0){
-                $files[] = $stat['name'];
-            }
-        }
         $zip->extractTo($tmpDir);
+        
+        // Move credits.ini
+        $this->addMessage("Moving credits.ini...");
+        $exec = 'mv -v ' . $this->escapePath($tmpDir) . 'credits.ini ' . $this->escapePath($creditsDir) . 'credits.ini 2>&1';
+        $output = shell_exec($exec);
+        $this->addMessage($output);
+        
+        // Move logos
+        $this->addMessage("Moving logos...");
+        $exec = 'mv -v ' . $this->escapePath($tmpDir) . 'logos/* ' . $this->escapePath($logosDir) . ' 2>&1';
+        $output = shell_exec($exec);
+        $this->addMessage($output);
+        
+        return $this;
+    }
+    
+    public function importCsv ()
+    {
+        $tmpDir = dirname(__DIR__) . '/tmp/';
+        $files = scandir($tmpDir);
         foreach ($files as $file) {
             // Leave anything that's not a csv file
             if (strpos($file, '.csv') === false) {
@@ -899,6 +932,11 @@ class AdOptimizer {
                 KEY `HierarchyCode` (`HierarchyCode`(255))
             ) ENGINE=MyISAM DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;"
         );
+    }
+    
+    private function escapePath ($path)
+    {
+        return str_replace(" ", "\\ ", $path);
     }
     
     private function getHigherTaxonRecordId () 

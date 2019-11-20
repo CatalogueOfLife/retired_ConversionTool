@@ -224,7 +224,7 @@
         echo "Script took $runningTime seconds to complete</p>";
     }
 
-    setCredits('tmp/credits.ini');
+    setCredits();
 
     $start = microtime(true);
     echo '<p>Adding common name elements to ' . SEARCH_ALL . ' table...<br>';
