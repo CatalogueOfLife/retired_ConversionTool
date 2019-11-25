@@ -1345,7 +1345,7 @@ function setCredits ($iniPath = false) {
 			array(
 				'type' => 'monthly',
 				'current' => ($ini['current_edition'] == 'monthly' ||
-						!in_array($ini['current_edition'], array('monthly', 'annual', 'dvd')) ? 1 : 0),
+						!in_array($ini['current_edition'], array('monthly', 'annual')) ? 1 : 0),
 				'edition' => $ini['monthly']['edition'],
 				'citation' => $ini['monthly']['citation']
 			),

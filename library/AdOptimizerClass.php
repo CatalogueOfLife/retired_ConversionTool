@@ -117,6 +117,8 @@ class AdOptimizer {
         $output = shell_exec($exec);
         $this->addMessage($output);
         
+        rmdir($tmpDir . 'logos');
+        
         return $this;
     }
     
