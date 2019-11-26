@@ -64,21 +64,33 @@ output($fp, "Starting CoL+ conversion at " . date('d-m-Y H:i:s') . "\n\n");
 output($fp, "Step 1: download and import data from CoL+ server\n");
 $output = shell_exec("$phpExec AdOptimizer.php 2>&1");
 $step1 = microtime(true);
-file_put_contents('logs/' . $date . '-step-1-log.htm', $output);
+$file = 'logs/' . $date . '-step-1-log.htm';
+file_put_contents($file, $output);
+if (strpos($output, "ABORT!") !== false) {
+    die('A critical error has occurred, aborting. Please check ' . $file);
+}
 output($fp, "Ready in " . round($step1 - $start) . " seconds\n\n");
 
 // Step 2
 output($fp, "Step 2: copy data to Annual Checklist database\n");
 $output = shell_exec("$phpExec AcToBs.php 2>&1");
 $step2 = microtime(true);
-file_put_contents('logs/' . $date . '-step-2-log.htm', $output);
+$file = 'logs/' . $date . '-step-2-log.htm';
+file_put_contents($file, $output);
+if (strpos($output, "ABORT!") !== false) {
+    die('A critical error has occurred, aborting. Please check ' . $file);
+}
 output($fp, "Ready in " . round($step2 - $step1) . " seconds\n\n");
 
 // Step 3
 output($fp, "Step 3: create auxiliary tables in Annual Checklist database\n");
 $output = shell_exec("$phpExec BsOptimizer.php 2>&1");
 $step3 = microtime(true);
-file_put_contents('logs/' . $date . '-step-3-log.htm', $output);
+$file = 'logs/' . $date . '-step-3-log.htm';
+file_put_contents($file, $output);
+if (strpos($output, "ABORT!") !== false) {
+    die('A critical error has occurred, aborting. Please check ' . $file);
+}
 output($fp, "Ready in " . round($step3 - $step2) . " seconds\n\n");
 
 // Step 4

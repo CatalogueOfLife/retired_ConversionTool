@@ -113,11 +113,11 @@ function createErrorTable ()
 function handleException ($message, $e = false) {
     global $logger;
     if (!$logger) {
-        die('Logger not initialized');
+        die('ABORT! Logger not initialized');
     }
     $message = "\n$message: \n" . ($e ? "Exception: \n" . $e->getMessage() : '');
     $logger->err($message);
-    die('<p>' . $message . '</p>');
+    die('<p>ABORT! ' . $message . '</p>');
 }
 
 /**
@@ -136,7 +136,7 @@ function writeToErrorTable ($id, $name, $message, $nameCode = null)
         $nameCode
     ));
     if (!$logger) {
-        die('Logger not initialized');
+        die('ABORT! Logger not initialized');
     }
     $m = "\nRecord skipped during conversion: \n" .
         "id: $id\n" .
@@ -157,7 +157,7 @@ function writeSql ($path, $dumpFile, $message = false)
     }
     $sql = file_get_contents($path . $dumpFile . '.sql');
     if (!$sql) {
-       die('Cannot read dump file ' . $path . $dumpFile . '.sql');
+       die('ABORT! Cannot read dump file ' . $path . $dumpFile . '.sql');
     }
     $stmt = $pdo->prepare($sql);
     try {

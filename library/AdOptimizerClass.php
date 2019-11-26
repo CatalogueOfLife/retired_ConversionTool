@@ -65,37 +65,37 @@ class AdOptimizer {
         
         // Is path available in config?
         if (!isset($this->config['csvUrl'])) {
-            throw new Exception('Please add path to zip with csv files to ini file ("csvUrl")!');
+            throw new Exception('ABORT! Please add path to zip with csv files to ini file ("csvUrl")!');
         }
         $tmpDir = dirname(__DIR__) . '/tmp/';
         // Is tmp directory to extract zip to writable?
         if (!is_writable($tmpDir)) {
-            throw new Exception($tmpDir . ' to extract csv to is not writable!');
+            throw new Exception('ABORT! ' . $tmpDir . ' to extract csv to is not writable!');
         }
         $zipFile = $tmpDir . 'ac-export.zip';
         // Is directory to move credits.ini to writable?
         $creditsDir = dirname(__DIR__) . '/config/';
         if (!is_writable($creditsDir)) {
-            throw new Exception($creditsDir . ' to write credit.ini to is not writable!');
+            throw new Exception('ABORT! ' . $creditsDir . ' to write credit.ini to is not writable!');
         }
         // Is directory to move logos to available?
         if (!isset($this->config['colPath'])) {
-            throw new Exception('Please add path to CoL rool directory to ini file ("colPath")!');
+            throw new Exception('ABORT! Please add path to CoL rool directory to ini file ("colPath")!');
         }
         // ... and is it writable?
         $logosDir = $this->config['colPath'] . '/public/images/databases/';
         if (!is_writable($logosDir)) {
-            throw new Exception($logosDir . ' to write database logos to is not writable!');
+            throw new Exception('ABORT! ' . $logosDir . ' to write database logos to is not writable!');
         }
         
         // Download file
         $result = $this->downloadFile($this->config['csvUrl'], $zipFile);
         if ($result['error'] !== false) {
-            throw new Exception('Could not download ' . $this->config['csvUrl'] . ': ' . $result['error']);
+            throw new Exception('ABORT! Could not download ' . $this->config['csvUrl'] . ': ' . $result['error']);
         }
         // ... and is it readable?
         if (!is_readable($zipFile)) {
-            throw new Exception('Downloaded archive ' . $zipFile . ' is not readable!');
+            throw new Exception('ABORT! Downloaded archive ' . $zipFile . ' is not readable!');
         }
 
         // Well, let's go then
@@ -147,7 +147,7 @@ class AdOptimizer {
                 IGNORE 1 LINES;";
             $res = $this->pdo->query($query);
             if (!$res) {
-                throw new Exception($file . " file is corrupt!");
+                throw new Exception('ABORT! ' . $file . " cannot be loaded!");
             } else if ($res->rowCount() < $nrLines) {
                 $this->addMessage($file . ': not everything seems to be imported; veriying...');
                 $this->reportMissingRecordIds($file, $table);
@@ -364,12 +364,12 @@ class AdOptimizer {
     private function query ($query = false, $message = false)
     {
         if (!$query) {
-            throw new Exception('No query?!');
+            throw new Exception('ABORT! No query?!');
         }
         $stmt = $this->pdo->query($query);
         // We have a problem
         if (!$stmt) {
-            throw new Exception('Query failed! ' . $query);
+            throw new Exception('ABORT! Query failed! ' . $query);
         }
         // No results; report if requested
         if ($stmt->rowCount() == 0 && $message) {

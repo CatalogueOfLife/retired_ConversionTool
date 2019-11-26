@@ -86,15 +86,15 @@ for ($limit = $memLimit = 100000, $offset = 0; $offset < $total; $offset += $mem
                 $storer->store($taxon);
             }
             catch (PDOException $e) {
-                $logger->err("\nStore error: " . formatException($e));
-                echo 'Store error: '.formatException($e);
+                $logger->err("\nABORT! Store error: " . formatException($e));
+                die('ABORT! Store error: '. formatException($e));
             }
         }
         unset($taxa);
     }
     catch (PDOException $e) {
-        $logger->err("\nLoad error: " . formatException($e));
-        echo 'Load error: '.formatException($e);
+        $logger->err("\nABORT! Load error: " . formatException($e));
+        die('ABORT! Load error: '. formatException($e));
     }
 }
 echo '<br>Done!</p>';
@@ -118,19 +118,16 @@ for ($limit = $memLimit = 10000, $offset = 0; $offset < $total; $offset += $memL
                 $storer->store($taxon);
             }
             catch (PDOException $e) {
-                $logger->err("\nStore error: " . formatException($e));
-                echo '<pre>';
-                print_r($taxon);
-                echo '</pre>';
-                echo 'Store error: ' . formatException($e);
+                $logger->err("\nABORT! Store error: " . formatException($e));
+                die('ABORT! Store error: ' . formatException($e));
                 //die();
             }
         }
         unset($taxa);
     }
     catch (PDOException $e) {
-        $logger->err("\nLoad error: " . formatException($e));
-        echo 'Load error: ' . formatException($e);
+        $logger->err("\nABORT! Load error: " . formatException($e));
+        die('ABORT! Load error: ' . formatException($e));
     }
 }
 ?>
