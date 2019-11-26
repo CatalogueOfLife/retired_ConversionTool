@@ -593,7 +593,7 @@
     
     $useColPlusKeys = false;
     if (isset($config['keys']['colPlusKeys']) && $config['keys']['colPlusKeys'] == 1) {
-        $useColPlusKeys = true;
+        //$useColPlusKeys = true;
     }
     
     // Natural keys for accepted (infra)species
