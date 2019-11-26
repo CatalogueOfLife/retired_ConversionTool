@@ -67,6 +67,7 @@ $step1 = microtime(true);
 $file = 'logs/' . $date . '-step-1-log.htm';
 file_put_contents($file, $output);
 if (strpos($output, "ABORT!") !== false) {
+    unlink($pid);
     die('A critical error has occurred, aborting. Please check ' . $file);
 }
 output($fp, "Ready in " . round($step1 - $start) . " seconds\n\n");
@@ -78,6 +79,7 @@ $step2 = microtime(true);
 $file = 'logs/' . $date . '-step-2-log.htm';
 file_put_contents($file, $output);
 if (strpos($output, "ABORT!") !== false) {
+    unlink($pid);
     die('A critical error has occurred, aborting. Please check ' . $file);
 }
 output($fp, "Ready in " . round($step2 - $step1) . " seconds\n\n");
@@ -89,6 +91,7 @@ $step3 = microtime(true);
 $file = 'logs/' . $date . '-step-3-log.htm';
 file_put_contents($file, $output);
 if (strpos($output, "ABORT!") !== false) {
+    unlink($pid);
     die('A critical error has occurred, aborting. Please check ' . $file);
 }
 output($fp, "Ready in " . round($step3 - $step2) . " seconds\n\n");
