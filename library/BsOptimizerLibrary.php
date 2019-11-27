@@ -958,12 +958,13 @@ function copyDeadEndToSearchAll ($p)
 
 function createNaturalKeyForDeadEnd ($p)
 {
+    $hash = hashCoL($p['hierarchy']['phylum'] . $p['rank'] . $p['hierarchy'][$p['rank']]);
     insertNaturalKey(array(
         $p['id'],
-        hashCoL($p['hierarchy']['phylum'] . $p['rank'] . $p['hierarchy'][$p['rank']]),
+        $hash,
         $p['hierarchy'][$p['rank']],
         null,
-        null,
+        $hash,
         1,
         0
     ));

@@ -669,7 +669,7 @@
                         $hash,
                         $row[$rank],
                         null,
-                        null,
+                        $hash,
                         1,
                         0
                     ));
@@ -697,7 +697,7 @@
             $hash,
             $row['common_name'],
             null,
-            null,
+            $hash,
             0,
             6
         ));
