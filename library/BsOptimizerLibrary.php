@@ -768,7 +768,7 @@ function insertNaturalKey ($d)
 {
     $pdo = DbHandler::getInstance('target');
     $insert = 'INSERT INTO `' . NATURAL_KEYS .
-        '` (`id`, `name_code`, `name`, `author`, `hash`, `accepted`, `status`)
+        '` (`id`, `hash`, `name`, `author`, `name_code`, `accepted`, `status`)
         VALUES (?, ?, ?, ?, ?, ?, ?)';
     $stmt = $pdo->prepare($insert);
     $stmt->execute($d);
