@@ -266,7 +266,7 @@ class Bs_Storer_Taxon extends Bs_Storer_HigherTaxon implements Bs_Storer_Interfa
         $storedDistributions = array();
         foreach ($taxon->distribution as $distribution) {
             $check = strtolower($distribution->freeText);
-            if (!in_array($check, $storedDistributions)) {
+            if (!empty(trim($check)) && !in_array($check, $storedDistributions)) {
                 $distribution->taxonId = $taxon->id;
                 $storer->store($distribution);
                 $storedDistributions[] = $check;
