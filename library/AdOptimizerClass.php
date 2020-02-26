@@ -142,8 +142,8 @@ class AdOptimizer {
             $query = "
                 LOAD DATA LOCAL INFILE '$file'
                 INTO TABLE `$table`
-                FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"'
-                LINES TERMINATED BY '\n'
+                FIELDS TERMINATED BY '\t' ENCLOSED BY '' ESCAPED BY '\\\\'
+                LINES TERMINATED BY '\n' STARTING BY ''
                 IGNORE 1 LINES;";
             $res = $this->pdo->query($query);
             if (!$res) {
